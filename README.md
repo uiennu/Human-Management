@@ -59,7 +59,7 @@ Dự án được xây dựng theo các mốc nộp bài sau:
 
 | Mốc | Mô tả công việc | Trạng thái (Ví dụ) |
 | :--- | :--- | :--- |
-| **Lần 1** | Phát biểu lại Đặc tả Hệ thống (SRS) và mô tả bằng User Story. | ✅ Hoàn thành |
+| **Lần 1** | Phát biểu lại Đặc tả Hệ thống (SRS) và mô tả bằng User Story. | ⏳ Đang thực hiện |
 | **Lần 2** | Phân tích chức năng (Sơ đồ Use Case, Prototype Giao diện, Sơ đồ Hoạt động/Sequence Diagram). | ⏳ Đang thực hiện |
 | **Lần 3** | Thiết kế hệ thống (Giao diện web, Thiết kế Service/API, Thiết kế Database). | ⏳ Kế hoạch |
 | **Lần 4** | Tích hợp hệ thống và Kiểm thử (Tích hợp Service, Hoàn chỉnh ứng dụng, Kiểm thử UAT). | ⏳ Kế hoạch |
