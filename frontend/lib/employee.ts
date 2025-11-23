@@ -1,0 +1,28 @@
+export const currentEmployee = {
+  id: 1,
+  employeeId: "EMP-2023-001",
+  firstName: "John",
+  lastName: "Doe",
+  email: "john.doe@company.com",
+  phone: "+1 (555) 123-4567",
+  position: "Software Engineer",
+  department: "Engineering",
+  managerId: 2,
+  managerName: "Jane Smith",
+  location: "San Francisco, CA",
+  joinDate: "2023-01-15",
+  avatar: "/professional-portrait.png",
+  leaveBalance: {
+    totalDays: 20,
+    usedDays: 5,
+    remainingDays: 15,
+    sickLeave: 10,
+    personalDays: 3,
+  },
+  stats: {
+    pendingRequests: 2,
+    overtimeHours: 24,
+    wfhDays: 8,
+    totalLeavesTaken: 5,
+  },
+}
