@@ -88,8 +88,8 @@ CREATE TABLE LeaveTypes (
     LeaveTypeID INT PRIMARY KEY IDENTITY(1,1),
     Name NVARCHAR(100) NOT NULL UNIQUE,
     Description NVARCHAR(500),
-    DefaultQuota DECIMAL(5, 2) NOT NULL DEFAULT 0,
-    Applicability NVARCHAR(100) -- e.g., 'All Employees', 'Female Employees'
+    DefaultQuota DECIMAL(5, 2) NOT NULL DEFAULT 0, -- Số ngày nghỉ phép mặc định được cấp mỗi năm
+    Applicability NVARCHAR(100) -- e.g., Loại phép áp dụng cho nhóm nào (ví dụ 'All Employees', 'Female Employees')
 );
 
 CREATE TABLE EmployeeLeaveBalances (
@@ -115,7 +115,7 @@ CREATE TABLE LeaveRequests (
     Reason NVARCHAR(1000),
     Status NVARCHAR(20) NOT NULL DEFAULT 'Pending', -- Pending, Approved, Rejected, Cancelled, Draft
     RequestedDate DATETIME NOT NULL DEFAULT GETDATE(),
-    AttachmentPath NVARCHAR(255) NULL, -- Path to stored file (SRS 2.1.1)
+    AttachmentPath NVARCHAR(255) NULL, 
     
     CONSTRAINT FK_LeaveRequests_Employee FOREIGN KEY (EmployeeID) REFERENCES Employees(EmployeeID),
     CONSTRAINT FK_LeaveRequests_LeaveType FOREIGN KEY (LeaveTypeID) REFERENCES LeaveTypes(LeaveTypeID),
