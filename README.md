@@ -19,8 +19,7 @@ Hệ thống được xây dựng dựa trên kiến trúc 3 lớp (Three-tier a
 | :--- | :--- | :--- |
 | **Frontend (UI)** | **ReactJS** | [cite_start]Giao diện người dùng hiện đại, mobile-responsive. |
 | **Backend (API)** | **Java Spring MVC / .NET Core Web API** | Xử lý nghiệp vụ, xác thực (JWT/OAuth2), kiểm tra quyền truy cập (RBAC). |
-| **Database** | **SQL Server / PostgreSQL** (Đề xuất) | Lưu trữ quan hệ, đảm bảo toàn vẹn dữ liệu. |
-| **Tích hợp** | [cite_start]Email/SMS Service, Calendar API, Hệ thống tính lương (Payroll). |
+| **Database** | **MySQL** (Đề xuất) | Lưu trữ quan hệ, đảm bảo toàn vẹn dữ liệu. |
 
 ## Yêu cầu Chức năng Cốt lõi (Core Functional Modules)
 
