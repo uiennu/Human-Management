@@ -2,9 +2,11 @@ using HRM.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services
+builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -22,6 +24,13 @@ app.Use((ctx, next) =>
 });
 // ⬆⬆⬆ THÊM ĐÚNG VỊ TRÍ NÀY
 
+// Cấu hình CORS cho phép frontend truy cập API
+app.UseCors(policy =>
+     policy.AllowAnyOrigin()
+             .AllowAnyHeader()
+             .AllowAnyMethod()
+);
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -33,6 +42,10 @@ app.UseHttpsRedirection();
 app.MapGet("/weatherforecast", () => "OK");
 app.MapGet("/", () => "HRM API Running...");
 
+
+
+// Map controller routes (AuthController)
+app.MapControllers();
 
 app.Run();
 
