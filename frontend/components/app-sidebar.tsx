@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
+import { useAuth } from "@/lib/auth-context"
+import { useRouter } from "next/navigation"
 import { Separator } from "@/components/ui/separator"
 
 const navigation = [
@@ -19,6 +21,13 @@ const navigation = [
 
 export function AppSidebar() {
   const pathname = usePathname()
+  const { logout } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    logout();
+    router.replace("/login");
+  };
 
   return (
     <div className="flex h-full w-64 flex-col bg-slate-900 text-slate-100">
@@ -71,6 +80,7 @@ export function AppSidebar() {
           variant="ghost"
           className="mt-2 w-full justify-start text-slate-300 hover:bg-slate-800 hover:text-white"
           size="sm"
+          onClick={handleLogout}
         >
           <LogOut className="mr-2 h-4 w-4" />
           Logout

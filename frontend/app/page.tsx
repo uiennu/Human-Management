@@ -1,5 +1,12 @@
-import { DashboardOverview } from "@/components/dashboard-overview"
+
+
+import RequireAuth from "@/components/require-auth";
+import { DashboardOverview } from "@/components/dashboard-overview";
 
 export default function Home() {
-  return <DashboardOverview />
+  return (
+    <RequireAuth>
+      <DashboardOverview />
+    </RequireAuth>
+  );
 }
