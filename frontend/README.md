@@ -58,7 +58,7 @@ The `NEXT_PUBLIC_API_URL` environment variable is already configured in your pro
 
 If you need to add it manually, create a `.env.local` file:
 \`\`\`
-NEXT_PUBLIC_API_URL=http://localhost:5000/api
+NEXT_PUBLIC_API_URL=http://localhost:5204/api
 \`\`\`
 
 3. Run development server:
@@ -128,7 +128,7 @@ dotnet ef database update
 dotnet run
 \`\`\`
 
-API will be available at `https://localhost:5001` or `http://localhost:5000`
+API will be available at `https://localhost:5204` or `http://localhost:5000`
 
 ## API Endpoints
 
@@ -383,7 +383,7 @@ git checkout -b feature/leave-approval-workflow
 
 ### Development
 - Frontend: `http://localhost:3000`
-- Backend: `http://localhost:5000`
+- Backend: `http://localhost:5204`
 - Database: `localhost:3306`
 
 ### Production
@@ -416,7 +416,7 @@ npm run build
 ### Backend (Docker)
 \`\`\`bash
 docker build -t leave-management-api .
-docker run -p 5000:80 leave-management-api
+docker run -p 5204:80 leave-management-api
 \`\`\`
 
 ## Support

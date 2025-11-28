@@ -1,5 +1,10 @@
-import LeaveHistoryPage from "@/components/leave-history-page"
+import RequireAuth from "@/components/require-auth";
+import LeaveHistoryPage from "@/components/leave-history-page";
 
 export default function LeavePage() {
-  return <LeaveHistoryPage />
+  return (
+    <RequireAuth>
+      <LeaveHistoryPage />
+    </RequireAuth>
+  );
 }

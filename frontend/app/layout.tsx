@@ -4,7 +4,8 @@ import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 // <CHANGE> Added sidebar layout for employee portal
-import { AppSidebar } from "@/components/app-sidebar"
+import SidebarLayout from "@/components/sidebar-layout"
+import { AuthProvider } from "@/lib/auth-context"
 
 const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
@@ -39,14 +40,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`font-sans antialiased`}>
-        {/* <CHANGE> Added sidebar + main content layout */}
-        <div className="flex h-screen overflow-hidden">
-          <AppSidebar />
-          <main className="flex-1 overflow-y-auto bg-slate-50">
-            <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">{children}</div>
-          </main>
-        </div>
+      <body>
+        <AuthProvider>
+          <SidebarLayout>{children}</SidebarLayout>
+        </AuthProvider>
         <Analytics />
       </body>
     </html>

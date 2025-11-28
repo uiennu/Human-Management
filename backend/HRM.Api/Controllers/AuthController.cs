@@ -14,14 +14,14 @@ namespace HRM.Api.Controllers
         public IActionResult Login([FromBody] LoginRequest request)
         {
             // TODO: Replace with real user validation
-            if (request.Email == "admin@example.com" && request.Password == "123456")
+            if (request.Email == "example@gmail.com" && request.Password == "123456")
             {
                 var claims = new[]
                 {
                     new Claim(ClaimTypes.Name, request.Email),
-                    new Claim(ClaimTypes.Role, "Admin")
+                    new Claim(ClaimTypes.Role, "Employee")
                 };
-                var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("super_secret_key_123!"));
+                var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("super_secret_key_1234567890_super_long_key!"));
                 var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
                 var token = new JwtSecurityToken(
                     issuer: "hrm.api",
