@@ -53,6 +53,8 @@ CREATE TABLE Employees (
     CONSTRAINT FK_Employees_Department FOREIGN KEY (DepartmentID) REFERENCES Departments(DepartmentID),
     CONSTRAINT FK_Employees_Manager FOREIGN KEY (ManagerID) REFERENCES Employees(EmployeeID)
 );
+ALTER TABLE Employees
+ADD AvatarUrl NVARCHAR(255) NULL;
 
 -- Add the FK for Department Manager (which references Employees)
 ALTER TABLE Departments ADD CONSTRAINT FK_Departments_Manager 
