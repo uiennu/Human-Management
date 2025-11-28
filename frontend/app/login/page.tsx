@@ -24,7 +24,7 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password })
       });
       if (!res.ok) {
-        throw new Error("Sai tài khoản hoặc mật khẩu!");
+        throw new Error("Incorrect email or password!");
       }
       const data = await res.json();
       // Lưu thông tin vào context/provider
@@ -32,7 +32,7 @@ export default function LoginPage() {
       // Chuyển hướng dashboard theo role
       router.replace("/");
     } catch (err: any) {
-      setError(err.message || "Đăng nhập thất bại!");
+      setError(err.message || "Login failed!");
     } finally {
       setLoading(false);
     }
@@ -44,7 +44,7 @@ export default function LoginPage() {
         onSubmit={handleSubmit}
         className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md space-y-6"
       >
-        <h2 className="text-2xl font-bold text-center text-blue-700 mb-4">Đăng nhập hệ thống</h2>
+        <h2 className="text-2xl font-bold text-center text-blue-700 mb-4">Login</h2>
         <div>
           <label className="block text-gray-700 mb-1">Email</label>
           <input
@@ -53,18 +53,18 @@ export default function LoginPage() {
             value={email}
             onChange={e => setEmail(e.target.value)}
             required
-            placeholder="Nhập email"
+            placeholder="Enter email"
           />
         </div>
         <div>
-          <label className="block text-gray-700 mb-1">Mật khẩu</label>
+          <label className="block text-gray-700 mb-1">Password</label>
           <input
             type="password"
             className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
             value={password}
             onChange={e => setPassword(e.target.value)}
             required
-            placeholder="Nhập mật khẩu"
+            placeholder="Enter password"
           />
         </div>
         {error && <div className="text-red-500 text-sm text-center">{error}</div>}
@@ -73,7 +73,7 @@ export default function LoginPage() {
           className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded transition duration-200 disabled:opacity-60"
           disabled={loading}
         >
-          {loading ? "Đang đăng nhập..." : "Đăng nhập"}
+          {loading ? "Logging in..." : "Login"}
         </button>
       </form>
     </div>
