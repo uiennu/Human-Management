@@ -1,0 +1,71 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# VSCode
+.vscode/
+
+# Logs
+*.log
+
+# Database
+*.mdf
+*.ldf
+*.sqlite
+*.db
+*.bak
+
+# Secrets
+appsettings.*.json
+!appsettings.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Others
+*.tmp
+*.swp
+*.swn
+*.swo
+
+# IDE
+.idea/
+*.iml
+
+# Docker
+*.pid
+
+# Misc
+*.local.js
+*.local.json
+
+# Test
+coverage/
+
+# Ignore generated SQL
+initdb/
+
+# Ignore Windows
+*.exe
+*.dll
+*.pdb
+*.cache
+*.msi
+*.msm
+*.msp
+
+# Ignore Mac
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+
+# Ignore Linux
+*~
