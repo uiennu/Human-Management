@@ -295,3 +295,27 @@ INSERT INTO Roles (RoleName) VALUES
 ('Manager'),
 ('HR'),
 ('C&B');
+
+-- =================================================================
+-- INSERT SAMPLE DATA (Departments & Employees)
+-- =================================================================
+
+INSERT INTO Departments (DepartmentName, DepartmentCode, Description) VALUES 
+('Human Resources', 'HR', 'Manages employee lifecycle'),
+('Information Technology', 'IT', 'Manages technical infrastructure'),
+('Sales', 'SALES', 'Handles sales and client relationships');
+
+-- Insert Admin/HR Manager
+INSERT INTO Employees (FirstName, LastName, Email, PasswordHash, HireDate, DepartmentID, IsActive) VALUES 
+('Admin', 'User', 'admin@hrm.com', 'hashed_password_here', NOW(), 1, 1),
+('John', 'Doe', 'john.doe@hrm.com', 'hashed_password_here', NOW(), 2, 1),
+('Jane', 'Smith', 'jane.smith@hrm.com', 'hashed_password_here', NOW(), 3, 1);
+
+-- Assign Roles
+-- Assuming RoleIDs: 1=Employee, 2=Manager, 3=HR, 4=C&B
+-- Admin -> HR & Manager
+INSERT INTO EmployeeRoles (EmployeeID, RoleID) VALUES 
+(1, 3), (1, 2),
+(2, 1),
+(3, 1);
+

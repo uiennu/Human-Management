@@ -79,3 +79,18 @@ Nếu bạn không dùng Docker mà cài MySQL trực tiếp (ví dụ dùng MyS
 
 3. **Chạy Backend**:
    - `dotnet run` như bình thường.
+
+
+   Để nạp dữ liệu này vào database, bạn có 2 cách:
+
+Cách 1: Reset lại toàn bộ (Khuyên dùng nếu chưa có dữ liệu quan trọng) Chạy lệnh sau để xóa database cũ và tạo lại từ đầu (bao gồm cả dữ liệu mẫu mới):
+
+    bash
+    docker-compose down -v
+    docker-compose up -d
+    
+Cách 2: Chỉ chạy thêm dữ liệu mới (Nếu không muốn xóa DB cũ) Chạy lệnh sau để thực thi phần INSERT mới:
+
+    bash
+    docker exec -i hrm_mysql mysql -u root -proot HRM_System < src/Human-Management_mysql.sql
+(Lưu ý: Cách 2 có thể báo lỗi "Table already exists" ở phần tạo bảng, nhưng sẽ vẫn chạy tiếp phần INSERT bên dưới).
