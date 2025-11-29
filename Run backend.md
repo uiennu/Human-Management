@@ -57,3 +57,25 @@ Mở browser:
 1. `docker-compose up -d` (Chỉ cần chạy 1 lần để bật DB)
 2. `cd backend/HRM.Api`
 3. `dotnet run`
+
+---
+
+## ⚠️ Option 2: Running with Local MySQL (No Docker)
+
+Nếu bạn không dùng Docker mà cài MySQL trực tiếp (ví dụ dùng MySQL Workbench, XAMPP):
+
+1. **Tạo Database**:
+   - Mở MySQL Workbench.
+   - Chạy script SQL tại: `src/Human-Management_mysql.sql`.
+   - Script này sẽ tạo database `HRM_System` và các bảng.
+
+2. **Cấu hình Backend**:
+   - Mở file `backend/HRM.Api/appsettings.json`.
+   - Sửa `ConnectionStrings` để trỏ về MySQL của bạn:
+     ```json
+     "DefaultConnection": "Server=localhost;Database=HRM_System;User=root;Password=YOUR_PASSWORD;"
+     ```
+   - Thay `YOUR_PASSWORD` bằng mật khẩu MySQL của bạn.
+
+3. **Chạy Backend**:
+   - `dotnet run` như bình thường.
