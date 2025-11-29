@@ -296,6 +296,7 @@ INSERT INTO Roles (RoleName) VALUES
 ('HR'),
 ('C&B');
 
+<<<<<<< Updated upstream
 -- =================================================================
 -- INSERT SAMPLE DATA (Departments & Employees)
 -- =================================================================
@@ -318,4 +319,127 @@ INSERT INTO EmployeeRoles (EmployeeID, RoleID) VALUES
 (1, 3), (1, 2),
 (2, 1),
 (3, 1);
+=======
+-- 1. Departments (ManagerID để NULL trước)
+INSERT INTO Departments (DepartmentName, DepartmentCode, Description, ManagerID) VALUES 
+('Technology', 'TECH', 'Phát triển phần mềm', NULL),
+('Human Resources', 'HR', 'Tuyển dụng & C&B', NULL),
+('Sales & Marketing', 'SALE', 'Kinh doanh', NULL);
+
+-- 2. Employees
+-- ID 1: An (Manager Tech)
+-- ID 2: Bình (HR Manager)
+-- ID 3: Cường (Nhân viên C&B - Role mới)
+-- ID 4: Dũng (Sales Employee)
+INSERT INTO Employees 
+(FirstName, LastName, Email, PasswordHash, Phone, Address, HireDate, DepartmentID, ManagerID, CurrentPoints, IsActive) 
+VALUES 
+('An', 'Nguyễn Văn', 'an.nguyen@company.com', 'hash_123', '0901112222', '123 Lê Lợi', '2023-01-01', 1, NULL, 150.00, 1),
+('Bình', 'Trần Thị', 'binh.tran@company.com', 'hash_456', '0902223333', '456 Nguyễn Huệ', '2023-02-15', 2, 1, 50.00, 1),
+('Cường', 'Lê Văn', 'cuong.le@company.com', 'hash_789', '0903334444', '789 Võ Văn Tần', '2023-03-20', 2, 2, 75.00, 1), -- Cường report cho Bình (HR)
+('Dũng', 'Phạm', 'dung.pham@company.com', 'hash_000', '0904445555', '321 Điện Biên Phủ', '2023-06-01', 3, 1, 20.00, 1);
+
+-- 3. Update Department Managers
+UPDATE Departments SET ManagerID = 1 WHERE DepartmentCode = 'TECH';
+UPDATE Departments SET ManagerID = 2 WHERE DepartmentCode = 'HR';
+UPDATE Departments SET ManagerID = 1 WHERE DepartmentCode = 'SALE'; -- Tạm thời An quản lý cả Sale
+
+-- 4. Employee Roles (Map với RoleID bạn đã có: 1=Emp, 2=Mgr, 3=HR, 4=C&B)
+INSERT INTO EmployeeRoles (EmployeeID, RoleID) VALUES 
+(1, 2), -- An: Manager
+(2, 3), -- Bình: HR
+(3, 4), -- Cường: C&B (Dùng Role mới của bạn)
+(4, 1); -- Dũng: Employee
+
+-- 5. Profile Changes
+INSERT INTO EmployeeProfileChanges (EmployeeID, FieldName, OldValue, NewValue, Status, ApproverID) VALUES 
+(3, 'BankAccount', '000xxx', '111yyy', 'Pending', NULL);
+
+-- =================================================================
+-- BƯỚC 3: LEAVE MANAGEMENT (Theo yêu cầu Vacation/Sick/Personal)
+-- =================================================================
+
+-- 6. Leave Types
+INSERT INTO LeaveTypes (Name, Description, DefaultQuota, Applicability) VALUES 
+('Vacation', 'Nghỉ mát / Phép năm', 12.00, 'All'),
+('Sick Leave', 'Nghỉ ốm', 30.00, 'All'),
+('Personal Day', 'Nghỉ việc riêng', 3.00, 'All');
+
+-- 7. Employee Leave Balances
+-- 1=Vacation, 2=Sick Leave, 3=Personal Day
+INSERT INTO EmployeeLeaveBalances (EmployeeID, LeaveTypeID, BalanceDays) VALUES 
+(1, 1, 10.00), (1, 2, 30.00), (1, 3, 2.00), -- An
+(2, 1, 12.00), (2, 2, 29.00), (2, 3, 3.00), -- Bình
+(3, 1, 5.00),  (3, 2, 30.00), (3, 3, 3.00), -- Cường
+(4, 1, 0.00),  (4, 2, 15.00), (4, 3, 1.00); -- Dũng
+
+-- 8. Leave Requests (Status: Approved, Pending, Rejected, Cancelled)
+INSERT INTO LeaveRequests (EmployeeID, LeaveTypeID, StartDate, EndDate, TotalDays, Reason, Status) VALUES 
+(1, 1, '2025-10-20', '2025-10-22', 3.0, 'Du lịch gia đình', 'Approved'),
+(3, 2, '2025-11-05', '2025-11-05', 1.0, 'Sốt cao', 'Pending'),
+(4, 3, '2025-12-01', '2025-12-03', 3.0, 'Về quê đám cưới', 'Rejected'),
+(1, 1, '2025-12-25', '2025-12-26', 2.0, 'Nghỉ Noel', 'Cancelled');
+
+-- 9. Leave History
+INSERT INTO LeaveRequestHistory (LeaveRequestID, Status, Notes, ChangedByEmployeeID) VALUES 
+(1, 'Approved', 'Đã duyệt', 2),
+(3, 'Rejected', 'Đang chạy số cuối năm', 1);
+
+-- 10. Work Handovers
+INSERT INTO WorkHandovers (LeaveRequestID, AssigneeEmployeeID, ManagerID, HandoverNotes) VALUES 
+(1, 3, 2, 'Gửi Cường check bảng lương');
+
+-- =================================================================
+-- BƯỚC 4: ATTENDANCE & WFH
+-- =================================================================
+
+-- 11. Attendance Logs
+INSERT INTO AttendanceLogs (EmployeeID, LogTime, LogType, Location) VALUES 
+(3, '2025-11-29 08:00:00', 'CheckIn', 'Office'),
+(3, '2025-11-29 17:00:00', 'CheckOut', 'Office'),
+(4, '2025-11-29 08:30:00', 'CheckIn', 'Site Khách Hàng');
+
+-- 12. Timesheet Updates
+INSERT INTO TimesheetUpdateRequests (EmployeeID, WorkDate, OldCheckInTime, NewCheckInTime, Reason, Status) VALUES 
+(4, '2025-11-28', NULL, '08:00:00', 'Quên chấm công', 'Approved');
+
+-- 13. Attendance Corrections
+INSERT INTO AttendanceCorrectionRequests (EmployeeID, WorkDate, RequestType, RequestedTime, Location, Reason, Status) VALUES 
+(2, '2025-11-28', 'LateIn', '09:00:00', 'Office', 'Hỏng xe', 'Pending');
+
+-- 14. WFH Requests
+INSERT INTO WFHRequests (EmployeeID, StartDate, EndDate, Reason, WorkPlan, Status) VALUES 
+(3, '2025-12-01', '2025-12-01', 'Sửa nhà', 'Vẫn tính lương', 'Pending');
+
+-- =================================================================
+-- BƯỚC 5: CAMPAIGNS & REWARDS
+-- =================================================================
+
+-- 15. Campaigns
+INSERT INTO Campaigns (CampaignName, ShortDescription, StartDate, EndDate, TargetAudienceType, Status, CreatedByEmployeeID) VALUES 
+('Marathon 2025', 'Chạy bộ gây quỹ', '2025-12-01', '2025-12-31', 'All', 'Published', 2),
+('Team Building', 'Phú Quốc Trip', '2025-12-20', '2025-12-22', 'All', 'Draft', 2);
+
+-- 16. Campaign Target Departments
+INSERT INTO CampaignTargetDepartments (CampaignID, DepartmentID) VALUES (1, 1), (1, 2), (1, 3);
+
+-- 17. Participants
+INSERT INTO CampaignParticipants (CampaignID, EmployeeID, Status) VALUES 
+(1, 3, 'Registered'),
+(1, 4, 'Registered');
+
+-- 18. Campaign Results
+INSERT INTO CampaignResults (ParticipantID, AchievementMetric, AchievementValue) VALUES 
+(1, 'Km', 10.5), -- Cường chạy 10.5km
+(2, 'Km', 5.0);  -- Dũng chạy 5km
+
+-- 19. Point Transactions
+INSERT INTO PointTransactions (EmployeeID, TransactionType, Amount, Description, GiverEmployeeID) VALUES 
+(3, 'Reward', 50.00, 'Xử lý lương đúng hạn', 2), -- Cường được thưởng
+(4, 'Penalty', -10.00, 'Đi muộn', 2);
+
+-- 20. Redemption Requests
+INSERT INTO RedemptionRequests (EmployeeID, PointsToRedeem, CashValue, ConversionRate, Status) VALUES 
+(3, 50.00, 500000, 10000, 'Processing');
+>>>>>>> Stashed changes
 
