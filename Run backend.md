@@ -1,81 +1,59 @@
-🟢 Backend Setup Guide (.NET 8 API)
-1. Prerequisites
+🟢 Backend Setup Guide (.NET 8 API + MySQL Docker)
+
+## 1. Prerequisites
 
 Trước khi chạy backend, cần đảm bảo:
 
-Đã cài .NET 8 SDK
+- **.NET 8 SDK**: Để chạy code .NET
+- **Docker Desktop**: Để chạy database MySQL
 
-Đã pull đúng source code backend
+## 2. Start Database (Docker)
 
-File sau phải có trong repo:
+Project này sử dụng MySQL chạy trên Docker. Bạn không cần cài MySQL thủ công.
 
-HRM.Api.csproj
+1. Mở terminal tại thư mục root của project (nơi có file `docker-compose.yml`).
+2. Chạy lệnh sau để khởi động database:
 
-Program.cs
+   docker-compose up -d
 
-/Models
 
-/Data/AppDbContext.cs
+   > **Lưu ý**: Lệnh này sẽ tự động tải MySQL image và tạo database `HRM_System` kèm dữ liệu mẫu.
 
-appsettings.json ✔ Very important
+3. Kiểm tra container đã chạy chưa:
 
-⚠️ Không được bỏ appsettings.json vào .gitignore
-vì file này chứa connection string chạy DB.
+   docker ps
 
-Check version:
+   Bạn sẽ thấy container tên `hrm_mysql` đang chạy.
 
-dotnet --version
-
-2. Restore NuGet Packages
+## 3. Restore & Build
 
 Sau khi pull code:
 
-dotnet restore
+
+    cd backend/HRM.Api
+    dotnet restore
+    dotnet build
 
 
-NuGet sẽ tự tải đầy đủ các packages:
-
-Entity Framework Core
-
-SQL Server Provider
-
-Swagger UI
-
-JWT
-
-etc.
-
-3. Build Project
-dotnet build
-
-4. Run Backend
+## 4. Run Backend
 
 Có 2 cách chạy:
 
-✔ Cách 1:
+✔ **Cách 1**:
 dotnet run
 
-✔ Cách 2 (recommended for dev):
+✔ **Cách 2 (recommended for dev)**:
+
 dotnet watch run
 
-5. Verify API is running
+## 5. Verify API is running
 
 Mở browser:
+- Swagger UI: http://localhost:5204/swagger
+- Test endpoint: http://localhost:5204/weatherforecast
 
-http://localhost:5204/swagger
+## 🎯 Tóm tắt các bước chạy
 
-
-hoặc test endpoint mặc định:
-
-http://localhost:5204/weatherforecast
-
-🎯 Kết luận
-
-Chỉ cần:
-
-dotnet restore
-dotnet build
-dotnet run
-
-
-Là có thể chạy backend thành công — không cần thêm setup nào khác.
+1. `docker-compose up -d` (Chỉ cần chạy 1 lần để bật DB)
+2. `cd backend/HRM.Api`
+3. `dotnet run`
