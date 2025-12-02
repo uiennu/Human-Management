@@ -296,7 +296,6 @@ INSERT INTO Roles (RoleName) VALUES
 ('HR'),
 ('C&B');
 
-<<<<<<< Updated upstream
 -- =================================================================
 -- INSERT SAMPLE DATA (Departments & Employees)
 -- =================================================================
@@ -319,7 +318,6 @@ INSERT INTO EmployeeRoles (EmployeeID, RoleID) VALUES
 (1, 3), (1, 2),
 (2, 1),
 (3, 1);
-=======
 -- 1. Departments (ManagerID để NULL trước)
 INSERT INTO Departments (DepartmentName, DepartmentCode, Description, ManagerID) VALUES 
 ('Technology', 'TECH', 'Phát triển phần mềm', NULL),
@@ -441,5 +439,4 @@ INSERT INTO PointTransactions (EmployeeID, TransactionType, Amount, Description,
 -- 20. Redemption Requests
 INSERT INTO RedemptionRequests (EmployeeID, PointsToRedeem, CashValue, ConversionRate, Status) VALUES 
 (3, 50.00, 500000, 10000, 'Processing');
->>>>>>> Stashed changes
 
