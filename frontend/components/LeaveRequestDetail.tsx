@@ -1,161 +1,196 @@
 "use client"
 
-import { X, FileText, Check, Upload, Download } from "lucide-react"
+import { useEffect, useState } from "react"
+import { ArrowLeft, Calendar, Clock, FileText, Eye, FileImage, X } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { leaveService } from "@/lib/services/leaveService"
 
-// Định nghĩa kiểu dữ liệu (tạm thời)
 interface LeaveRequestDetailProps {
-  request: any; // Dữ liệu của yêu cầu được chọn
-  onBack: () => void; // Hàm quay lại danh sách
-}
-
-// Map màu sắc cho Badge trạng thái
-const statusStyles: Record<string, { bg: string; text: string }> = {
-  Approved: { bg: "bg-[#28A745]/20", text: "text-[#28A745]" },
-  Pending: { bg: "bg-[#ED6C02]/20", text: "text-[#ED6C02]" },
-  Rejected: { bg: "bg-[#D32F2F]/20", text: "text-[#D32F2F]" },
-  Cancelled: { bg: "bg-gray-500/20", text: "text-gray-600" },
+  request: any;
+  onBack: () => void;
 }
 
 export default function LeaveRequestDetail({ request, onBack }: LeaveRequestDetailProps) {
-  // Lấy style màu dựa trên trạng thái, mặc định là xám nếu không tìm thấy
-  const statusStyle = statusStyles[request.status] || statusStyles.Cancelled;
+  const [details, setDetails] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadDetails = async () => {
+      try {
+        const data = await leaveService.getLeaveRequestDetail(request.leaveRequestID);
+        setDetails(data);
+      } catch (error) {
+        console.error("Failed to load details", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadDetails();
+  }, [request]);
+
+  if (loading) return <div className="p-8 text-center">Loading details...</div>;
+  if (!details) return <div className="p-8 text-center text-red-500">Failed to load details</div>;
+
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5204';
 
   return (
-    <div className="relative flex h-auto min-h-screen w-full flex-col bg-[#f6f7f8] font-sans">
-      <div className="flex h-full grow flex-col">
-        <div className="flex flex-1 justify-center px-4 py-5 sm:px-10 md:px-20 lg:px-40">
-          <div className="flex flex-1 flex-col max-w-[960px] rounded-xl bg-white shadow-lg">
-            
-            {/* --- HEADER --- */}
-            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 p-4 sm:p-6">
-              <div className="flex items-center gap-4">
-                <p className="text-2xl font-black tracking-[-0.033em] text-[#111418] sm:text-3xl">
-                  Leave Request Details
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={onBack}>
+          <ArrowLeft className="h-6 w-6" />
+        </Button>
+        <h1 className="text-2xl font-bold text-slate-900">Request Details</h1>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-3">
+        {/* Main Info */}
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>{details.leaveType.name}</span>
+              <Badge variant="outline" className="text-base px-3 py-1">
+                {details.status}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-slate-500 flex items-center gap-2">
+                  <Calendar className="h-4 w-4" /> Start Date
                 </p>
-                <div className={`flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-lg px-4 ${statusStyle.bg}`}>
-                  <p className={`text-sm font-medium leading-normal uppercase ${statusStyle.text}`}>
-                    {request.status}
-                  </p>
-                </div>
+                <p className="text-slate-900 font-medium">
+                  {new Date(details.startDate).toLocaleDateString()}
+                  {details.isHalfDayStart && " (Half Day)"}
+                </p>
               </div>
-              <button 
-                onClick={onBack}
-                className="text-gray-500 hover:text-gray-800 transition-colors"
-              >
-                <X className="h-6 w-6" />
-              </button>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-slate-500 flex items-center gap-2">
+                  <Calendar className="h-4 w-4" /> End Date
+                </p>
+                <p className="text-slate-900 font-medium">
+                  {new Date(details.endDate).toLocaleDateString()}
+                  {details.isHalfDayEnd && " (Half Day)"}
+                </p>
+              </div>
             </div>
 
-            {/* --- BODY --- */}
-            <div className="p-4 sm:p-6">
-              <h2 className="pb-3 text-xl font-bold tracking-[-0.015em] text-[#111418]">
-                Request Details
-              </h2>
-              
-              {/* Grid thông tin */}
-              <div className="grid grid-cols-1 gap-x-6 p-4 sm:grid-cols-[1fr_2fr]">
-                
-                {/* Leave Type */}
-                <div className="col-span-1 grid grid-cols-subgrid border-t border-[#dbe0e6] py-4 sm:col-span-2">
-                  <p className="text-sm font-normal leading-normal text-[#617589]">Leave Type</p>
-                  <p className="text-sm font-normal leading-normal text-[#111418]">{request.leaveType}</p>
-                </div>
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-slate-500 flex items-center gap-2">
+                <Clock className="h-4 w-4" /> Total Duration
+              </p>
+              <p className="text-slate-900 font-medium">{details.totalDays} Days</p>
+            </div>
 
-                {/* Dates */}
-                <div className="col-span-1 grid grid-cols-subgrid border-t border-[#dbe0e6] py-4 sm:col-span-2">
-                  <p className="text-sm font-normal leading-normal text-[#617589]">Dates</p>
-                  <p className="text-sm font-normal leading-normal text-[#111418]">
-                    {new Date(request.startDate).toLocaleDateString()} - {new Date(request.endDate).toLocaleDateString()}
-                  </p>
-                </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-slate-500 flex items-center gap-2">
+                <FileText className="h-4 w-4" /> Reason
+              </p>
+              <div className="bg-slate-50 p-4 rounded-md text-slate-700 text-sm">
+                {details.reason || "No reason provided."}
+              </div>
+            </div>
 
-                {/* Half-day Info (Hardcoded demo) */}
-                <div className="col-span-1 grid grid-cols-subgrid border-t border-[#dbe0e6] py-4 sm:col-span-2">
-                  <p className="text-sm font-normal leading-normal text-[#617589]">Half-day Info</p>
-                  <p className="text-sm font-normal leading-normal text-[#111418]">Not applicable</p>
-                </div>
-
-                {/* Total Days */}
-                <div className="col-span-1 grid grid-cols-subgrid border-t border-[#dbe0e6] py-4 sm:col-span-2">
-                  <p className="text-sm font-normal leading-normal text-[#617589]">Total Days</p>
-                  <p className="text-sm font-normal leading-normal text-[#111418]">{request.totalDays}</p>
-                </div>
-
-                {/* Reason (Hardcoded demo) */}
-                <div className="col-span-1 grid grid-cols-subgrid border-t border-[#dbe0e6] py-4 sm:col-span-2">
-                  <p className="text-sm font-normal leading-normal text-[#617589]">Reason</p>
-                  <p className="text-sm font-normal leading-normal text-[#111418]">Family vacation to the beach.</p>
-                </div>
-
-                {/* Attachments */}
-                <div className="col-span-1 grid grid-cols-subgrid border-y border-[#dbe0e6] py-4 sm:col-span-2">
-                  <p className="pt-2 self-start text-sm font-normal leading-normal text-[#617589]">Attachments</p>
-                  <div>
-                    <div className="flex min-h-14 items-center justify-between gap-4">
-                      <div className="flex items-center gap-4">
-                        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[#f0f2f4] text-[#111418]">
-                          <FileText className="h-6 w-6" />
+            {/* Attachments */}
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-slate-500">Attachments</p>
+              {details.attachments && details.attachments.length > 0 ? (
+                <div className="space-y-4">
+                  {/* Image Grid */}
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                    {details.attachments.filter((path: string) => /\.(jpg|jpeg|png|gif|webp)$/i.test(path)).map((path: string, index: number) => {
+                      const fileName = path.split('/').pop();
+                      return (
+                        <div
+                          key={index}
+                          className="group relative aspect-square cursor-pointer overflow-hidden rounded-lg border border-slate-200 bg-slate-100"
+                          onClick={() => setSelectedImage(`${API_BASE}/${path}`)}
+                        >
+                          <img
+                            src={`${API_BASE}/${path}`}
+                            alt={fileName}
+                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
+                            <Eye className="h-6 w-6 text-white opacity-0 transition-opacity group-hover:opacity-100" />
+                          </div>
                         </div>
-                        <p className="flex-1 truncate text-base font-normal leading-normal text-[#111418]">
-                          Flight_Confirmation.pdf
-                        </p>
-                      </div>
-                      <div className="shrink-0">
-                        <button className="text-base font-medium leading-normal text-[#137fec] hover:underline">
-                          View
-                        </button>
-                      </div>
-                    </div>
+                      );
+                    })}
                   </div>
-                </div>
-              </div>
 
-              {/* --- ACTIVITY LOG --- */}
-              <h2 className="px-4 pb-3 pt-5 text-xl font-bold tracking-[-0.015em] text-[#111418]">
-                Activity Log
-              </h2>
-              <div className="flex flex-col gap-4 p-4">
-                
-                {/* Log Item 1 */}
-                <div className="flex gap-4">
-                  <div className="flex flex-col items-center">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#137fec]/20">
-                      <Check className="h-5 w-5 text-[#137fec]" />
-                    </div>
-                    <div className="h-full w-px bg-gray-300"></div>
-                  </div>
-                  <div className="pb-8">
-                    <p className="font-medium text-[#111418]">Approved by {request.approver} (Manager)</p>
-                    <p className="text-sm text-[#617589]">23/07/2024 at 09:15 AM</p>
-                    <p className="mt-2 rounded-lg bg-[#f6f7f8] p-3 text-sm text-[#111418]">
-                      Have a great time!
-                    </p>
-                  </div>
+                  {/* File List (Non-images or all files) */}
+                  <ul className="space-y-2">
+                    {details.attachments.map((path: string, index: number) => {
+                      const fileName = path.split('/').pop();
+                      const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(path);
+                      return (
+                        <li key={index} className="flex items-center gap-2 text-sm">
+                          <a
+                            href={`${API_BASE}/${path}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline flex items-center gap-1"
+                          >
+                            {isImage ? <FileImage className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                            {fileName}
+                          </a>
+                        </li>
+                      );
+                    })}
+                  </ul>
                 </div>
-
-                {/* Log Item 2 */}
-                <div className="flex gap-4">
-                  <div className="flex flex-col items-center">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#137fec]/20">
-                      <Upload className="h-5 w-5 text-[#137fec]" />
-                    </div>
-                    {/* Dòng kẻ cuối cùng thường ẩn hoặc để mờ nếu là item cuối */}
-                    <div className="h-full w-px bg-transparent"></div> 
-                  </div>
-                  <div className="pb-8">
-                    <p className="font-medium text-[#111418]">Submitted by You</p>
-                    <p className="text-sm text-[#617589]">
-                      {new Date(request.submittedDate).toLocaleDateString()} at 02:30 PM
-                    </p>
-                  </div>
-                </div>
-
-              </div>
+              ) : (
+                <p className="text-sm text-slate-400 italic">No attachments</p>
+              )}
             </div>
+          </CardContent>
+        </Card>
 
+        {/* Sidebar Info */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Timeline</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="relative pl-4 border-l-2 border-slate-200 pb-4">
+                <div className="absolute -left-[5px] top-0 h-2.5 w-2.5 rounded-full bg-blue-500" />
+                <p className="text-sm font-medium text-slate-900">Request Submitted</p>
+                <p className="text-xs text-slate-500">
+                  {new Date(details.requestedDate).toLocaleString()}
+                </p>
+              </div>
+              {/* Add more timeline items here based on history if available */}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Image Modal */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div className="relative max-h-[90vh] max-w-[90vw] overflow-hidden rounded-lg shadow-2xl">
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute right-2 top-2 z-10 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <img
+              src={selectedImage}
+              alt="Preview"
+              className="max-h-[90vh] max-w-[90vw] object-contain"
+            />
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

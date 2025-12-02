@@ -6,6 +6,7 @@ interface AuthContextType {
   role: string | null;
   email: string | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
   setAuth: (data: { token: string; role: string; email: string }) => void;
   logout: () => void;
 }
@@ -16,21 +17,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Lấy token/role/email từ localStorage khi load lại trang
     const t = localStorage.getItem("token");
     const r = localStorage.getItem("role");
     const e = localStorage.getItem("email");
-    if (t && r && e) {
+
+    // Only require token to stay logged in (role and email are optional)
+    if (t) {
       setToken(t);
-      setRole(r);
-      setEmail(e);
-    } else {
-      setToken(null);
-      setRole(null);
-      setEmail(null);
+      setRole(r || null);
+      setEmail(e || null);
     }
+
+    setIsLoading(false); // Done checking localStorage
   }, []);
 
   const setAuth = ({ token, role, email }: { token: string; role: string; email: string }) => {
@@ -54,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ token, role, email, isAuthenticated: !!token, setAuth, logout }}>
+    <AuthContext.Provider value={{ token, role, email, isAuthenticated: !!token, isLoading, setAuth, logout }}>
       {children}
     </AuthContext.Provider>
   );

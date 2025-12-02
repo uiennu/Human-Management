@@ -1,3 +1,4 @@
+import Link from "next/link"; // Import thêm cái này để chuyển trang
 import RequireAuth from "@/components/require-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -5,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Mail, Phone, MapPin, Calendar, Briefcase, Edit } from "lucide-react";
 
+// Dữ liệu giả (Mock Data) - Giữ nguyên như cũ để hiển thị cho đẹp
 const employeeProfile = {
   name: "John Doe",
   email: "john.doe@company.com",
@@ -28,10 +30,15 @@ export default function ProfilePage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold text-slate-900">My Profile</h1>
-          <Button variant="outline">
-            <Edit className="mr-2 h-4 w-4" />
-            Edit Profile
-          </Button>
+          
+          {/* --- ĐÃ SỬA CHỖ NÀY: Bọc nút Edit trong thẻ Link --- */}
+          <Link href="/profile/edit">
+            <Button variant="outline">
+              <Edit className="mr-2 h-4 w-4" />
+              Edit Profile
+            </Button>
+          </Link>
+          {/* -------------------------------------------------- */}
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
