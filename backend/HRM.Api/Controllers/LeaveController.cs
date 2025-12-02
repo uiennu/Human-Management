@@ -1,6 +1,7 @@
 using HRM.Api.DTOs;
 using HRM.Api.Services;
 using Microsoft.AspNetCore.Mvc;
+using HRM.Api.Constants;
 
 namespace HRM.Api.Controllers
 {
@@ -8,46 +9,46 @@ namespace HRM.Api.Controllers
     [Route("api/[controller]")]
     public class LeaveController : ControllerBase
     {
+        private readonly ICurrentUserService _currentUserService;
         private readonly ILeaveBalanceService _leaveBalanceService;
         private readonly ILeaveRequestService _leaveRequestService;
         private readonly IWorkHandoverService _workHandoverService;
 
         public LeaveController(
+            ICurrentUserService currentUserService,
             ILeaveBalanceService leaveBalanceService,
             ILeaveRequestService leaveRequestService,
             IWorkHandoverService workHandoverService)
         {
+            _currentUserService = currentUserService;
             _leaveBalanceService = leaveBalanceService;
             _leaveRequestService = leaveRequestService;
             _workHandoverService = workHandoverService;
         }
 
-        /// <summary>
-        /// Extract current employee ID from JWT claims
-        /// </summary>
-        private int GetCurrentEmployeeId()
-        {
-            var employeeIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)
-                                  ?? User.FindFirst("EmployeeID");
-            
-            if (employeeIdClaim == null || !int.TryParse(employeeIdClaim.Value, out int employeeId))
-            {
-                return 0; // Not authenticated
-            }
 
-            return employeeId;
+
+        /// <summary>
+        /// Get all leave types
+        /// GET: /api/leave/types
+        /// </summary>
+        [HttpGet("types")]
+        public async Task<ActionResult<List<LeaveTypeDto>>> GetLeaveTypes()
+        {
+            var types = await _leaveRequestService.GetLeaveTypesAsync();
+            return Ok(types);
         }
 
         /// <summary>
-        /// Get current employee's leave balance
-        /// GET: /api/leave/leave-balances/me
+        /// Get employee's leave balance
+        /// GET: /api/leave/balances/{employeeId}
         /// </summary>
-        [HttpGet("leave-balances/me")]
-        public async Task<ActionResult<LeaveBalanceResponseDto>> GetMyLeaveBalance()
+        [HttpGet("balances/{employeeId}")]
+        public async Task<ActionResult<LeaveBalanceResponseDto>> GetMyLeaveBalance(int employeeId)
         {
-            int employeeId = GetCurrentEmployeeId();
-            if (employeeId == 0)
-                return Unauthorized(new { message = "Employee not authenticated" });
+            // Use the provided employeeId directly (for querying other employees' balances)
+            if (employeeId <= 0)
+                return BadRequest("Invalid employee ID");
 
             var result = await _leaveBalanceService.GetMyLeaveBalanceAsync(employeeId);
             if (result == null)
@@ -60,13 +61,15 @@ namespace HRM.Api.Controllers
 
         /// <summary>
         /// Create a new leave request
-        /// POST: /api/leave/leave-requests
+        /// POST: /api/leave/request
         /// </summary>
-        [HttpPost("leave-requests")]
-        public async Task<ActionResult<LeaveRequestResponseDto>> CreateLeaveRequest([FromBody] CreateLeaveRequestDto dto)
+        [HttpPost("request")]
+        public async Task<ActionResult<LeaveRequestResponseDto>> CreateLeaveRequest(
+            [FromForm] CreateLeaveRequestDto dto,
+            [FromQuery] int? employeeId = null) // For development - remove when auth is implemented
         {
-            int employeeId = GetCurrentEmployeeId();
-            if (employeeId == 0)
+            var id = employeeId ?? _currentUserService.GetCurrentEmployeeId();
+            if (id == 0)
                 return Unauthorized(new { message = "Employee not authenticated" });
 
             if (!ModelState.IsValid)
@@ -74,35 +77,39 @@ namespace HRM.Api.Controllers
                 return BadRequest(ModelState);
             }
 
-            var result = await _leaveRequestService.CreateLeaveRequestAsync(employeeId, dto);
+            var result = await _leaveRequestService.CreateLeaveRequestAsync(id, dto);
             if (result.Status == "Error")
             {
                 return BadRequest(result);
             }
 
-            return Created($"/api/leave/leave-requests/{result.LeaveRequestID}", result);
+            return Created($"/api/leave/request/{result.LeaveRequestID}", result);
         }
 
         /// <summary>
         /// Get paginated list of leave requests
-        /// GET: /api/leave/leave-requests?page=1&size=10&status=Pending
+        /// GET: /api/leave/requests
         /// </summary>
-        [HttpGet("leave-requests")]
+        [HttpGet("requests")]
         public async Task<ActionResult<PagedResultDto<LeaveRequestListItemDto>>> GetLeaveRequests(
             [FromQuery] int page = 1,
-            [FromQuery] int size = 10,
-            [FromQuery] string? status = null)
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? status = null,
+            [FromQuery] string? dateRange = null,
+            [FromQuery] int? leaveTypeId = null,
+            [FromQuery] int? employeeId = null) // For development - remove when auth is implemented
         {
-            int employeeId = GetCurrentEmployeeId();
-            if (employeeId == 0)
+            // Use provided employeeId for development, otherwise get from auth
+            var id = employeeId ?? _currentUserService.GetCurrentEmployeeId();
+            if (id == 0)
                 return Unauthorized(new { message = "Employee not authenticated" });
 
-            if (page < 1 || size < 1)
+            if (page < 1 || pageSize < 1)
             {
                 return BadRequest("Page and size must be greater than 0");
             }
 
-            var result = await _leaveRequestService.GetLeaveRequestsAsync(employeeId, status, page, size);
+            var result = await _leaveRequestService.GetLeaveRequestsAsync(id, status, dateRange, leaveTypeId, page, pageSize);
             return Ok(result);
         }
 
@@ -129,7 +136,7 @@ namespace HRM.Api.Controllers
         [HttpPut("leave-requests/{id}/cancel")]
         public async Task<ActionResult> CancelLeaveRequest(int id)
         {
-            int employeeId = GetCurrentEmployeeId();
+            var employeeId = _currentUserService.GetCurrentEmployeeId();
             if (employeeId == 0)
                 return Unauthorized(new { message = "Employee not authenticated" });
 
@@ -144,7 +151,7 @@ namespace HRM.Api.Controllers
                 success = true,
                 message,
                 leaveRequestId = id,
-                newStatus = "Cancelled"
+                newStatus = LeaveStatus.Cancelled
             });
         }
 
@@ -162,7 +169,7 @@ namespace HRM.Api.Controllers
                 return BadRequest(ModelState);
             }
 
-            int managerId = GetCurrentEmployeeId();
+            var managerId = _currentUserService.GetCurrentEmployeeId();
             if (managerId == 0)
                 return Unauthorized(new { message = "Employee not authenticated" });
 
@@ -195,7 +202,7 @@ namespace HRM.Api.Controllers
         [HttpGet("my-handovers")]
         public async Task<ActionResult<List<WorkHandoverDto>>> GetMyHandovers()
         {
-            int employeeId = GetCurrentEmployeeId();
+            var employeeId = _currentUserService.GetCurrentEmployeeId();
             if (employeeId == 0)
                 return Unauthorized(new { message = "Employee not authenticated" });
 
@@ -226,7 +233,7 @@ namespace HRM.Api.Controllers
         [HttpDelete("work-handovers/{id}")]
         public async Task<ActionResult> DeleteWorkHandover(int id)
         {
-            int managerId = GetCurrentEmployeeId();
+            var managerId = _currentUserService.GetCurrentEmployeeId();
             if (managerId == 0)
                 return Unauthorized(new { message = "Employee not authenticated" });
 

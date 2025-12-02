@@ -1,28 +1,45 @@
 using HRM.Api.DTOs;
 using HRM.Api.Models;
 using HRM.Api.Repositories;
+using HRM.Api.Constants;
 
 namespace HRM.Api.Services
 {
     public interface ILeaveRequestService
     {
         Task<LeaveRequestResponseDto> CreateLeaveRequestAsync(int employeeId, CreateLeaveRequestDto dto);
-        Task<PagedResultDto<LeaveRequestListItemDto>> GetLeaveRequestsAsync(int employeeId, string? status, int page, int pageSize);
+        Task<PagedResultDto<LeaveRequestListItemDto>> GetLeaveRequestsAsync(int employeeId, string? status, string? dateRange, int? leaveTypeId, int page, int pageSize);
         Task<LeaveRequestDetailDto?> GetLeaveRequestDetailAsync(int requestId);
         Task<(bool success, string message)> CancelLeaveRequestAsync(int requestId, int employeeId);
+        Task<List<LeaveTypeDto>> GetLeaveTypesAsync();
     }
 
     public class LeaveRequestService : ILeaveRequestService
     {
         private readonly ILeaveRequestRepository _leaveRequestRepository;
         private readonly ILeaveBalanceRepository _leaveBalanceRepository;
+        private readonly IFileStorageService _fileStorageService;
 
         public LeaveRequestService(
             ILeaveRequestRepository leaveRequestRepository,
-            ILeaveBalanceRepository leaveBalanceRepository)
+            ILeaveBalanceRepository leaveBalanceRepository,
+            IFileStorageService fileStorageService)
         {
             _leaveRequestRepository = leaveRequestRepository;
             _leaveBalanceRepository = leaveBalanceRepository;
+            _fileStorageService = fileStorageService;
+        }
+
+        public async Task<List<LeaveTypeDto>> GetLeaveTypesAsync()
+        {
+            var types = await _leaveRequestRepository.GetLeaveTypesAsync();
+            return types.Select(t => new LeaveTypeDto
+            {
+                LeaveTypeID = t.LeaveTypeID,
+                Name = t.Name,
+                Description = t.Description,
+                DefaultQuota = t.DefaultQuota
+            }).ToList();
         }
 
         public async Task<LeaveRequestResponseDto> CreateLeaveRequestAsync(int employeeId, CreateLeaveRequestDto dto)
@@ -48,29 +65,42 @@ namespace HRM.Api.Services
                 IsHalfDayEnd = dto.IsHalfDayEnd,
                 TotalDays = dto.TotalDays,
                 Reason = dto.Reason,
-                AttachmentPath = dto.AttachmentPath,
-                Status = "Pending",
+                Status = LeaveStatus.Pending,
                 RequestedDate = DateTime.Now
             };
 
+            // 1. Save request first to get ID
             await _leaveRequestRepository.AddAsync(leaveRequest);
             await _leaveRequestRepository.SaveAsync();
+
+            // 2. Handle file uploads if any
+            if (dto.Attachments != null && dto.Attachments.Any())
+            {
+                var folderPath = $"uploads/leave/{employeeId}/{leaveRequest.LeaveRequestID}";
+                var savedPath = await _fileStorageService.SaveFilesAsync(dto.Attachments, folderPath);
+                
+                // 3. Update request with folder path
+                leaveRequest.AttachmentPath = savedPath;
+                await _leaveRequestRepository.UpdateAsync(leaveRequest);
+                await _leaveRequestRepository.SaveAsync();
+            }
 
             return new LeaveRequestResponseDto
             {
                 LeaveRequestID = leaveRequest.LeaveRequestID,
-                Status = "Pending",
+                Status = LeaveStatus.Pending,
                 Message = "Leave request created successfully"
             };
         }
 
-        public async Task<PagedResultDto<LeaveRequestListItemDto>> GetLeaveRequestsAsync(int employeeId, string? status, int page, int pageSize)
+        public async Task<PagedResultDto<LeaveRequestListItemDto>> GetLeaveRequestsAsync(int employeeId, string? status, string? dateRange, int? leaveTypeId, int page, int pageSize)
         {
-            var result = await _leaveRequestRepository.GetPagedAsync(employeeId, status, page, pageSize);
+            var result = await _leaveRequestRepository.GetPagedAsync(employeeId, status, dateRange, leaveTypeId, page, pageSize);
 
             var data = result.Items.Select(r => new LeaveRequestListItemDto
             {
                 LeaveRequestID = r.LeaveRequestID,
+                LeaveTypeID = r.LeaveTypeID,
                 LeaveTypeName = r.LeaveType?.Name ?? "Unknown",
                 StartDate = r.StartDate,
                 EndDate = r.EndDate,
@@ -96,13 +126,13 @@ namespace HRM.Api.Services
                 return null;
             }
 
-            return new LeaveRequestDetailDto
+            var detailDto = new LeaveRequestDetailDto
             {
                 LeaveRequestID = leaveRequest.LeaveRequestID,
                 EmployeeID = leaveRequest.EmployeeID,
                 LeaveType = new LeaveTypeDto
                 {
-                    ID = leaveRequest.LeaveType?.LeaveTypeID ?? 0,
+                    LeaveTypeID = leaveRequest.LeaveType?.LeaveTypeID ?? 0,
                     Name = leaveRequest.LeaveType?.Name ?? "Unknown"
                 },
                 StartDate = leaveRequest.StartDate,
@@ -111,10 +141,16 @@ namespace HRM.Api.Services
                 IsHalfDayEnd = leaveRequest.IsHalfDayEnd,
                 TotalDays = leaveRequest.TotalDays,
                 Reason = leaveRequest.Reason,
-                AttachmentPath = leaveRequest.AttachmentPath,
                 Status = leaveRequest.Status,
                 RequestedDate = leaveRequest.RequestedDate
             };
+
+            if (!string.IsNullOrEmpty(leaveRequest.AttachmentPath))
+            {
+                detailDto.Attachments = _fileStorageService.GetFiles(leaveRequest.AttachmentPath);
+            }
+
+            return detailDto;
         }
 
         public async Task<(bool success, string message)> CancelLeaveRequestAsync(int requestId, int employeeId)
@@ -130,17 +166,17 @@ namespace HRM.Api.Services
                 return (false, "Unauthorized");
             }
 
-            if (leaveRequest.Status != "Pending" && leaveRequest.Status != "Approved")
+            if (leaveRequest.Status != LeaveStatus.Pending && leaveRequest.Status != LeaveStatus.Approved)
             {
                 return (false, $"Cannot cancel a {leaveRequest.Status} request");
             }
 
-            if (leaveRequest.Status == "Approved" && leaveRequest.StartDate <= DateTime.Now.Date)
+            if (leaveRequest.Status == LeaveStatus.Approved && leaveRequest.StartDate <= DateTime.Now.Date)
             {
                 return (false, "Cannot cancel leave that has already started");
             }
 
-            leaveRequest.Status = "Cancelled";
+            leaveRequest.Status = LeaveStatus.Cancelled;
             await _leaveRequestRepository.UpdateAsync(leaveRequest);
             await _leaveRequestRepository.SaveAsync();
 

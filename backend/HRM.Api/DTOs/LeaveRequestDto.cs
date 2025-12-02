@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Http;
+
 namespace HRM.Api.DTOs
 {
     public class CreateLeaveRequestDto
@@ -9,17 +11,18 @@ namespace HRM.Api.DTOs
         public bool IsHalfDayEnd { get; set; }
         public decimal TotalDays { get; set; }
         public string? Reason { get; set; }
-        public string? AttachmentPath { get; set; }
+        public List<IFormFile>? Attachments { get; set; }
     }
 
     public class LeaveRequestListItemDto
     {
         public int LeaveRequestID { get; set; }
-        public string LeaveTypeName { get; set; }
+        public int LeaveTypeID { get; set; }
+        public string LeaveTypeName { get; set; } = string.Empty;
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public decimal TotalDays { get; set; }
-        public string Status { get; set; }
+        public string Status { get; set; } = string.Empty;
         public DateTime RequestedDate { get; set; }
     }
 
@@ -34,7 +37,7 @@ namespace HRM.Api.DTOs
         public bool IsHalfDayEnd { get; set; }
         public decimal TotalDays { get; set; }
         public string? Reason { get; set; }
-        public string? AttachmentPath { get; set; }
+        public List<string>? Attachments { get; set; }
         public string Status { get; set; }
         public DateTime RequestedDate { get; set; }
         public ApprovalInfoDto? ApprovalInfo { get; set; }
@@ -42,13 +45,15 @@ namespace HRM.Api.DTOs
 
     public class LeaveTypeDto
     {
-        public int ID { get; set; }
-        public string Name { get; set; }
+        public int LeaveTypeID { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public decimal DefaultQuota { get; set; }
     }
 
     public class ApprovalInfoDto
     {
-        public string ApproverName { get; set; }
+        public string ApproverName { get; set; } = string.Empty;
         public DateTime ActionDate { get; set; }
         public string? Note { get; set; }
     }
@@ -56,8 +61,8 @@ namespace HRM.Api.DTOs
     public class LeaveRequestResponseDto
     {
         public int LeaveRequestID { get; set; }
-        public string Status { get; set; }
-        public string Message { get; set; }
+        public string? Status { get; set; }
+        public string? Message { get; set; }
     }
 
     public class PagedResultDto<T>

@@ -1,3 +1,5 @@
+using HRM.Api.Constants;
+
 namespace HRM.Api.Models
 {
     public class LeaveRequest
@@ -11,7 +13,7 @@ namespace HRM.Api.Models
         public bool IsHalfDayEnd { get; set; }
         public decimal TotalDays { get; set; }
         public string? Reason { get; set; }
-        public string Status { get; set; } = "Pending"; // Pending, Approved, Rejected, Cancelled, Draft
+        public string Status { get; set; } = LeaveStatus.Pending;
         public DateTime RequestedDate { get; set; } = DateTime.Now;
         public string? AttachmentPath { get; set; }
 

@@ -319,3 +319,37 @@ INSERT INTO EmployeeRoles (EmployeeID, RoleID) VALUES
 (2, 1),
 (3, 1);
 
+
+-- =================================================================
+-- INSERT LEAVE TYPES
+-- =================================================================
+INSERT INTO LeaveTypes (Name, Description, DefaultQuota, Applicability) VALUES 
+('Annual Leave', 'Paid time off for leisure or personal reasons', 12.00, 'All Employees'),
+('Sick Leave', 'Paid time off for medical reasons', 10.00, 'All Employees'),
+('Unpaid Leave', 'Time off without pay', 0.00, 'All Employees');
+
+-- =================================================================
+-- INSERT LEAVE BALANCES (For John Doe - EmployeeID 2)
+-- =================================================================
+-- Assuming LeaveTypeIDs: 1=Annual, 2=Sick, 3=Unpaid
+INSERT INTO EmployeeLeaveBalances (EmployeeID, LeaveTypeID, BalanceDays) VALUES 
+(2, 1, 12.00), -- Annual
+(2, 2, 10.00), -- Sick
+(2, 3, 0.00);  -- Unpaid
+
+-- =================================================================
+-- INSERT LEAVE BALANCES (For Jane Smith - EmployeeID 3)
+-- =================================================================
+INSERT INTO EmployeeLeaveBalances (EmployeeID, LeaveTypeID, BalanceDays) VALUES 
+(2, 1, 12.00),
+(2, 2, 10.00),
+(2, 3, 0.00);
+
+-- =================================================================
+-- INSERT LEAVE REQUESTS (For John Doe - EmployeeID 2)
+-- =================================================================
+INSERT INTO LeaveRequests (EmployeeID, LeaveTypeID, StartDate, EndDate, TotalDays, Reason, Status, RequestedDate) VALUES 
+(2, 1, DATE_SUB(NOW(), INTERVAL 1 MONTH), DATE_SUB(NOW(), INTERVAL 1 MONTH), 1.00, 'Personal errand', 'Approved', DATE_SUB(NOW(), INTERVAL 35 DAY)),
+(2, 2, DATE_SUB(NOW(), INTERVAL 10 DAY), DATE_SUB(NOW(), INTERVAL 9 DAY), 2.00, 'Flu', 'Approved', DATE_SUB(NOW(), INTERVAL 12 DAY)),
+(2, 1, DATE_ADD(NOW(), INTERVAL 5 DAY), DATE_ADD(NOW(), INTERVAL 7 DAY), 3.00, 'Family vacation', 'Pending', NOW());
+
