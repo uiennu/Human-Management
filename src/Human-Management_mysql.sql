@@ -442,4 +442,3 @@ INSERT INTO PointTransactions (EmployeeID, TransactionType, Amount, Description,
 INSERT INTO RedemptionRequests (EmployeeID, PointsToRedeem, CashValue, ConversionRate, Status) VALUES 
 (3, 50.00, 500000, 10000, 'Processing');
 >>>>>>> Stashed changes
-
