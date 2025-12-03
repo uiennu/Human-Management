@@ -287,60 +287,170 @@ CREATE TABLE RedemptionRequests (
     CONSTRAINT FK_Redemption_Approver FOREIGN KEY (ApproverID) REFERENCES Employees(EmployeeID)
 );
 
--- =================================================================
--- INSERT INITIAL DATA
--- =================================================================
 INSERT INTO Roles (RoleName) VALUES 
-('Employee'),
-('Manager'),
-('HR'),
-('C&B');
+('Employee'), -- ID 1
+('Manager'),  -- ID 2
+('HR'),       -- ID 3
+('C&B'),      -- ID 4
+('Admin');    -- ID 5 (Thêm dòng này cho đủ 5 dòng như yêu cầu)
 
--- =================================================================
--- INSERT SAMPLE DATA (Departments & Employees)
--- =================================================================
+-- 2. Departments
+INSERT INTO Departments (DepartmentName, DepartmentCode, Description, ManagerID) VALUES 
+('Board of Directors', 'BOD', 'Top management', NULL),
+('Human Resources', 'HR', 'People management', NULL),
+('IT Development', 'IT', 'Tech and Code', NULL),
+('Sales & Marketing', 'SALE', 'Revenue generation', NULL),
+('Finance', 'FIN', 'Money management', NULL);
 
-INSERT INTO Departments (DepartmentName, DepartmentCode, Description) VALUES 
-('Human Resources', 'HR', 'Manages employee lifecycle'),
-('Information Technology', 'IT', 'Manages technical infrastructure'),
-('Sales', 'SALES', 'Handles sales and client relationships');
+-- 3. Employees
+INSERT INTO Employees (FirstName, LastName, Email, PasswordHash, Phone, Address, HireDate, DepartmentID, IsActive, ManagerID, CurrentPoints) VALUES 
+-- Employee 1: Director
+('Alice', 'Nguyen', 'alice@hrm.com', 'hashed_password_here', '0901000001', 'District 1, HCMC', CURDATE(), 1, 1, NULL, 500),
+-- Employee 2: HR Manager (Reports to 1)
+('Bob', 'Tran', 'bob@hrm.com', 'hashed_password_here', '0901000002', 'District 3, HCMC', CURDATE(), 2, 1, 1, 200),
+-- Employee 3: IT Manager (Reports to 1)
+('Charlie', 'Le', 'charlie@hrm.com', 'hashed_password_here', '0901000003', 'Thu Duc, HCMC', CURDATE(), 3, 1, 1, 300),
+-- Employee 4: Dev (Reports to 3)
+('David', 'Pham', 'david@hrm.com', 'hashed_password_here', '0901000004', 'Binh Thanh, HCMC', CURDATE(), 3, 1, 3, 150),
+-- Employee 5: C&B Staff (Reports to 2) - Changed to fit C&B Role
+('Eve', 'Vo', 'eve@hrm.com', 'hashed_password_here', '0901000005', 'District 7, HCMC', CURDATE(), 2, 1, 2, 100);
 
--- Insert Admin/HR Manager
-INSERT INTO Employees (FirstName, LastName, Email, PasswordHash, HireDate, DepartmentID, IsActive) VALUES 
-('Admin', 'User', 'admin@hrm.com', 'hashed_password_here', CURDATE(), 1, 1),
-('John', 'Doe', 'john.doe@hrm.com', 'hashed_password_here', CURDATE(), 2, 1),
-('Jane', 'Smith', 'jane.smith@hrm.com', 'hashed_password_here', CURDATE(), 3, 1);
+-- Update Departments Managers
+UPDATE Departments SET ManagerID = 1 WHERE DepartmentID = 1;
+UPDATE Departments SET ManagerID = 2 WHERE DepartmentID = 2;
+UPDATE Departments SET ManagerID = 3 WHERE DepartmentID = 3;
 
--- Assign Roles
--- Assuming RoleIDs: 1=Employee, 2=Manager, 3=HR, 4=C&B
--- Admin -> HR & Manager
+-- 4. EmployeeRoles (MAPPED LẠI THEO ROLE ID MỚI)
+-- 1=Employee, 2=Manager, 3=HR, 4=C&B
 INSERT INTO EmployeeRoles (EmployeeID, RoleID) VALUES 
-(1, 3), (1, 2),
-(2, 1),
-(3, 1);
+(1, 2), -- Alice (Director) -> Manager
+(2, 3), -- Bob (HR Dept) -> HR
+(3, 2), -- Charlie (IT Dept) -> Manager
+(4, 1), -- David (IT Staff) -> Employee
+(5, 4); -- Eve (HR Dept) -> C&B
 
+-- 5. EmployeeProfileChanges
+INSERT INTO EmployeeProfileChanges (EmployeeID, FieldName, OldValue, NewValue, Status, ApproverID) VALUES 
+(4, 'Address', 'Old Addr', 'New Addr Binh Thanh', 'Approved', 2),
+(5, 'Phone', '0901000005', '0999999999', 'Pending', NULL),
+(3, 'EmergencyContact', 'None', 'Wife', 'Approved', 1),
+(2, 'TaxID', NULL, 'TAX-12345', 'Rejected', 1),
+(4, 'BankAccount', '0001', '0002', 'Pending', NULL);
 
--- =================================================================
--- INSERT LEAVE TYPES
--- =================================================================
+-- 6. LeaveTypes
 INSERT INTO LeaveTypes (Name, Description, DefaultQuota, Applicability) VALUES 
-('Annual Leave', 'Paid time off for leisure or personal reasons', 12.00, 'All Employees'),
-('Sick Leave', 'Paid time off for medical reasons', 10.00, 'All Employees'),
-('Unpaid Leave', 'Time off without pay', 0.00, 'All Employees');
+('Annual Leave', 'Standard vacation', 12, 'All'),
+('Sick Leave', 'Medical reasons', 10, 'All'),
+('Unpaid Leave', 'No salary', 0, 'All'),
+('Maternity Leave', 'For mothers', 180, 'Female'),
+('Remote Work', 'Work from home quota', 5, 'Office Staff');
 
--- =================================================================
--- INSERT LEAVE BALANCES (For John Doe - EmployeeID 2)
--- =================================================================
--- Assuming LeaveTypeIDs: 1=Annual, 2=Sick, 3=Unpaid
+-- 7. EmployeeLeaveBalances
 INSERT INTO EmployeeLeaveBalances (EmployeeID, LeaveTypeID, BalanceDays) VALUES 
-(1, 1, 12.00), -- Annual
-(2, 2, 10.00), -- Sick
-(3, 3, 0.00);  -- Unpaid
+(4, 1, 12.0),
+(4, 2, 10.0),
+(5, 1, 12.0),
+(3, 1, 15.0),
+(2, 1, 15.0);
 
--- =================================================================
--- INSERT LEAVE REQUESTS (For John Doe - EmployeeID 2)
--- =================================================================
-INSERT INTO LeaveRequests (EmployeeID, LeaveTypeID, StartDate, EndDate, TotalDays, Reason, Status, RequestedDate) VALUES 
-(2, 1, DATE_SUB(CURDATE(), INTERVAL 1 MONTH), DATE_SUB(CURDATE(), INTERVAL 1 MONTH), 1.00, 'Personal errand', 'Approved', DATE_SUB(NOW(), INTERVAL 35 DAY)),
-(2, 2, DATE_SUB(CURDATE(), INTERVAL 10 DAY), DATE_SUB(CURDATE(), INTERVAL 9 DAY), 2.00, 'Flu', 'Approved', DATE_SUB(NOW(), INTERVAL 12 DAY)),
-(2, 1, DATE_ADD(CURDATE(), INTERVAL 5 DAY), DATE_ADD(CURDATE(), INTERVAL 7 DAY), 3.00, 'Family vacation', 'Pending', NOW());
+-- 8. LeaveRequests
+INSERT INTO LeaveRequests (EmployeeID, LeaveTypeID, StartDate, EndDate, TotalDays, Reason, Status) VALUES 
+(4, 1, DATE_ADD(CURDATE(), INTERVAL 5 DAY), DATE_ADD(CURDATE(), INTERVAL 6 DAY), 2.0, 'Holiday', 'Pending'),
+(5, 2, DATE_SUB(CURDATE(), INTERVAL 2 DAY), DATE_SUB(CURDATE(), INTERVAL 1 DAY), 2.0, 'Sick', 'Approved'),
+(3, 1, DATE_ADD(CURDATE(), INTERVAL 20 DAY), DATE_ADD(CURDATE(), INTERVAL 25 DAY), 5.0, 'Travel', 'Pending'),
+(2, 3, DATE_ADD(CURDATE(), INTERVAL 1 DAY), DATE_ADD(CURDATE(), INTERVAL 1 DAY), 1.0, 'Personal', 'Approved'),
+(4, 2, DATE_SUB(CURDATE(), INTERVAL 10 DAY), DATE_SUB(CURDATE(), INTERVAL 10 DAY), 1.0, 'Headache', 'Rejected');
+
+-- 9. LeaveRequestHistory
+INSERT INTO LeaveRequestHistory (LeaveRequestID, Status, Notes, ChangedByEmployeeID) VALUES 
+(1, 'Pending', 'Submitted', 4),
+(2, 'Approved', 'Ok get well', 2),
+(3, 'Pending', 'Submitted', 3),
+(4, 'Approved', 'Approved by Director', 1),
+(5, 'Rejected', 'Not enough info', 3);
+
+-- 10. WorkHandovers
+INSERT INTO WorkHandovers (LeaveRequestID, AssigneeEmployeeID, ManagerID, HandoverNotes) VALUES 
+(1, 3, 3, 'Code review tasks'),
+(2, 2, 1, 'Email monitoring'),
+(3, 4, 1, 'Server maintenance'),
+(4, 1, 1, 'Meeting notes'),
+(5, 3, 3, 'Pending tasks');
+
+-- 11. AttendanceLogs
+INSERT INTO AttendanceLogs (EmployeeID, LogTime, LogType, Location) VALUES 
+(4, CONCAT(CURDATE(), ' 08:00:00'), 'CheckIn', 'Office'),
+(4, CONCAT(CURDATE(), ' 17:00:00'), 'CheckOut', 'Office'),
+(5, CONCAT(CURDATE(), ' 08:15:00'), 'CheckIn', 'Site A'),
+(3, CONCAT(CURDATE(), ' 07:55:00'), 'CheckIn', 'Office'),
+(2, CONCAT(CURDATE(), ' 08:05:00'), 'CheckIn', 'Office');
+
+-- 12. TimesheetUpdateRequests
+INSERT INTO TimesheetUpdateRequests (EmployeeID, WorkDate, OldCheckInTime, NewCheckInTime, Reason, Status, ApproverID) VALUES 
+(4, DATE_SUB(CURDATE(), INTERVAL 1 DAY), NULL, '08:00:00', 'Forgot card', 'Approved', 3),
+(5, DATE_SUB(CURDATE(), INTERVAL 1 DAY), '09:00:00', '08:00:00', 'Traffic', 'Pending', NULL),
+(3, DATE_SUB(CURDATE(), INTERVAL 2 DAY), NULL, '17:00:00', 'Forgot out', 'Approved', 1),
+(2, DATE_SUB(CURDATE(), INTERVAL 3 DAY), NULL, '08:00:00', 'System error', 'Rejected', 1),
+(4, DATE_SUB(CURDATE(), INTERVAL 5 DAY), '08:30:00', '08:00:00', 'Late entry', 'Pending', NULL);
+
+-- 13. AttendanceCorrectionRequests
+INSERT INTO AttendanceCorrectionRequests (EmployeeID, WorkDate, RequestType, RequestedTime, Reason, Status) VALUES 
+(4, CURDATE(), 'LateIn', '08:30:00', 'Rain', 'Approved'),
+(5, CURDATE(), 'EarlyOut', '16:00:00', 'Doctor', 'Pending'),
+(3, CURDATE(), 'MissingIn', '08:00:00', 'Forgot', 'Approved'),
+(2, CURDATE(), 'MissingOut', '17:00:00', 'Meeting', 'Rejected'),
+(4, CURDATE(), 'LateIn', '09:00:00', 'Overslept', 'Pending');
+
+-- 14. WFHRequests
+INSERT INTO WFHRequests (EmployeeID, StartDate, EndDate, Reason, WorkPlan, Status, ApproverID) VALUES 
+(4, DATE_ADD(CURDATE(), INTERVAL 1 DAY), DATE_ADD(CURDATE(), INTERVAL 1 DAY), 'Plumber', 'Coding Module X', 'Approved', 3),
+(3, DATE_ADD(CURDATE(), INTERVAL 2 DAY), DATE_ADD(CURDATE(), INTERVAL 3 DAY), 'Sick child', 'Emails', 'Pending', NULL),
+(2, DATE_ADD(CURDATE(), INTERVAL 5 DAY), DATE_ADD(CURDATE(), INTERVAL 5 DAY), 'Focus', 'Strategy', 'Approved', 1),
+(5, DATE_ADD(CURDATE(), INTERVAL 10 DAY), DATE_ADD(CURDATE(), INTERVAL 10 DAY), 'Trip', 'Calls', 'Rejected', 1),
+(4, DATE_ADD(CURDATE(), INTERVAL 7 DAY), DATE_ADD(CURDATE(), INTERVAL 7 DAY), 'Rain', 'Fix bugs', 'Draft', NULL);
+
+-- 15. Campaigns
+INSERT INTO Campaigns (CampaignName, ShortDescription, StartDate, EndDate, TargetAudienceType, CreatedByEmployeeID) VALUES 
+('Summer Trip', 'Beach Party', DATE_ADD(NOW(), INTERVAL 1 MONTH), DATE_ADD(NOW(), INTERVAL 35 DAY), 'All', 2),
+('Code Hackathon', 'Best Coder', DATE_ADD(NOW(), INTERVAL 10 DAY), DATE_ADD(NOW(), INTERVAL 12 DAY), 'Specific', 3),
+('Charity Run', 'Run for Heart', DATE_ADD(NOW(), INTERVAL 2 MONTH), DATE_ADD(NOW(), INTERVAL 65 DAY), 'All', 2),
+('Sales Push', 'Q4 Targets', DATE_ADD(NOW(), INTERVAL 5 DAY), DATE_ADD(NOW(), INTERVAL 20 DAY), 'Specific', 5),
+('Health Check', 'Annual Checkup', DATE_ADD(NOW(), INTERVAL 3 MONTH), DATE_ADD(NOW(), INTERVAL 3 MONTH), 'All', 2);
+
+-- 16. CampaignTargetDepartments
+INSERT INTO CampaignTargetDepartments (CampaignID, DepartmentID) VALUES 
+(1, 1), (1, 2), (1, 3), -- Summer Trip for everyone
+(2, 3), -- Hackathon for IT
+(4, 4); -- Sales Push for Sales
+
+-- 17. CampaignParticipants
+INSERT INTO CampaignParticipants (CampaignID, EmployeeID, Status) VALUES 
+(1, 3, 'Registered'),
+(1, 4, 'Registered'),
+(1, 5, 'Registered'),
+(2, 4, 'Winner'),
+(4, 5, 'Registered');
+
+-- 18. CampaignResults
+INSERT INTO CampaignResults (ParticipantID, AchievementMetric, AchievementValue) VALUES 
+(1, 'Attendance', 1.0),
+(2, 'Attendance', 1.0),
+(3, 'Attendance', 1.0),
+(4, 'Score', 95.5),
+(5, 'Revenue', 5000.00);
+
+-- 19. PointTransactions
+INSERT INTO PointTransactions (EmployeeID, TransactionType, Amount, Description, GiverEmployeeID) VALUES 
+(4, 'Earned', 50, 'Project Completion', 3),
+(5, 'Earned', 100, 'Sales Target', 1),
+(3, 'Earned', 20, 'Helping others', 2),
+(4, 'Redeemed', -10, 'Bought Mug', NULL),
+(2, 'Earned', 200, 'Yearly Bonus', 1);
+
+-- 20. RedemptionRequests
+INSERT INTO RedemptionRequests (EmployeeID, PointsToRedeem, CashValue, ConversionRate, Status) VALUES 
+(4, 10, 10, 1.0, 'Completed'),
+(5, 50, 50, 1.0, 'Processing'),
+(3, 100, 100, 1.0, 'Pending'),
+(2, 20, 20, 1.0, 'Rejected'),
+(4, 5, 5, 1.0, 'Processing');
