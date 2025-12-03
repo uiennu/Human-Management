@@ -1,5 +1,8 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace HRM.Api.Models
 {
+    [Table("LeaveRequestHistory")]
     public class LeaveRequestHistory
     {
         public int HistoryID { get; set; }

@@ -6,6 +6,7 @@ namespace HRM.Api.Models
     {
         public int LeaveRequestID { get; set; }
         public int EmployeeID { get; set; }
+        public int ManagerID { get; set; }
         public int LeaveTypeID { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
@@ -19,6 +20,7 @@ namespace HRM.Api.Models
 
         // Navigation
         public virtual Employee? Employee { get; set; }
+        public virtual Employee? Manager { get; set; }
         public virtual LeaveType? LeaveType { get; set; }
         public virtual ICollection<LeaveRequestHistory> Histories { get; set; }
     }

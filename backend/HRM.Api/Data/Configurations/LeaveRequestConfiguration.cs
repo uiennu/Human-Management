@@ -15,8 +15,14 @@ namespace HRM.Api.Data.Configurations
                 .HasForeignKey(lr => lr.LeaveTypeID);
 
             builder.HasOne(lr => lr.Employee)
+                .WithMany(e => e.LeaveRequests)
+                .HasForeignKey(lr => lr.EmployeeID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasOne(lr => lr.Manager)
                 .WithMany()
-                .HasForeignKey(lr => lr.EmployeeID);
+                .HasForeignKey(lr => lr.ManagerID)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

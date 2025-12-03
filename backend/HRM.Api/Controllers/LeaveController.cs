@@ -40,6 +40,26 @@ namespace HRM.Api.Controllers
         }
 
         /// <summary>
+        /// Get primary approver (manager) for the current or specified employee
+        /// GET: /api/leave/primary-approver
+        /// </summary>
+        [HttpGet("primary-approver")]
+        public async Task<ActionResult> GetPrimaryApprover([FromQuery] int? employeeId = null)
+        {
+            var id = employeeId ?? _currentUserService.GetCurrentEmployeeId();
+            if (id == 0)
+                return Unauthorized(new { message = "Employee not authenticated" });
+
+            var name = await _leaveRequestService.GetPrimaryApproverNameAsync(id);
+            if (string.IsNullOrEmpty(name))
+            {
+                return NotFound(new { message = "Manager not found for this employee" });
+            }
+
+            return Ok(new { managerName = name });
+        }
+
+        /// <summary>
         /// Get employee's leave balance
         /// GET: /api/leave/balances/{employeeId}
         /// </summary>
