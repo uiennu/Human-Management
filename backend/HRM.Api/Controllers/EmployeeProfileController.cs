@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace HRM.Api.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/employees/me")]
     [Authorize]
     public class EmployeeProfileController : ControllerBase
     {
@@ -56,7 +56,7 @@ namespace HRM.Api.Controllers
         /// <summary>
         /// Update basic information (phone, address, personal email, emergency contact)
         /// </summary>
-        [HttpPut("basic")]
+        [HttpPut("basic-info")]
         public async Task<IActionResult> UpdateBasicInfo([FromBody] UpdateBasicInfoDto dto)
         {
             try
@@ -87,7 +87,7 @@ namespace HRM.Api.Controllers
         /// Request to update sensitive information (Tax ID/CCCD, Bank Account)
         /// This will generate and send an OTP to the employee's email
         /// </summary>
-        [HttpPost("sensitive/request")]
+        [HttpPost("sensitive-update-requests")]
         public async Task<IActionResult> RequestSensitiveUpdate([FromBody] SensitiveUpdateRequestDto dto)
         {
             try
@@ -115,7 +115,7 @@ namespace HRM.Api.Controllers
         /// <summary>
         /// Verify OTP and submit sensitive information change request to HR for approval
         /// </summary>
-        [HttpPost("sensitive/verify")]
+        [HttpPost("sensitive-update-requests/verify")]
         public async Task<IActionResult> VerifySensitiveOtp([FromBody] VerifyOtpDto dto)
         {
             try
