@@ -4,6 +4,7 @@
 CREATE DATABASE IF NOT EXISTS HRM_System;
 USE HRM_System;
 
+drop database HRM_System;
 -- =================================================================
 -- SECTION 1: CORE HR & USERS
 -- =================================================================
@@ -307,9 +308,9 @@ INSERT INTO Departments (DepartmentName, DepartmentCode, Description) VALUES
 
 -- Insert Admin/HR Manager
 INSERT INTO Employees (FirstName, LastName, Email, PasswordHash, HireDate, DepartmentID, IsActive) VALUES 
-('Admin', 'User', 'admin@hrm.com', 'hashed_password_here', NOW(), 1, 1),
-('John', 'Doe', 'john.doe@hrm.com', 'hashed_password_here', NOW(), 2, 1),
-('Jane', 'Smith', 'jane.smith@hrm.com', 'hashed_password_here', NOW(), 3, 1);
+('Admin', 'User', 'admin@hrm.com', 'hashed_password_here', CURDATE(), 1, 1),
+('John', 'Doe', 'john.doe@hrm.com', 'hashed_password_here', CURDATE(), 2, 1),
+('Jane', 'Smith', 'jane.smith@hrm.com', 'hashed_password_here', CURDATE(), 3, 1);
 
 -- Assign Roles
 -- Assuming RoleIDs: 1=Employee, 2=Manager, 3=HR, 4=C&B
@@ -333,15 +334,14 @@ INSERT INTO LeaveTypes (Name, Description, DefaultQuota, Applicability) VALUES
 -- =================================================================
 -- Assuming LeaveTypeIDs: 1=Annual, 2=Sick, 3=Unpaid
 INSERT INTO EmployeeLeaveBalances (EmployeeID, LeaveTypeID, BalanceDays) VALUES 
-(2, 1, 12.00), -- Annual
+(1, 1, 12.00), -- Annual
 (2, 2, 10.00), -- Sick
-(2, 3, 0.00);  -- Unpaid
+(3, 3, 0.00);  -- Unpaid
 
 -- =================================================================
 -- INSERT LEAVE REQUESTS (For John Doe - EmployeeID 2)
 -- =================================================================
 INSERT INTO LeaveRequests (EmployeeID, LeaveTypeID, StartDate, EndDate, TotalDays, Reason, Status, RequestedDate) VALUES 
-(2, 1, DATE_SUB(NOW(), INTERVAL 1 MONTH), DATE_SUB(NOW(), INTERVAL 1 MONTH), 1.00, 'Personal errand', 'Approved', DATE_SUB(NOW(), INTERVAL 35 DAY)),
-(2, 2, DATE_SUB(NOW(), INTERVAL 10 DAY), DATE_SUB(NOW(), INTERVAL 9 DAY), 2.00, 'Flu', 'Approved', DATE_SUB(NOW(), INTERVAL 12 DAY)),
-(2, 1, DATE_ADD(NOW(), INTERVAL 5 DAY), DATE_ADD(NOW(), INTERVAL 7 DAY), 3.00, 'Family vacation', 'Pending', NOW());
-
+(2, 1, DATE_SUB(CURDATE(), INTERVAL 1 MONTH), DATE_SUB(CURDATE(), INTERVAL 1 MONTH), 1.00, 'Personal errand', 'Approved', DATE_SUB(NOW(), INTERVAL 35 DAY)),
+(2, 2, DATE_SUB(CURDATE(), INTERVAL 10 DAY), DATE_SUB(CURDATE(), INTERVAL 9 DAY), 2.00, 'Flu', 'Approved', DATE_SUB(NOW(), INTERVAL 12 DAY)),
+(2, 1, DATE_ADD(CURDATE(), INTERVAL 5 DAY), DATE_ADD(CURDATE(), INTERVAL 7 DAY), 3.00, 'Family vacation', 'Pending', NOW());
