@@ -38,6 +38,8 @@ CREATE TABLE Employees (
     PersonalEmail VARCHAR(100),
     EmergencyContactName VARCHAR(100),
     EmergencyContactPhone VARCHAR(20),
+    EmergencyContactRelation NVARCHAR(50),
+    
     BankAccountNumber VARCHAR(50),
     TaxID VARCHAR(50),
 

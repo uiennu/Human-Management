@@ -46,7 +46,8 @@ namespace HRM.Api.Controllers
                 new Claim("EmployeeID", employee.EmployeeID.ToString()) // Also add as custom claim for convenience
             };
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("super_secret_key_1234567890_super_long_key!"));
+            var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET") ?? "super_secret_key_1234567890_super_long_key!";
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
             var token = new JwtSecurityToken(
                 issuer: "hrm.api",
