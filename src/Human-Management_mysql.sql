@@ -311,19 +311,19 @@ INSERT INTO Departments (DepartmentName, DepartmentCode, Description, ManagerID)
 -- Bob (2) quản lý Eve (5).
 INSERT INTO Employees (FirstName, LastName, Email, PasswordHash, Phone, Address, HireDate, DepartmentID, IsActive, ManagerID, CurrentPoints) VALUES 
 -- ID 1: Alice (Sếp tổng)
-('Alice', 'Nguyen', 'alice@hrm.com', 'hash123', '0901000001', 'District 1, HCM', CURDATE(), 1, 1, NULL, 500),
+('Alice', 'Nguyen', 'alice@hrm.com', 'hashed_password_here', '0901000001', 'District 1, HCM', CURDATE(), 1, 1, NULL, 500),
 
 -- ID 2: Bob (Sếp HR) -> Báo cáo cho Alice (1)
-('Bob', 'Tran', 'bob@hrm.com', 'hash123', '0901000002', 'District 3, HCM', CURDATE(), 2, 1, 1, 200),
+('Bob', 'Tran', 'bob@hrm.com', 'hashed_password_here', '0901000002', 'District 3, HCM', CURDATE(), 2, 1, 1, 200),
 
 -- ID 3: Charlie (Sếp IT) -> Báo cáo cho Alice (1)
 ('Charlie', 'Le', 'charlie@hrm.com', 'hash123', '0901000003', 'Thu Duc, HCM', CURDATE(), 3, 1, 1, 300),
 
 -- ID 4: David (Nhân viên IT) -> Báo cáo cho Charlie (3)
-('David', 'Pham', 'david@hrm.com', 'hash123', '0901000004', 'Binh Thanh, HCM', CURDATE(), 3, 1, 3, 150),
+('David', 'Pham', 'david@hrm.com', 'hashed_password_here', '0901000004', 'Binh Thanh, HCM', CURDATE(), 3, 1, 3, 150),
 
 -- ID 5: Eve (Nhân viên C&B) -> Báo cáo cho Bob (2)
-('Eve', 'Vo', 'eve@hrm.com', 'hash123', '0901000005', 'District 7, HCM', CURDATE(), 2, 1, 2, 100);
+('Eve', 'Vo', 'eve@hrm.com', 'hashed_password_here', '0901000005', 'District 7, HCM', CURDATE(), 2, 1, 2, 100);
 
 -- Update lại Manager cho Department
 UPDATE Departments SET ManagerID = 1 WHERE DepartmentID = 1;
