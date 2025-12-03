@@ -317,7 +317,7 @@ INSERT INTO Employees (FirstName, LastName, Email, PasswordHash, Phone, Address,
 ('Bob', 'Tran', 'bob@hrm.com', 'hashed_password_here', '0901000002', 'District 3, HCM', CURDATE(), 2, 1, 1, 200),
 
 -- ID 3: Charlie (Sếp IT) -> Báo cáo cho Alice (1)
-('Charlie', 'Le', 'charlie@hrm.com', 'hash123', '0901000003', 'Thu Duc, HCM', CURDATE(), 3, 1, 1, 300),
+('Charlie', 'Le', 'charlie@hrm.com', 'hashed_password_here', '0901000003', 'Thu Duc, HCM', CURDATE(), 3, 1, 1, 300),
 
 -- ID 4: David (Nhân viên IT) -> Báo cáo cho Charlie (3)
 ('David', 'Pham', 'david@hrm.com', 'hashed_password_here', '0901000004', 'Binh Thanh, HCM', CURDATE(), 3, 1, 3, 150),
