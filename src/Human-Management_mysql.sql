@@ -1,10 +1,9 @@
 -- =================================================================
 -- CREATE DATABASE
 -- =================================================================
-CREATE DATABASE IF NOT EXISTS HRM_System;
+DROP DATABASE IF EXISTS HRM_System;
+CREATE DATABASE HRM_System;
 USE HRM_System;
-
-drop database HRM_System;
 -- =================================================================
 -- SECTION 1: CORE HR & USERS
 -- =================================================================
