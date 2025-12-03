@@ -2,6 +2,7 @@ using HRM.Api.DTOs;
 using HRM.Api.Models;
 using HRM.Api.Repositories;
 using HRM.Api.Constants;
+using Microsoft.EntityFrameworkCore;
 
 namespace HRM.Api.Services
 {
@@ -12,6 +13,7 @@ namespace HRM.Api.Services
         Task<LeaveRequestDetailDto?> GetLeaveRequestDetailAsync(int requestId);
         Task<(bool success, string message)> CancelLeaveRequestAsync(int requestId, int employeeId);
         Task<List<LeaveTypeDto>> GetLeaveTypesAsync();
+        Task<string?> GetPrimaryApproverNameAsync(int employeeId);
     }
 
     public class LeaveRequestService : ILeaveRequestService
@@ -42,8 +44,44 @@ namespace HRM.Api.Services
             }).ToList();
         }
 
+        public async Task<string?> GetPrimaryApproverNameAsync(int employeeId)
+        {
+            var employee = await _leaveRequestRepository.GetContext().Set<Employee>()
+                .Include(e => e.Manager)
+                .FirstOrDefaultAsync(e => e.EmployeeID == employeeId);
+
+            if (employee == null || employee.Manager == null)
+            {
+                return null;
+            }
+
+            return $"{employee.Manager.FirstName} {employee.Manager.LastName}";
+        }
+
         public async Task<LeaveRequestResponseDto> CreateLeaveRequestAsync(int employeeId, CreateLeaveRequestDto dto)
         {
+            // Get employee to find their manager
+            var employee = await _leaveRequestRepository.GetContext().Set<Employee>()
+                .FirstOrDefaultAsync(e => e.EmployeeID == employeeId);
+            
+            if (employee == null)
+            {
+                return new LeaveRequestResponseDto
+                {
+                    Status = "Error",
+                    Message = "Employee not found"
+                };
+            }
+
+            if (!employee.ManagerID.HasValue)
+            {
+                return new LeaveRequestResponseDto
+                {
+                    Status = "Error",
+                    Message = "No manager assigned to approve leave requests"
+                };
+            }
+
             // Validate leave balance
             var balance = await _leaveBalanceRepository.GetByEmployeeAndLeaveTypeAsync(employeeId, dto.LeaveTypeID);
             if (balance == null || balance.BalanceDays < dto.TotalDays)
@@ -58,6 +96,7 @@ namespace HRM.Api.Services
             var leaveRequest = new LeaveRequest
             {
                 EmployeeID = employeeId,
+                ManagerID = employee.ManagerID.Value,
                 LeaveTypeID = dto.LeaveTypeID,
                 StartDate = dto.StartDate,
                 EndDate = dto.EndDate,
@@ -148,6 +187,25 @@ namespace HRM.Api.Services
             if (!string.IsNullOrEmpty(leaveRequest.AttachmentPath))
             {
                 detailDto.Attachments = _fileStorageService.GetFiles(leaveRequest.AttachmentPath);
+            }
+
+            // Populate approval info from history if approved or rejected
+            if (leaveRequest.Histories != null && leaveRequest.Histories.Any())
+            {
+                var approvalHistory = leaveRequest.Histories
+                    .Where(h => h.Status == LeaveStatus.Approved || h.Status == LeaveStatus.Rejected)
+                    .OrderByDescending(h => h.ChangeDate)
+                    .FirstOrDefault();
+
+                if (approvalHistory != null && approvalHistory.ChangedByEmployee != null)
+                {
+                    detailDto.ApprovalInfo = new ApprovalInfoDto
+                    {
+                        ApproverName = $"{approvalHistory.ChangedByEmployee.FirstName} {approvalHistory.ChangedByEmployee.LastName}",
+                        ActionDate = approvalHistory.ChangeDate,
+                        Note = approvalHistory.Notes
+                    };
+                }
             }
 
             return detailDto;

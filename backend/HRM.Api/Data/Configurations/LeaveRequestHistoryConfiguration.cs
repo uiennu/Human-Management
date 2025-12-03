@@ -9,6 +9,9 @@ namespace HRM.Api.Data.Configurations
         public void Configure(EntityTypeBuilder<LeaveRequestHistory> builder)
         {
             builder.HasKey(lrh => lrh.HistoryID);
+
+            // Map to existing table name in database (singular)
+            builder.ToTable("LeaveRequestHistory");
         }
     }
 }

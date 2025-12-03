@@ -52,6 +52,10 @@ export interface LeaveRequestDetail extends LeaveRequestListItem {
     leaveType: LeaveType;
 }
 
+export interface PrimaryApproverResponse {
+    managerName: string;
+}
+
 export const leaveService = {
     async getLeaveTypes(): Promise<LeaveType[]> {
         const res = await fetch(`${API_URL}/leave/types`);
@@ -134,6 +138,14 @@ export const leaveService = {
         if (!res.ok) {
             const error = await res.json();
             throw new Error(error.message || 'Failed to cancel request');
+        }
+        return res.json();
+    },
+
+    async getPrimaryApprover(employeeId: number): Promise<PrimaryApproverResponse> {
+        const res = await fetch(`${API_URL}/leave/primary-approver?employeeId=${employeeId}`);
+        if (!res.ok) {
+            throw new Error('Failed to fetch primary approver');
         }
         return res.json();
     }
