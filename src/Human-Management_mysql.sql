@@ -338,14 +338,6 @@ INSERT INTO EmployeeLeaveBalances (EmployeeID, LeaveTypeID, BalanceDays) VALUES
 (2, 3, 0.00);  -- Unpaid
 
 -- =================================================================
--- INSERT LEAVE BALANCES (For Jane Smith - EmployeeID 3)
--- =================================================================
-INSERT INTO EmployeeLeaveBalances (EmployeeID, LeaveTypeID, BalanceDays) VALUES 
-(2, 1, 12.00),
-(2, 2, 10.00),
-(2, 3, 0.00);
-
--- =================================================================
 -- INSERT LEAVE REQUESTS (For John Doe - EmployeeID 2)
 -- =================================================================
 INSERT INTO LeaveRequests (EmployeeID, LeaveTypeID, StartDate, EndDate, TotalDays, Reason, Status, RequestedDate) VALUES 
