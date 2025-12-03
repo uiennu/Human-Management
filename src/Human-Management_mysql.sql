@@ -1,9 +1,10 @@
 -- =================================================================
 -- CREATE DATABASE
 -- =================================================================
-DROP DATABASE IF EXISTS HRM_System;
-CREATE DATABASE HRM_System;
+CREATE DATABASE IF NOT EXISTS HRM_System;
 USE HRM_System;
+
+
 -- =================================================================
 -- SECTION 1: CORE HR & USERS
 -- =================================================================
@@ -103,6 +104,7 @@ CREATE TABLE EmployeeLeaveBalances (
 CREATE TABLE LeaveRequests (
     LeaveRequestID INT PRIMARY KEY AUTO_INCREMENT,
     EmployeeID INT NOT NULL,
+    ManagerID INT NOT NULL,
     LeaveTypeID INT NOT NULL,
     StartDate DATE NOT NULL,
     EndDate DATE NOT NULL,
@@ -112,7 +114,7 @@ CREATE TABLE LeaveRequests (
     Reason VARCHAR(1000),
     Status VARCHAR(20) NOT NULL DEFAULT 'Pending',
     RequestedDate DATETIME NOT NULL DEFAULT NOW(),
-    AttachmentPath VARCHAR(255) NULL, 
+    AttachmentPath VARCHAR(255) NULL,
     
     CONSTRAINT FK_LeaveRequests_Employee FOREIGN KEY (EmployeeID) REFERENCES Employees(EmployeeID),
     CONSTRAINT FK_LeaveRequests_LeaveType FOREIGN KEY (LeaveTypeID) REFERENCES LeaveTypes(LeaveTypeID),
@@ -125,7 +127,8 @@ CREATE TABLE LeaveRequestHistory (
     Status VARCHAR(20) NOT NULL,
     Notes VARCHAR(1000),
     ChangedByEmployeeID INT NOT NULL,
-    ChangeDate DATETIME NOT NULL DEFAULT NOW(),
+    SummitedDate DATETIME NOT NULL DEFAULT NOW(),
+    ChangeDate DATETIME,
     CONSTRAINT FK_LeaveHistory_Request FOREIGN KEY (LeaveRequestID) REFERENCES LeaveRequests(LeaveRequestID) ON DELETE CASCADE,
     CONSTRAINT FK_LeaveHistory_Employee FOREIGN KEY (ChangedByEmployeeID) REFERENCES Employees(EmployeeID)
 );
@@ -288,11 +291,11 @@ CREATE TABLE RedemptionRequests (
 );
 
 INSERT INTO Roles (RoleName) VALUES 
-('Employee'), -- ID 1
-('Manager'),  -- ID 2
-('HR'),       -- ID 3
-('C&B'),      -- ID 4
-('Admin');    -- ID 5 (Thêm dòng này cho đủ 5 dòng như yêu cầu)
+('Employee'), -- 1
+('Manager'),  -- 2
+('HR'),       -- 3
+('C&B'),      -- 4
+('Admin');    -- 5
 
 -- 2. Departments
 INSERT INTO Departments (DepartmentName, DepartmentCode, Description, ManagerID) VALUES 
@@ -303,39 +306,49 @@ INSERT INTO Departments (DepartmentName, DepartmentCode, Description, ManagerID)
 ('Finance', 'FIN', 'Money management', NULL);
 
 -- 3. Employees
+-- Logic: Alice (1) quản lý Bob (2) và Charlie (3). 
+-- Charlie (3) quản lý David (4). 
+-- Bob (2) quản lý Eve (5).
 INSERT INTO Employees (FirstName, LastName, Email, PasswordHash, Phone, Address, HireDate, DepartmentID, IsActive, ManagerID, CurrentPoints) VALUES 
--- Employee 1: Director
-('Alice', 'Nguyen', 'alice@hrm.com', 'hashed_password_here', '0901000001', 'District 1, HCMC', CURDATE(), 1, 1, NULL, 500),
--- Employee 2: HR Manager (Reports to 1)
-('Bob', 'Tran', 'bob@hrm.com', 'hashed_password_here', '0901000002', 'District 3, HCMC', CURDATE(), 2, 1, 1, 200),
--- Employee 3: IT Manager (Reports to 1)
-('Charlie', 'Le', 'charlie@hrm.com', 'hashed_password_here', '0901000003', 'Thu Duc, HCMC', CURDATE(), 3, 1, 1, 300),
--- Employee 4: Dev (Reports to 3)
-('David', 'Pham', 'david@hrm.com', 'hashed_password_here', '0901000004', 'Binh Thanh, HCMC', CURDATE(), 3, 1, 3, 150),
--- Employee 5: C&B Staff (Reports to 2) - Changed to fit C&B Role
-('Eve', 'Vo', 'eve@hrm.com', 'hashed_password_here', '0901000005', 'District 7, HCMC', CURDATE(), 2, 1, 2, 100);
+-- ID 1: Alice (Sếp tổng)
+('Alice', 'Nguyen', 'alice@hrm.com', 'hash123', '0901000001', 'District 1, HCM', CURDATE(), 1, 1, NULL, 500),
 
--- Update Departments Managers
+-- ID 2: Bob (Sếp HR) -> Báo cáo cho Alice (1)
+('Bob', 'Tran', 'bob@hrm.com', 'hash123', '0901000002', 'District 3, HCM', CURDATE(), 2, 1, 1, 200),
+
+-- ID 3: Charlie (Sếp IT) -> Báo cáo cho Alice (1)
+('Charlie', 'Le', 'charlie@hrm.com', 'hash123', '0901000003', 'Thu Duc, HCM', CURDATE(), 3, 1, 1, 300),
+
+-- ID 4: David (Nhân viên IT) -> Báo cáo cho Charlie (3)
+('David', 'Pham', 'david@hrm.com', 'hash123', '0901000004', 'Binh Thanh, HCM', CURDATE(), 3, 1, 3, 150),
+
+-- ID 5: Eve (Nhân viên C&B) -> Báo cáo cho Bob (2)
+('Eve', 'Vo', 'eve@hrm.com', 'hash123', '0901000005', 'District 7, HCM', CURDATE(), 2, 1, 2, 100);
+
+-- Update lại Manager cho Department
 UPDATE Departments SET ManagerID = 1 WHERE DepartmentID = 1;
 UPDATE Departments SET ManagerID = 2 WHERE DepartmentID = 2;
 UPDATE Departments SET ManagerID = 3 WHERE DepartmentID = 3;
 
--- 4. EmployeeRoles (MAPPED LẠI THEO ROLE ID MỚI)
--- 1=Employee, 2=Manager, 3=HR, 4=C&B
+-- 4. EmployeeRoles
 INSERT INTO EmployeeRoles (EmployeeID, RoleID) VALUES 
-(1, 2), -- Alice (Director) -> Manager
-(2, 3), -- Bob (HR Dept) -> HR
-(3, 2), -- Charlie (IT Dept) -> Manager
-(4, 1), -- David (IT Staff) -> Employee
-(5, 4); -- Eve (HR Dept) -> C&B
+(1, 5), -- Alice: Admin
+(2, 2), -- Bob: Manager
+(3, 2), -- Charlie: Manager
+(4, 1), -- David: Employee
+(5, 4); -- Eve: C&B
 
 -- 5. EmployeeProfileChanges
 INSERT INTO EmployeeProfileChanges (EmployeeID, FieldName, OldValue, NewValue, Status, ApproverID) VALUES 
-(4, 'Address', 'Old Addr', 'New Addr Binh Thanh', 'Approved', 2),
+(4, 'Address', 'Old Addr', 'New Addr Binh Thanh', 'Approved', 3), -- David đổi, Charlie duyệt
 (5, 'Phone', '0901000005', '0999999999', 'Pending', NULL),
-(3, 'EmergencyContact', 'None', 'Wife', 'Approved', 1),
+(3, 'EmergencyContact', 'None', 'Wife', 'Approved', 1), -- Charlie đổi, Alice duyệt
 (2, 'TaxID', NULL, 'TAX-12345', 'Rejected', 1),
 (4, 'BankAccount', '0001', '0002', 'Pending', NULL);
+
+-- =================================================================
+-- 3. INSERT LEAVE MANAGEMENT DATA (Logic ManagerID chặt chẽ)
+-- =================================================================
 
 -- 6. LeaveTypes
 INSERT INTO LeaveTypes (Name, Description, DefaultQuota, Applicability) VALUES 
@@ -347,35 +360,55 @@ INSERT INTO LeaveTypes (Name, Description, DefaultQuota, Applicability) VALUES
 
 -- 7. EmployeeLeaveBalances
 INSERT INTO EmployeeLeaveBalances (EmployeeID, LeaveTypeID, BalanceDays) VALUES 
-(4, 1, 12.0),
-(4, 2, 10.0),
-(5, 1, 12.0),
-(3, 1, 15.0),
-(2, 1, 15.0);
+(4, 1, 12.0), (4, 2, 10.0), (5, 1, 12.0), (3, 1, 15.0), (2, 1, 15.0);
 
--- 8. LeaveRequests
-INSERT INTO LeaveRequests (EmployeeID, LeaveTypeID, StartDate, EndDate, TotalDays, Reason, Status) VALUES 
-(4, 1, DATE_ADD(CURDATE(), INTERVAL 5 DAY), DATE_ADD(CURDATE(), INTERVAL 6 DAY), 2.0, 'Holiday', 'Pending'),
-(5, 2, DATE_SUB(CURDATE(), INTERVAL 2 DAY), DATE_SUB(CURDATE(), INTERVAL 1 DAY), 2.0, 'Sick', 'Approved'),
-(3, 1, DATE_ADD(CURDATE(), INTERVAL 20 DAY), DATE_ADD(CURDATE(), INTERVAL 25 DAY), 5.0, 'Travel', 'Pending'),
-(2, 3, DATE_ADD(CURDATE(), INTERVAL 1 DAY), DATE_ADD(CURDATE(), INTERVAL 1 DAY), 1.0, 'Personal', 'Approved'),
-(4, 2, DATE_SUB(CURDATE(), INTERVAL 10 DAY), DATE_SUB(CURDATE(), INTERVAL 10 DAY), 1.0, 'Headache', 'Rejected');
+-- 8. LeaveRequests 
+-- LƯU Ý: Cột ManagerID ở đây phải khớp với ManagerID trong bảng Employees
+INSERT INTO LeaveRequests (EmployeeID, ManagerID, LeaveTypeID, StartDate, EndDate, TotalDays, Reason, Status, RequestedDate) VALUES 
+-- Req 1: David (ID 4) xin nghỉ -> Manager là Charlie (ID 3)
+(4, 3, 1, DATE_ADD(CURDATE(), INTERVAL 5 DAY), DATE_ADD(CURDATE(), INTERVAL 6 DAY), 2.0, 'Holiday', 'Pending', NOW()),
+
+-- Req 2: Eve (ID 5) xin nghỉ -> Manager là Bob (ID 2)
+(5, 2, 2, DATE_SUB(CURDATE(), INTERVAL 2 DAY), DATE_SUB(CURDATE(), INTERVAL 1 DAY), 2.0, 'Sick', 'Approved', DATE_SUB(NOW(), INTERVAL 3 DAY)),
+
+-- Req 3: Charlie (ID 3) xin nghỉ -> Manager là Alice (ID 1)
+(3, 1, 1, DATE_ADD(CURDATE(), INTERVAL 20 DAY), DATE_ADD(CURDATE(), INTERVAL 25 DAY), 5.0, 'Travel', 'Pending', NOW()),
+
+-- Req 4: Bob (ID 2) xin nghỉ -> Manager là Alice (ID 1)
+(2, 1, 3, DATE_ADD(CURDATE(), INTERVAL 1 DAY), DATE_ADD(CURDATE(), INTERVAL 1 DAY), 1.0, 'Personal', 'Approved', DATE_SUB(NOW(), INTERVAL 2 DAY)),
+
+-- Req 5: David (ID 4) xin nghỉ -> Manager là Charlie (ID 3)
+(4, 3, 2, DATE_SUB(CURDATE(), INTERVAL 10 DAY), DATE_SUB(CURDATE(), INTERVAL 10 DAY), 1.0, 'Headache', 'Rejected', DATE_SUB(NOW(), INTERVAL 12 DAY));
 
 -- 9. LeaveRequestHistory
-INSERT INTO LeaveRequestHistory (LeaveRequestID, Status, Notes, ChangedByEmployeeID) VALUES 
-(1, 'Pending', 'Submitted', 4),
-(2, 'Approved', 'Ok get well', 2),
-(3, 'Pending', 'Submitted', 3),
-(4, 'Approved', 'Approved by Director', 1),
-(5, 'Rejected', 'Not enough info', 3);
+-- LOGIC: ChangedByEmployeeID với status 'Approved'/'Rejected' PHẢI LÀ ManagerID tương ứng ở trên.
+INSERT INTO LeaveRequestHistory (LeaveRequestID, Status, Notes, ChangedByEmployeeID, SummitedDate, ChangeDate) VALUES 
+-- 1. David (ID 4) vừa nộp -> ChangedBy là David (4)
+(1, 'Pending', 'Submitted', 4, NOW(), NULL),
+
+-- 2. Eve (ID 5) đã duyệt -> ChangedBy là Bob (2)
+(2, 'Approved', 'Ok get well', 2, DATE_SUB(NOW(), INTERVAL 3 DAY), DATE_SUB(NOW(), INTERVAL 1 DAY)),
+
+-- 3. Charlie (ID 3) vừa nộp -> ChangedBy là Charlie (3)
+(3, 'Pending', 'Submitted', 3, NOW(), NULL),
+
+-- 4. Bob (ID 2) đã duyệt -> ChangedBy là Alice (1)
+(4, 'Approved', 'Approved by Director', 1, DATE_SUB(NOW(), INTERVAL 2 DAY), DATE_SUB(NOW(), INTERVAL 1 HOUR)),
+
+-- 5. David (ID 4) bị từ chối -> ChangedBy là Charlie (3)
+(5, 'Rejected', 'Not enough info', 3, DATE_SUB(NOW(), INTERVAL 12 DAY), DATE_SUB(NOW(), INTERVAL 10 DAY));
 
 -- 10. WorkHandovers
 INSERT INTO WorkHandovers (LeaveRequestID, AssigneeEmployeeID, ManagerID, HandoverNotes) VALUES 
-(1, 3, 3, 'Code review tasks'),
-(2, 2, 1, 'Email monitoring'),
-(3, 4, 1, 'Server maintenance'),
-(4, 1, 1, 'Meeting notes'),
+(1, 3, 3, 'Code review tasks'), -- David giao lại cho Charlie
+(2, 2, 2, 'Email monitoring'),  -- Eve giao lại cho Bob
+(3, 4, 1, 'Server maintenance'),  -- Charlie giao lại cho David
+(4, 5, 1, 'Meeting notes'),       -- Bob giao lại cho Eve
 (5, 3, 3, 'Pending tasks');
+
+-- =================================================================
+-- 4. INSERT ATTENDANCE & CAMPAIGNS
+-- =================================================================
 
 -- 11. AttendanceLogs
 INSERT INTO AttendanceLogs (EmployeeID, LogTime, LogType, Location) VALUES 
@@ -385,21 +418,21 @@ INSERT INTO AttendanceLogs (EmployeeID, LogTime, LogType, Location) VALUES
 (3, CONCAT(CURDATE(), ' 07:55:00'), 'CheckIn', 'Office'),
 (2, CONCAT(CURDATE(), ' 08:05:00'), 'CheckIn', 'Office');
 
--- 12. TimesheetUpdateRequests
+-- 12. TimesheetUpdateRequests (ApproverID là Manager tương ứng)
 INSERT INTO TimesheetUpdateRequests (EmployeeID, WorkDate, OldCheckInTime, NewCheckInTime, Reason, Status, ApproverID) VALUES 
-(4, DATE_SUB(CURDATE(), INTERVAL 1 DAY), NULL, '08:00:00', 'Forgot card', 'Approved', 3),
+(4, DATE_SUB(CURDATE(), INTERVAL 1 DAY), NULL, '08:00:00', 'Forgot card', 'Approved', 3), -- Charlie duyệt
 (5, DATE_SUB(CURDATE(), INTERVAL 1 DAY), '09:00:00', '08:00:00', 'Traffic', 'Pending', NULL),
-(3, DATE_SUB(CURDATE(), INTERVAL 2 DAY), NULL, '17:00:00', 'Forgot out', 'Approved', 1),
-(2, DATE_SUB(CURDATE(), INTERVAL 3 DAY), NULL, '08:00:00', 'System error', 'Rejected', 1),
+(3, DATE_SUB(CURDATE(), INTERVAL 2 DAY), NULL, '17:00:00', 'Forgot out', 'Approved', 1), -- Alice duyệt
+(2, DATE_SUB(CURDATE(), INTERVAL 3 DAY), NULL, '08:00:00', 'System error', 'Rejected', 1), -- Alice từ chối
 (4, DATE_SUB(CURDATE(), INTERVAL 5 DAY), '08:30:00', '08:00:00', 'Late entry', 'Pending', NULL);
 
 -- 13. AttendanceCorrectionRequests
-INSERT INTO AttendanceCorrectionRequests (EmployeeID, WorkDate, RequestType, RequestedTime, Reason, Status) VALUES 
-(4, CURDATE(), 'LateIn', '08:30:00', 'Rain', 'Approved'),
-(5, CURDATE(), 'EarlyOut', '16:00:00', 'Doctor', 'Pending'),
-(3, CURDATE(), 'MissingIn', '08:00:00', 'Forgot', 'Approved'),
-(2, CURDATE(), 'MissingOut', '17:00:00', 'Meeting', 'Rejected'),
-(4, CURDATE(), 'LateIn', '09:00:00', 'Overslept', 'Pending');
+INSERT INTO AttendanceCorrectionRequests (EmployeeID, WorkDate, RequestType, RequestedTime, Reason, Status, ApproverID) VALUES 
+(4, CURDATE(), 'LateIn', '08:30:00', 'Rain', 'Approved', 3), -- Charlie duyệt
+(5, CURDATE(), 'EarlyOut', '16:00:00', 'Doctor', 'Pending', NULL),
+(3, CURDATE(), 'MissingIn', '08:00:00', 'Forgot', 'Approved', 1),
+(2, CURDATE(), 'MissingOut', '17:00:00', 'Meeting', 'Rejected', 1),
+(4, CURDATE(), 'LateIn', '09:00:00', 'Overslept', 'Pending', NULL);
 
 -- 14. WFHRequests
 INSERT INTO WFHRequests (EmployeeID, StartDate, EndDate, Reason, WorkPlan, Status, ApproverID) VALUES 
@@ -419,25 +452,15 @@ INSERT INTO Campaigns (CampaignName, ShortDescription, StartDate, EndDate, Targe
 
 -- 16. CampaignTargetDepartments
 INSERT INTO CampaignTargetDepartments (CampaignID, DepartmentID) VALUES 
-(1, 1), (1, 2), (1, 3), -- Summer Trip for everyone
-(2, 3), -- Hackathon for IT
-(4, 4); -- Sales Push for Sales
+(1, 1), (1, 2), (1, 3), (2, 3), (4, 4); 
 
 -- 17. CampaignParticipants
 INSERT INTO CampaignParticipants (CampaignID, EmployeeID, Status) VALUES 
-(1, 3, 'Registered'),
-(1, 4, 'Registered'),
-(1, 5, 'Registered'),
-(2, 4, 'Winner'),
-(4, 5, 'Registered');
+(1, 3, 'Registered'), (1, 4, 'Registered'), (1, 5, 'Registered'), (2, 4, 'Winner'), (4, 5, 'Registered');
 
 -- 18. CampaignResults
 INSERT INTO CampaignResults (ParticipantID, AchievementMetric, AchievementValue) VALUES 
-(1, 'Attendance', 1.0),
-(2, 'Attendance', 1.0),
-(3, 'Attendance', 1.0),
-(4, 'Score', 95.5),
-(5, 'Revenue', 5000.00);
+(1, 'Attendance', 1.0), (2, 'Attendance', 1.0), (3, 'Attendance', 1.0), (4, 'Score', 95.5), (5, 'Revenue', 5000.00);
 
 -- 19. PointTransactions
 INSERT INTO PointTransactions (EmployeeID, TransactionType, Amount, Description, GiverEmployeeID) VALUES 
