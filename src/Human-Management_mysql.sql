@@ -1,6 +1,7 @@
 -- =================================================================
 -- CREATE DATABASE
 -- =================================================================
+DROP DATABASE IF EXISTS HRM_System;
 CREATE DATABASE IF NOT EXISTS HRM_System;
 USE HRM_System;
 
