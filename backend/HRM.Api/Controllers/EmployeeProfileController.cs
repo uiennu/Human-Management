@@ -14,7 +14,7 @@ namespace HRM.Api.Controllers
         private readonly ICurrentUserService _currentUserService;
         private readonly ILogger<EmployeeProfileController> _logger;
 
-        public EmployeeProfileController(
+        public EmployeeProfileController(   
             IEmployeeProfileService service,
             ICurrentUserService currentUserService,
             ILogger<EmployeeProfileController> logger)

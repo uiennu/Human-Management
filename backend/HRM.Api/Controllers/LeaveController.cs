@@ -66,11 +66,31 @@ namespace HRM.Api.Controllers
         /// GET: /api/leave/balances/{employeeId}
         /// </summary>
         [HttpGet("balances/{employeeId}")]
+        [Authorize]
         public async Task<ActionResult<LeaveBalanceResponseDto>> GetMyLeaveBalance(int employeeId)
         {
-            // Use the provided employeeId directly (for querying other employees' balances)
-            if (employeeId <= 0)
-                return BadRequest("Invalid employee ID");
+            var currentEmployeeId = _currentUserService.GetCurrentEmployeeId();
+            var roles = _currentUserService.GetCurrentUserRoles();
+
+            // DEBUG LOGGING
+            Console.WriteLine($"[AuthCheck] CurrentUser: {currentEmployeeId}, TargetUser: {employeeId}");
+            Console.WriteLine($"[AuthCheck] Roles: {string.Join(", ", roles)}");
+
+            if (currentEmployeeId == 0)
+                return Unauthorized(new { message = "Employee not authenticated" });
+
+            // Logic:
+            // 1. Admin & HR & Manager can view anyone's balance
+            // 2. Employee can ONLY view their own balance
+            
+            bool isPrivilegedUser = roles.Any(r => r == "Admin" || r == "HR" || r == "Manager");
+            Console.WriteLine($"[AuthCheck] IsPrivileged: {isPrivilegedUser}");
+
+            if (!isPrivilegedUser && employeeId != currentEmployeeId)
+            {
+                Console.WriteLine("[AuthCheck] Access Denied");
+                return Forbid(); // 403 Forbidden
+            }
 
             var result = await _leaveBalanceService.GetMyLeaveBalanceAsync(employeeId);
             if (result == null)
@@ -80,6 +100,7 @@ namespace HRM.Api.Controllers
 
             return Ok(result);
         }
+
 
         /// <summary>
         /// Create a new leave request

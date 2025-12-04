@@ -5,6 +5,7 @@ namespace HRM.Api.Services
     public interface ICurrentUserService
     {
         int GetCurrentEmployeeId();
+        List<string> GetCurrentUserRoles();
         bool IsAuthenticated { get; }
     }
 
@@ -34,6 +35,14 @@ namespace HRM.Api.Services
             }
 
             return employeeId;
+        }
+
+        public List<string> GetCurrentUserRoles()
+        {
+            var user = _httpContextAccessor.HttpContext?.User;
+            if (user == null) return new List<string>();
+
+            return user.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
         }
     }
 }
