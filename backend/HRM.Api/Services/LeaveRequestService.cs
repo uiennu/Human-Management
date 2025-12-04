@@ -3,6 +3,7 @@ using HRM.Api.Models;
 using HRM.Api.Repositories;
 using HRM.Api.Constants;
 using Microsoft.EntityFrameworkCore;
+using HRM.Api.Data;
 
 namespace HRM.Api.Services
 {
@@ -14,7 +15,10 @@ namespace HRM.Api.Services
         Task<(bool success, string message)> CancelLeaveRequestAsync(int requestId, int employeeId);
         Task<List<LeaveTypeDto>> GetLeaveTypesAsync();
         Task<string?> GetPrimaryApproverNameAsync(int employeeId);
+        Task<List<LeaveRequestListItemDto>> GetLeaveRequestsByEmployeeAsync(int employeeId);
+
     }
+
 
     public class LeaveRequestService : ILeaveRequestService
     {
@@ -240,5 +244,29 @@ namespace HRM.Api.Services
 
             return (true, "Request cancelled successfully");
         }
+
+        public async Task<List<LeaveRequestListItemDto>> GetLeaveRequestsByEmployeeAsync(int employeeId)
+        {
+            var context = _leaveRequestRepository.GetContext();
+
+            var leaveRequests = await context.LeaveRequests
+                .Include(l => l.LeaveType)
+                .Where(l => l.EmployeeID == employeeId)
+                .OrderByDescending(l => l.RequestedDate)
+                .ToListAsync();
+
+            return leaveRequests.Select(r => new LeaveRequestListItemDto
+            {
+                LeaveRequestID = r.LeaveRequestID,
+                LeaveTypeID = r.LeaveTypeID,
+                LeaveTypeName = r.LeaveType?.Name ?? "Unknown",
+                StartDate = r.StartDate,
+                EndDate = r.EndDate,
+                TotalDays = r.TotalDays,
+                Status = r.Status,
+                RequestedDate = r.RequestedDate
+            }).ToList();
+        }
+
     }
 }

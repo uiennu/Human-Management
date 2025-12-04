@@ -2,6 +2,8 @@ using HRM.Api.DTOs;
 using HRM.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using HRM.Api.Constants;
+using Microsoft.AspNetCore.Authorization;
+using HRM.Api.Data;
 
 namespace HRM.Api.Controllers
 {
@@ -265,5 +267,35 @@ namespace HRM.Api.Controllers
 
             return Ok(new { message = "Work handover deleted successfully" });
         }
+        ///<summary>
+        /// Get all leave requests of a specific employee (HR/Admin only)
+        /// GET /api/LeaveRequest/employee/{employeeId}
+        /// </summary>
+        [HttpGet("employee/{employeeId}")]
+        [Authorize(Roles = "Manager,Admin")]
+        public async Task<IActionResult> GetEmployeeLeaveRequests(
+            int employeeId,
+            [FromQuery] string? status = null,
+            [FromQuery] string? dateRange = null,
+            [FromQuery] int? leaveTypeId = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
+        {
+            if (employeeId <= 0)
+            {
+                return BadRequest(new { message = "Invalid employee ID" });
+            }
+
+            var result = await _leaveRequestService.GetLeaveRequestsAsync(
+                employeeId,
+                status,
+                dateRange,
+                leaveTypeId,
+                page,
+                pageSize);
+
+            return Ok(result);
+        }
     }
+    
 }

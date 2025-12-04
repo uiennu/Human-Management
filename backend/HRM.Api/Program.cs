@@ -14,7 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer("Bearer", options =>
     {
-        var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET") ?? builder.Configuration["Jwt:Secret"] ?? "YourSuperSecretKeyHere";
+        var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET") ?? builder.Configuration["Jwt:Secret"] ?? "super_secret_key_1234567890_super_long_key!";
         options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
         {
             ValidateIssuer = false,
@@ -54,7 +54,9 @@ builder.Services.AddScoped<IEmailService, ResendEmailService>();
 
 // Register Resend client correctly
 var resendApiKey = Environment.GetEnvironmentVariable("RESEND_API_KEY") 
-    ?? builder.Configuration["Resend:ApiKey"];
+    ?? builder.Configuration["Resend:ApiKey"]
+    ?? "re_dummy_key"; // Fallback to prevent null exception if not configured
+
 // Register the Resend client using the SDK's factory method
 builder.Services.AddSingleton<Resend.IResend>(provider => Resend.ResendClient.Create(resendApiKey));
 

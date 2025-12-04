@@ -22,7 +22,7 @@ namespace HRM.Api.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            // TODO: Replace with real user validation from database
+            // Get employee by email
             var employee = await _context.Employees.FirstOrDefaultAsync(e => e.Email == request.Email);
             
             if (employee == null)
@@ -36,15 +36,33 @@ namespace HRM.Api.Controllers
                 return Unauthorized(new { message = "Invalid email or password" });
             }
 
-            var claims = new[]
+            // Get employee roles from database
+            var employeeRoles = await _context.EmployeeRoles
+                .Where(er => er.EmployeeID == employee.EmployeeID)
+                .Join(_context.Roles, er => er.RoleID, r => r.RoleID, (er, r) => r.RoleName)
+                .ToListAsync();
+
+            // Default to "Employee" if no roles assigned
+            if (!employeeRoles.Any())
             {
-                new Claim(ClaimTypes.NameIdentifier, employee.EmployeeID.ToString()), // Add EmployeeID as NameIdentifier
+                employeeRoles.Add("Employee");
+            }
+
+            // Create claims list
+            var claimsList = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, employee.EmployeeID.ToString()),
                 new Claim(ClaimTypes.Name, employee.Email),
                 new Claim(ClaimTypes.GivenName, employee.FirstName),
                 new Claim(ClaimTypes.Surname, employee.LastName),
-                new Claim(ClaimTypes.Role, "Employee"),
-                new Claim("EmployeeID", employee.EmployeeID.ToString()) // Also add as custom claim for convenience
+                new Claim("EmployeeID", employee.EmployeeID.ToString())
             };
+
+            // Add all roles as separate claims
+            foreach (var role in employeeRoles)
+            {
+                claimsList.Add(new Claim(ClaimTypes.Role, role));
+            }
 
             var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET") ?? "super_secret_key_1234567890_super_long_key!";
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
@@ -52,7 +70,7 @@ namespace HRM.Api.Controllers
             var token = new JwtSecurityToken(
                 issuer: "hrm.api",
                 audience: "hrm.api",
-                claims: claims,
+                claims: claimsList,
                 expires: DateTime.Now.AddHours(8),
                 signingCredentials: creds
             );
@@ -64,7 +82,7 @@ namespace HRM.Api.Controllers
                 employeeId = employee.EmployeeID,
                 name = $"{employee.FirstName} {employee.LastName}",
                 email = employee.Email,
-                role = "Employee" 
+                roles = employeeRoles // Return list of roles
             });
         }
     }

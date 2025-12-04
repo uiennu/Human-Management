@@ -51,6 +51,9 @@ CREATE TABLE Employees (
     CurrentPoints DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
     AvatarUrl VARCHAR(255) NULL,
 
+    --add 
+    EmergencyContactRelation NVARCHAR(50) NULL
+
     CONSTRAINT FK_Employees_Department FOREIGN KEY (DepartmentID) REFERENCES Departments(DepartmentID),
     CONSTRAINT FK_Employees_Manager FOREIGN KEY (ManagerID) REFERENCES Employees(EmployeeID)
 );
