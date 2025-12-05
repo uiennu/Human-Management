@@ -2,6 +2,8 @@ using HRM.Api.DTOs;
 using HRM.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using HRM.Api.Constants;
+using Microsoft.AspNetCore.Authorization;
+using HRM.Api.Data;
 
 namespace HRM.Api.Controllers
 {
@@ -40,15 +42,53 @@ namespace HRM.Api.Controllers
         }
 
         /// <summary>
+        /// Get primary approver (manager) for the current or specified employee
+        /// GET: /api/leave/primary-approver
+        /// </summary>
+        [HttpGet("primary-approver")]
+        public async Task<ActionResult> GetPrimaryApprover([FromQuery] int? employeeId = null)
+        {
+            var id = employeeId ?? _currentUserService.GetCurrentEmployeeId();
+            if (id == 0)
+                return Unauthorized(new { message = "Employee not authenticated" });
+
+            var name = await _leaveRequestService.GetPrimaryApproverNameAsync(id);
+            if (string.IsNullOrEmpty(name))
+            {
+                return NotFound(new { message = "Manager not found for this employee" });
+            }
+
+            return Ok(new { managerName = name });
+        }
+
+        /// <summary>
         /// Get employee's leave balance
         /// GET: /api/leave/balances/{employeeId}
         /// </summary>
         [HttpGet("balances/{employeeId}")]
+        [Authorize]
         public async Task<ActionResult<LeaveBalanceResponseDto>> GetMyLeaveBalance(int employeeId)
         {
-            // Use the provided employeeId directly (for querying other employees' balances)
-            if (employeeId <= 0)
-                return BadRequest("Invalid employee ID");
+            var currentEmployeeId = _currentUserService.GetCurrentEmployeeId();
+            var roles = _currentUserService.GetCurrentUserRoles();
+
+            // DEBUG LOGGING
+            Console.WriteLine($"[AuthCheck] CurrentUser: {currentEmployeeId}, TargetUser: {employeeId}");
+            Console.WriteLine($"[AuthCheck] Roles: {string.Join(", ", roles)}");
+
+            if (currentEmployeeId == 0)
+                return Unauthorized(new { message = "Employee not authenticated" });
+
+            // Logic:
+            // 1. Admin & HR & Manager can view anyone's balance
+            // 2. Employee can ONLY view their own balance
+            
+            bool isPrivilegedUser = roles.Any(r => r == "Admin" || r == "HR" || r == "Manager");
+
+            if (!isPrivilegedUser && employeeId != currentEmployeeId)
+            {
+                return Forbid(); // 403 Forbidden
+            }
 
             var result = await _leaveBalanceService.GetMyLeaveBalanceAsync(employeeId);
             if (result == null)
@@ -58,6 +98,7 @@ namespace HRM.Api.Controllers
 
             return Ok(result);
         }
+
 
         /// <summary>
         /// Create a new leave request
@@ -245,5 +286,35 @@ namespace HRM.Api.Controllers
 
             return Ok(new { message = "Work handover deleted successfully" });
         }
+        ///<summary>
+        /// Get all leave requests of a specific employee (HR/Admin only)
+        /// GET /api/LeaveRequest/employee/{employeeId}
+        /// </summary>
+        [HttpGet("employee/{employeeId}")]
+        [Authorize(Roles = "Manager,Admin")]
+        public async Task<IActionResult> GetEmployeeLeaveRequests(
+            int employeeId,
+            [FromQuery] string? status = null,
+            [FromQuery] string? dateRange = null,
+            [FromQuery] int? leaveTypeId = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
+        {
+            if (employeeId <= 0)
+            {
+                return BadRequest(new { message = "Invalid employee ID" });
+            }
+
+            var result = await _leaveRequestService.GetLeaveRequestsAsync(
+                employeeId,
+                status,
+                dateRange,
+                leaveTypeId,
+                page,
+                pageSize);
+
+            return Ok(result);
+        }
     }
+    
 }

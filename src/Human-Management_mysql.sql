@@ -1,6 +1,7 @@
 -- =================================================================
 -- CREATE DATABASE
 -- =================================================================
+DROP DATABASE IF EXISTS HRM_System;
 CREATE DATABASE IF NOT EXISTS HRM_System;
 USE HRM_System;
 
@@ -37,6 +38,8 @@ CREATE TABLE Employees (
     PersonalEmail VARCHAR(100),
     EmergencyContactName VARCHAR(100),
     EmergencyContactPhone VARCHAR(20),
+    EmergencyContactRelation NVARCHAR(50),
+    
     BankAccountNumber VARCHAR(50),
     TaxID VARCHAR(50),
 
@@ -47,6 +50,9 @@ CREATE TABLE Employees (
     -- Rewards
     CurrentPoints DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
     AvatarUrl VARCHAR(255) NULL,
+
+    --add 
+    EmergencyContactRelation NVARCHAR(50) NULL
 
     CONSTRAINT FK_Employees_Department FOREIGN KEY (DepartmentID) REFERENCES Departments(DepartmentID),
     CONSTRAINT FK_Employees_Manager FOREIGN KEY (ManagerID) REFERENCES Employees(EmployeeID)

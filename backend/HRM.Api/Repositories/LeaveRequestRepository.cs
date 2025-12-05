@@ -26,6 +26,8 @@ namespace HRM.Api.Repositories
             return await _dbSet
                 .Include(x => x.LeaveType)
                 .Include(x => x.Employee)
+                .Include(x => x.Histories)
+                    .ThenInclude(h => h.ChangedByEmployee)
                 .FirstOrDefaultAsync(x => x.LeaveRequestID == id);
         }
 

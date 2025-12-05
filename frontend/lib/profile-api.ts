@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5204/api"
 
 export interface EmployeeProfile {
   id: number
@@ -22,11 +22,16 @@ export interface EmployeeProfile {
 export interface UpdateProfileRequest {
   phone?: string
   location?: string
+  personalEmail?: string
+  emergencyContactName?: string
+  emergencyContactPhone?: string
+  emergencyContactRelation?: string
+  address?: string
 }
 
 // Get current employee profile
 export async function getEmployeeProfile(): Promise<EmployeeProfile> {
-  const response = await fetch(`${API_BASE_URL}/profile`, {
+  const response = await fetch(`${API_BASE_URL}/employees/me`, {
     headers: {
       Authorization: `Bearer ${getAuthToken()}`,
     },
@@ -40,8 +45,8 @@ export async function getEmployeeProfile(): Promise<EmployeeProfile> {
 }
 
 // Update employee profile
-export async function updateEmployeeProfile(data: UpdateProfileRequest): Promise<{ success: boolean }> {
-  const response = await fetch(`${API_BASE_URL}/profile`, {
+export async function updateEmployeeProfile(data: UpdateProfileRequest): Promise<{ success: boolean; message?: string }> {
+  const response = await fetch(`${API_BASE_URL}/employees/me/basic-info`, {
     method: "PUT",
     headers: {
       Authorization: `Bearer ${getAuthToken()}`,
@@ -51,7 +56,8 @@ export async function updateEmployeeProfile(data: UpdateProfileRequest): Promise
   })
 
   if (!response.ok) {
-    throw new Error("Failed to update employee profile")
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || "Failed to update employee profile")
   }
 
   return response.json()
@@ -60,7 +66,7 @@ export async function updateEmployeeProfile(data: UpdateProfileRequest): Promise
 // Helper function to get auth token
 function getAuthToken(): string {
   if (typeof window !== "undefined") {
-    return localStorage.getItem("authToken") || ""
+    return localStorage.getItem("token") || ""
   }
   return ""
 }

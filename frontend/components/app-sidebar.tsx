@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button"
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
 import { Separator } from "@/components/ui/separator"
+import { useEffect, useState } from "react"
+import { getEmployeeProfile, EmployeeProfile } from "@/lib/profile-api"
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: Home },
@@ -21,13 +23,32 @@ const navigation = [
 
 export function AppSidebar() {
   const pathname = usePathname()
-  const { logout } = useAuth();
+  const { logout, token } = useAuth();
   const router = useRouter();
+  const [profile, setProfile] = useState<EmployeeProfile | null>(null);
+
+  useEffect(() => {
+    async function fetchProfile() {
+      try {
+        const data = await getEmployeeProfile();
+        setProfile(data);
+      } catch (err) {
+        console.error("Error fetching profile for sidebar:", err);
+      }
+    }
+
+    if (token) {
+      fetchProfile();
+    }
+  }, [token]);
 
   const handleLogout = () => {
     logout();
     router.replace("/login");
   };
+
+  const displayName = profile ? `${profile.firstName} ${profile.lastName}` : "User";
+  const displayPosition = profile?.position || "Employee";
 
   return (
     <div className="flex h-full w-64 flex-col bg-slate-900 text-slate-100">
@@ -68,12 +89,14 @@ export function AppSidebar() {
       <div className="p-4">
         <div className="flex items-center gap-3 rounded-lg bg-slate-800 p-3">
           <Avatar className="h-10 w-10">
-            <AvatarImage src="/professional-portrait.png" alt="User" />
-            <AvatarFallback className="bg-blue-600 text-white">JD</AvatarFallback>
+            <AvatarImage src={profile?.avatarUrl || "/professional-portrait.png"} alt={displayName} />
+            <AvatarFallback className="bg-blue-600 text-white">
+              {profile ? `${profile.firstName[0]}${profile.lastName[0]}` : "JD"}
+            </AvatarFallback>
           </Avatar>
           <div className="flex-1 overflow-hidden">
-            <p className="truncate text-sm font-medium text-white">John Doe</p>
-            <p className="truncate text-xs text-slate-400">Software Engineer</p>
+            <p className="truncate text-sm font-medium text-white">{displayName}</p>
+            <p className="truncate text-xs text-slate-400">{displayPosition}</p>
           </div>
         </div>
         <Button
