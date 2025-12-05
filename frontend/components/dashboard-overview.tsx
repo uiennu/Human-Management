@@ -4,8 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Calendar, Clock, TrendingUp, CalendarCheck, AlertCircle } from "lucide-react"
+import { Calendar, Clock, TrendingUp, CalendarCheck, AlertCircle, Loader2 } from "lucide-react"
 import Link from "next/link"
+import { useEffect, useState } from "react"
+import { getEmployeeProfile, EmployeeProfile } from "@/lib/profile-api"
+import { useAuth } from "@/lib/auth-context"
 
 const upcomingLeaves = [
   { id: 1, type: "Vacation", startDate: "Dec 24, 2023", endDate: "Dec 28, 2023", days: 5, status: "Approved" },
@@ -19,17 +22,56 @@ const recentActivities = [
 ]
 
 export function DashboardOverview() {
+  const { token } = useAuth();
+  const [profile, setProfile] = useState<EmployeeProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchProfile() {
+      try {
+        const data = await getEmployeeProfile();
+        setProfile(data);
+      } catch (err) {
+        console.error("Error fetching profile for dashboard:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (token) {
+      fetchProfile();
+    }
+  }, [token]);
+
+  if (loading) {
+    return (
+      <div className="flex h-40 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  // Fallback if profile fails to load
+  const displayName = profile ? `${profile.firstName} ${profile.lastName}` : "Employee";
+  const position = profile?.position || "Staff";
+  const annualLeave = profile?.leaveBalance?.annual ?? 0;
+  const sickLeave = profile?.leaveBalance?.sick ?? 0;
+  const personalLeave = profile?.leaveBalance?.personal ?? 0;
+  const totalBalance = annualLeave + sickLeave + personalLeave;
+
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Welcome back, John!</h1>
+          <h1 className="text-3xl font-bold text-slate-900">Welcome back, {profile?.firstName || "there"}!</h1>
           <p className="mt-1 text-slate-600">Here's what's happening with your account today.</p>
         </div>
         <Avatar className="h-16 w-16">
-          <AvatarImage src="/professional-portrait.png" alt="John Doe" />
-          <AvatarFallback className="bg-blue-600 text-xl text-white">JD</AvatarFallback>
+          <AvatarImage src={profile?.avatarUrl || "/professional-portrait.png"} alt={displayName} />
+          <AvatarFallback className="bg-blue-600 text-xl text-white">
+            {profile ? `${profile.firstName[0]}${profile.lastName[0]}` : "JD"}
+          </AvatarFallback>
         </Avatar>
       </div>
 
@@ -39,8 +81,8 @@ export function DashboardOverview() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-600">Leave Balance</p>
-                <p className="mt-2 text-3xl font-bold text-slate-900">15</p>
+                <p className="text-sm font-medium text-slate-600">Annual Leave</p>
+                <p className="mt-2 text-3xl font-bold text-slate-900">{annualLeave}</p>
                 <p className="mt-1 text-xs text-slate-500">days remaining</p>
               </div>
               <div className="rounded-full bg-blue-100 p-3">
@@ -54,9 +96,9 @@ export function DashboardOverview() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-600">Leave Used</p>
-                <p className="mt-2 text-3xl font-bold text-slate-900">5</p>
-                <p className="mt-1 text-xs text-slate-500">days this year</p>
+                <p className="text-sm font-medium text-slate-600">Sick Leave</p>
+                <p className="mt-2 text-3xl font-bold text-slate-900">{sickLeave}</p>
+                <p className="mt-1 text-xs text-slate-500">days remaining</p>
               </div>
               <div className="rounded-full bg-emerald-100 p-3">
                 <CalendarCheck className="h-6 w-6 text-emerald-600" />
@@ -70,7 +112,7 @@ export function DashboardOverview() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">Pending Requests</p>
-                <p className="mt-2 text-3xl font-bold text-slate-900">2</p>
+                <p className="mt-2 text-3xl font-bold text-slate-900">0</p>
                 <p className="mt-1 text-xs text-slate-500">awaiting approval</p>
               </div>
               <div className="rounded-full bg-amber-100 p-3">
@@ -84,9 +126,9 @@ export function DashboardOverview() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-600">This Month</p>
-                <p className="mt-2 text-3xl font-bold text-slate-900">8h</p>
-                <p className="mt-1 text-xs text-slate-500">overtime hours</p>
+                <p className="text-sm font-medium text-slate-600">Personal Days</p>
+                <p className="mt-2 text-3xl font-bold text-slate-900">{personalLeave}</p>
+                <p className="mt-1 text-xs text-slate-500">days remaining</p>
               </div>
               <div className="rounded-full bg-purple-100 p-3">
                 <TrendingUp className="h-6 w-6 text-purple-600" />

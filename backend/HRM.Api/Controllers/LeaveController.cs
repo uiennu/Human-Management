@@ -84,11 +84,9 @@ namespace HRM.Api.Controllers
             // 2. Employee can ONLY view their own balance
             
             bool isPrivilegedUser = roles.Any(r => r == "Admin" || r == "HR" || r == "Manager");
-            Console.WriteLine($"[AuthCheck] IsPrivileged: {isPrivilegedUser}");
 
             if (!isPrivilegedUser && employeeId != currentEmployeeId)
             {
-                Console.WriteLine("[AuthCheck] Access Denied");
                 return Forbid(); // 403 Forbidden
             }
 

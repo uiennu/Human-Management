@@ -45,11 +45,31 @@ namespace HRM.Api.Services
             var pendingSensitiveChange = pendingChanges
                 .FirstOrDefault(c => c.FieldName == "TaxID" || c.FieldName == "BankAccountNumber");
 
+            // Calculate leave balances
+            var annualBalance = employee.LeaveBalances.FirstOrDefault(lb => lb.LeaveType?.Name == "Annual")?.BalanceDays ?? 0;
+            var sickBalance = employee.LeaveBalances.FirstOrDefault(lb => lb.LeaveType?.Name == "Sick")?.BalanceDays ?? 0;
+            var personalBalance = employee.LeaveBalances.FirstOrDefault(lb => lb.LeaveType?.Name == "Personal")?.BalanceDays ?? 0;
+
             return new MyProfileResponseDto
             {
                 EmployeeId = employee.EmployeeID.ToString(),
+                FirstName = employee.FirstName,
+                LastName = employee.LastName,
                 FullName = $"{employee.FirstName} {employee.LastName}",
+                Email = employee.Email,
+                Phone = employee.Phone ?? "",
+                Position = "Employee", // Default position as it's not in Employee model
+                Department = employee.Department?.DepartmentName ?? "N/A",
+                Manager = employee.Manager != null ? $"{employee.Manager.FirstName} {employee.Manager.LastName}" : "N/A",
+                Location = employee.Address ?? "N/A",
+                JoinDate = employee.HireDate,
                 AvatarUrl = employee.AvatarUrl ?? "",
+                LeaveBalance = new LeaveBalanceSummaryDto
+                {
+                    Annual = (int)annualBalance,
+                    Sick = (int)sickBalance,
+                    Personal = (int)personalBalance
+                },
                 BasicInfo = new BasicInfoDto
                 {
                     PhoneNumber = employee.Phone ?? "",

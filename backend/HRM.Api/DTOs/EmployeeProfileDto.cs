@@ -34,12 +34,30 @@ namespace HRM.Api.DTOs
         public PendingRequestDto? PendingRequest { get; set; }
     }
 
+    // Leave Balance Summary DTO
+    public class LeaveBalanceSummaryDto
+    {
+        public int Annual { get; set; }
+        public int Sick { get; set; }
+        public int Personal { get; set; }
+    }
+
     // My Profile Response DTO
     public class MyProfileResponseDto
     {
         public string EmployeeId { get; set; } = "";
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
         public string FullName { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Phone { get; set; } = "";
+        public string Position { get; set; } = "";
+        public string Department { get; set; } = "";
+        public string Manager { get; set; } = "";
+        public string Location { get; set; } = "";
+        public DateTime JoinDate { get; set; }
         public string AvatarUrl { get; set; } = "";
+        public LeaveBalanceSummaryDto LeaveBalance { get; set; } = new();
         public BasicInfoDto BasicInfo { get; set; } = new();
         public SensitiveInfoDto SensitiveInfo { get; set; } = new();
     }

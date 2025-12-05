@@ -27,6 +27,8 @@ namespace HRM.Api.Repositories
             return await _dbSet
                 .Include(e => e.Department)
                 .Include(e => e.Manager)
+                .Include(e => e.LeaveBalances)
+                    .ThenInclude(lb => lb.LeaveType)
                 .FirstOrDefaultAsync(e => e.EmployeeID == employeeId);
         }
     }

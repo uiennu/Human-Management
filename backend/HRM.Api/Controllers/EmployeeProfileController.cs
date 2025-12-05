@@ -33,17 +33,22 @@ namespace HRM.Api.Controllers
             try
             {
                 var employeeId = _currentUserService.GetCurrentEmployeeId();
+                _logger.LogInformation($"[GetMyProfile] Request received. EmployeeID: {employeeId}");
+
                 if (employeeId == 0)
                 {
+                    _logger.LogWarning("[GetMyProfile] User not authenticated (EmployeeID is 0)");
                     return Unauthorized(new { message = "User not authenticated" });
                 }
 
                 var profile = await _service.GetMyProfileAsync(employeeId);
                 if (profile == null)
                 {
+                    _logger.LogWarning($"[GetMyProfile] Profile not found for EmployeeID: {employeeId}");
                     return NotFound(new { message = "Employee profile not found" });
                 }
 
+                _logger.LogInformation($"[GetMyProfile] Profile found for {profile.FullName}");
                 return Ok(profile);
             }
             catch (Exception ex)
