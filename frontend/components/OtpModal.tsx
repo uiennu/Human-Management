@@ -5,10 +5,11 @@ interface OtpModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (otp: string) => void;
+  onResend?: () => void;
   message?: string;
 }
 
-export default function OtpModal({ isOpen, onClose, onSubmit, message }: OtpModalProps) {
+export default function OtpModal({ isOpen, onClose, onSubmit, onResend, message }: OtpModalProps) {
   const [otp, setOtp] = useState<string[]>(new Array(6).fill(""));
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -84,7 +85,12 @@ export default function OtpModal({ isOpen, onClose, onSubmit, message }: OtpModa
             className="flex w-full cursor-pointer items-center justify-center rounded-lg h-12 px-5 bg-[#13a4ec] text-white text-base font-bold hover:bg-[#13a4ec]/90 transition-colors">
             Verify & Submit
           </button>
-          <p className="text-sm font-medium text-[#13a4ec] hover:underline cursor-pointer">Resend OTP</p>
+          <p 
+            className="text-sm font-medium text-[#13a4ec] hover:underline cursor-pointer"
+            onClick={() => {
+              if (typeof onResend === 'function') onResend();
+            }}
+          >Resend OTP</p>
         </div>
       </div>
     </div>
