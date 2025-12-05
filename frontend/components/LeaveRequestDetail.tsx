@@ -21,6 +21,8 @@ export default function LeaveRequestDetail({ request, onBack }: LeaveRequestDeta
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
+const SERVER_ROOT = "http://localhost:5204";
+
   useEffect(() => {
     const loadDetails = async () => {
       try {
@@ -43,6 +45,7 @@ export default function LeaveRequestDetail({ request, onBack }: LeaveRequestDeta
     return <div className="p-8 text-center text-red-500">Failed to load details</div>;
   }
 
+  // Normalize API base: remove trailing /api if NEXT_PUBLIC_API_URL includes it
   const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5204";
 
   const status = details.status || request.status;
@@ -58,9 +61,22 @@ export default function LeaveRequestDetail({ request, onBack }: LeaveRequestDeta
   })();
 
   const hasApproval = !!details.approvalInfo;
+  const getImageUrl = (path: string) => {
+      if (!path) return "";
+      
+      // 1. Xóa chữ "api/" ở đầu nếu lỡ có
+      // 2. Xóa các dấu gạch chéo thừa ở đầu chuỗi (ví dụ /uploads -> uploads)
+      // 3. Đổi tất cả dấu gạch chéo ngược "\" (Windows) thành "/" (Web)
+      const cleanPath = path
+        .replace(/^api\//i, "") 
+        .replace(/^[\\/]+/, "")
+        .replace(/\\/g, "/");
 
+      return `${SERVER_ROOT}/${cleanPath}`;
+    };
   const openAttachment = (path: string) => {
-    const url = `${API_BASE}/${path}`;
+    const url = getImageUrl(path);
+    console.log("Opening URL:", url); // Log để kiểm tra nếu còn lỗi
     const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(path);
     if (isImage) {
       setSelectedImage(url);
@@ -164,9 +180,9 @@ export default function LeaveRequestDetail({ request, onBack }: LeaveRequestDeta
                   <div className="space-y-3">
                     {details.attachments && details.attachments.length > 0 ? (
                       details.attachments.map((path: string, index: number) => {
-                        const fileName = path.split("/").pop();
+                        const fileName = path.split(/[/\\]/).pop();
                         const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(path);
-                        const url = `${API_BASE}/${path}`;
+                        const url = getImageUrl(path);
                         return (
                           <div
                             key={index}
