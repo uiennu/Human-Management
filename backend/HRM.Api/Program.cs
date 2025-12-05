@@ -60,7 +60,16 @@ var resendApiKey = Environment.GetEnvironmentVariable("RESEND_API_KEY")
 // Register the Resend client using the SDK's factory method
 builder.Services.AddSingleton<Resend.IResend>(provider => Resend.ResendClient.Create(resendApiKey));
 
-builder.Services.AddCors();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowLocalhost3000", policy =>
+    {
+        policy.WithOrigins("http://localhost:3000")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
 
 
 var app = builder.Build();
@@ -83,16 +92,12 @@ if (app.Environment.IsDevelopment())
 // app.UseHttpsRedirection();
 
 
+// Enable CORS early so preflight (OPTIONS) requests are handled
+app.UseCors("AllowLocalhost3000");
+
 // Add authentication and authorization middleware
 app.UseAuthentication();
 app.UseAuthorization();
-
-// CORS must come before routing and controllers
-app.UseCors(policy =>
-     policy.AllowAnyOrigin()
-             .AllowAnyHeader()
-             .AllowAnyMethod()
-);
 
 app.UseStaticFiles();
 

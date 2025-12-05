@@ -46,13 +46,50 @@ export default function LeaveHistoryPage() {
   const [balances, setBalances] = useState<any[]>([])
   const [leaveTypes, setLeaveTypes] = useState<any[]>([])
 
-  const EMPLOYEE_ID = 2; // Mock John Doe
+  const [employeeId, setEmployeeId] = useState<number | null>(null);
+
+
+  // 2. useEffect: Lấy ID từ Token (thay vì lấy từ user object bị null)
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    
+    if (token) {
+      try {
+        // --- ĐOẠN CODE GIẢI MÃ JWT TOKEN ---
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        
+        const payload = JSON.parse(jsonPayload);
+        console.log("Token Payload đã giải mã:", payload); 
+
+        // Dựa vào log của bạn, key trong token là "EmployeeID"
+        // (Lưu ý chữ hoa chữ thường tùy server, nên mình check vài trường hợp)
+        const id = payload.EmployeeID || payload.employeeID || payload.nameid || payload.sub;
+
+        if (id) {
+            console.log("Đã tìm thấy ID từ Token:", id);
+            setEmployeeId(Number(id));
+        } else {
+            console.error("Không tìm thấy EmployeeID trong token");
+        }
+      } catch (e) {
+        console.error("Lỗi khi giải mã token:", e);
+      }
+    } else {
+        console.log("Không tìm thấy token trong localStorage");
+    }
+  }, []);
 
   useEffect(() => {
-    loadRequests();
-    loadBalances();
-    loadLeaveTypes();
-  }, [showCreateForm]);
+    if (employeeId && employeeId > 0) {
+        loadRequests();
+        loadBalances();
+        loadLeaveTypes();
+    }
+  }, [showCreateForm, employeeId]);
 
   const loadLeaveTypes = async () => {
     try {
@@ -64,9 +101,17 @@ export default function LeaveHistoryPage() {
   };
 
   const loadRequests = async () => {
+    // --- THÊM ĐOẠN NÀY ĐỂ CHẶN LỖI ---
+    if (!employeeId || employeeId === 0) {
+        console.log("🛑 Đang chờ ID... (Chưa gọi API)");
+        return; // Dừng ngay lập tức, không cho chạy tiếp
+    }
+    // ----------------------------------
+
     setLoading(true);
     try {
-      const data = await leaveService.getMyRequests(EMPLOYEE_ID, {
+      console.log("✅ Bắt đầu gọi API với ID:", employeeId);
+      const data = await leaveService.getMyRequests(employeeId, {
         status: statusFilter,
         dateRange: dateRangeFilter,
         leaveTypeId: leaveTypeFilter,
@@ -82,8 +127,9 @@ export default function LeaveHistoryPage() {
   };
 
   const loadBalances = async () => {
+    if (!employeeId) return;
     try {
-      const data = await leaveService.getMyBalances(EMPLOYEE_ID);
+      const data = await leaveService.getMyBalances(employeeId);
       setBalances(data || []);
     } catch (err) {
       console.error("Failed to load balances", err);
@@ -136,7 +182,7 @@ export default function LeaveHistoryPage() {
     setTimeout(() => {
       // Manually call loadRequests with default values since state might not be updated yet in this closure
       setLoading(true);
-      leaveService.getMyRequests(EMPLOYEE_ID, {
+      leaveService.getMyRequests(employeeId||0, {
         status: "all",
         dateRange: "last-30-days",
         leaveTypeId: "all",

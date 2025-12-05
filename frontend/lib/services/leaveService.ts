@@ -1,4 +1,21 @@
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5204') + '/api';
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5204');
+
+const getAuthHeaders = (isMultipart = false) => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
+    
+    // --- DEBUG LOG: Kiểm tra token trước khi gửi ---
+    console.log("DEBUG - Token trong localStorage:", token ? token.substring(0, 20) + "..." : "KHÔNG CÓ TOKEN");
+    
+    const headers: any = {
+        'Authorization': `Bearer ${token}`,
+    };
+
+    if (!isMultipart) {
+        headers['Content-Type'] = 'application/json';
+    }
+
+    return headers;
+};
 
 export interface LeaveType {
     leaveTypeID: number;
@@ -58,13 +75,15 @@ export interface PrimaryApproverResponse {
 
 export const leaveService = {
     async getLeaveTypes(): Promise<LeaveType[]> {
-        const res = await fetch(`${API_URL}/leave/types`);
+        const res = await fetch(`${API_URL}/leave/types`,{
+            headers: getAuthHeaders()});
         if (!res.ok) throw new Error('Failed to fetch leave types');
         return res.json();
     },
 
     async getMyBalances(employeeId: number): Promise<LeaveBalance[]> {
-        const res = await fetch(`${API_URL}/leave/balances/${employeeId}`);
+        const res = await fetch(`${API_URL}/leave/balances/${employeeId}`,{
+            headers: getAuthHeaders()});
         if (!res.ok) throw new Error('Failed to fetch balances');
         const data = await res.json();
         return data.data;
@@ -88,6 +107,7 @@ export const leaveService = {
 
         const res = await fetch(`${API_URL}/leave/request?employeeId=${employeeId}`, {
             method: 'POST',
+            headers: getAuthHeaders(true),
             body: formData,
         });
 
@@ -120,20 +140,23 @@ export const leaveService = {
             params.append('leaveTypeId', options.leaveTypeId);
         }
 
-        const res = await fetch(`${API_URL}/leave/requests?${params.toString()}`);
+        const res = await fetch(`${API_URL}/leave/requests?${params.toString()}`,{
+            headers: getAuthHeaders()});
         if (!res.ok) throw new Error('Failed to fetch requests');
         return res.json();
     },
 
     async getLeaveRequestDetail(requestId: number): Promise<LeaveRequestDetail> {
-        const res = await fetch(`${API_URL}/leave/leave-requests/${requestId}`);
+        const res = await fetch(`${API_URL}/leave/leave-requests/${requestId}`,{
+            headers: getAuthHeaders()});
         if (!res.ok) throw new Error('Failed to fetch request details');
         return res.json();
     },
 
     async cancelLeaveRequest(requestId: number) {
         const res = await fetch(`${API_URL}/leave/leave-requests/${requestId}/cancel`, {
-            method: 'PUT'
+            method: 'PUT',
+            headers: getAuthHeaders()
         });
         if (!res.ok) {
             const error = await res.json();
@@ -143,7 +166,8 @@ export const leaveService = {
     },
 
     async getPrimaryApprover(employeeId: number): Promise<PrimaryApproverResponse> {
-        const res = await fetch(`${API_URL}/leave/primary-approver?employeeId=${employeeId}`);
+        const res = await fetch(`${API_URL}/leave/primary-approver?employeeId=${employeeId}`,{
+            headers: getAuthHeaders()});
         if (!res.ok) {
             throw new Error('Failed to fetch primary approver');
         }
