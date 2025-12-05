@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button"
 import { Calendar, Clock, TrendingUp, CalendarCheck, AlertCircle, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { getEmployeeProfile, EmployeeProfile } from "@/lib/profile-api"
-import { useAuth } from "@/lib/auth-context"
+import { profileApi } from "@/lib/api/profile"
+import type { EmployeeProfile } from "@/types/profile"
+import { useAuth } from "@/lib/hooks/use-auth"
 
 const upcomingLeaves = [
   { id: 1, type: "Vacation", startDate: "Dec 24, 2023", endDate: "Dec 28, 2023", days: 5, status: "Approved" },
@@ -29,7 +30,7 @@ export function DashboardOverview() {
   useEffect(() => {
     async function fetchProfile() {
       try {
-        const data = await getEmployeeProfile();
+        const data = await profileApi.getProfile();
         setProfile(data);
       } catch (err) {
         console.error("Error fetching profile for dashboard:", err);

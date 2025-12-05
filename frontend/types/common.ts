@@ -14,30 +14,6 @@ export interface Employee {
   avatar?: string
 }
 
-export interface LeaveRequest {
-  id: number
-  employeeId: number
-  leaveType: string
-  startDate: string
-  endDate: string
-  totalDays: number
-  status: "Approved" | "Pending" | "Rejected" | "Cancelled"
-  approverId?: number
-  approver: string
-  submittedDate: string
-  reason?: string
-  approvedDate?: string
-  rejectedDate?: string
-}
-
-export interface LeaveBalance {
-  totalDays: number
-  usedDays: number
-  remainingDays: number
-  pendingRequests: number
-  year: number
-}
-
 export interface TimesheetUpdateRequest {
   id: number
   employeeId: number
@@ -57,18 +33,6 @@ export interface CheckInRequest {
   date: string
   time: string
   location: string
-  status: "Approved" | "Pending" | "Rejected"
-  reason: string
-  submittedDate: string
-  approver?: string
-}
-
-export interface WFHRequest {
-  id: number
-  employeeId: number
-  startDate: string
-  endDate: string
-  days: number
   status: "Approved" | "Pending" | "Rejected"
   reason: string
   submittedDate: string

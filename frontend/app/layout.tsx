@@ -5,7 +5,7 @@ import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 // <CHANGE> Added sidebar layout for employee portal
 import SidebarLayout from "@/components/sidebar-layout"
-import { AuthProvider } from "@/lib/auth-context"
+import { AuthProvider } from "@/lib/hooks/use-auth"
 
 const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })

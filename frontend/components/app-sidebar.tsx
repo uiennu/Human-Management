@@ -6,11 +6,12 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { useAuth } from "@/lib/auth-context"
+import { useAuth } from "@/lib/hooks/use-auth"
 import { useRouter } from "next/navigation"
 import { Separator } from "@/components/ui/separator"
 import { useEffect, useState } from "react"
-import { getEmployeeProfile, EmployeeProfile } from "@/lib/profile-api"
+import { profileApi } from "@/lib/api/profile"
+import type { EmployeeProfile } from "@/types/profile"
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: Home },
@@ -30,7 +31,7 @@ export function AppSidebar() {
   useEffect(() => {
     async function fetchProfile() {
       try {
-        const data = await getEmployeeProfile();
+        const data = await profileApi.getProfile();
         setProfile(data);
       } catch (err) {
         console.error("Error fetching profile for sidebar:", err);

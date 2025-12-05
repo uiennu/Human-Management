@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Eye, X, Plus, TriangleAlert } from "lucide-react"
 import LeaveRequestForm from "./LeaveRequestForm"
 import LeaveRequestDetail from "./LeaveRequestDetail"
-import { leaveService } from "@/lib/services/leaveService"
+import { leaveService } from "@/lib/api/leave-service"
 import {
   AlertDialog,
   AlertDialogAction,

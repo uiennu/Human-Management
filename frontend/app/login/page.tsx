@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth } from "@/lib/hooks/use-auth";
 
 
 export default function LoginPage() {

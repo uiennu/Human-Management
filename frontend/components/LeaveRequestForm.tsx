@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { ArrowLeft, CloudUpload } from "lucide-react"
-import { leaveService, LeaveType, LeaveBalance } from "@/lib/services/leaveService"
+import { leaveService } from "@/lib/api/leave-service"
+import type { LeaveType, LeaveBalance } from "@/types/leave"
 
 interface LeaveRequestFormProps {
   onCancel: () => void;

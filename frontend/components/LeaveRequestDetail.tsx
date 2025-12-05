@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { X, FileText, Check, Upload } from "lucide-react"
-import { leaveService } from "@/lib/services/leaveService"
+import { leaveService } from "@/lib/api/leave-service"
 
 interface LeaveRequestDetailProps {
   request: any; // Selected request (contains at least leaveRequestID and status)

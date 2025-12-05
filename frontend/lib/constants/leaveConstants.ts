@@ -1,9 +1,3 @@
-export const LeaveStatus = {
-    PENDING: 'Pending',
-    APPROVED: 'Approved',
-    REJECTED: 'Rejected',
-    CANCELLED: 'Cancelled',
-    DRAFT: 'Draft',
-} as const;
-
-export type LeaveStatusType = typeof LeaveStatus[keyof typeof LeaveStatus];
+// This file is deprecated. Please use @/lib/constants instead.
+export { LEAVE_STATUS as LeaveStatus } from '@/lib/constants'
+export type { LeaveStatus as LeaveStatusType } from '@/lib/constants'

@@ -8,8 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Mail, Phone, MapPin, Calendar, Briefcase, Edit, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { getEmployeeProfile, EmployeeProfile } from "@/lib/profile-api";
-import { useAuth } from "@/lib/auth-context";
+import { profileApi } from "@/lib/api/profile";
+import type { EmployeeProfile } from "@/types/profile";
+import { useAuth } from "@/lib/hooks/use-auth";
 
 export default function ProfilePage() {
   const { token } = useAuth();
@@ -20,7 +21,7 @@ export default function ProfilePage() {
   useEffect(() => {
     async function fetchProfile() {
       try {
-        const data = await getEmployeeProfile();
+        const data = await profileApi.getProfile();
         setProfile(data);
       } catch (err) {
         console.error("Error fetching profile:", err);
