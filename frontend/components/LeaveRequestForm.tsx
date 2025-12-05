@@ -6,10 +6,11 @@ import { leaveService } from "@/lib/api/leave-service"
 import type { LeaveType, LeaveBalance } from "@/types/leave"
 
 interface LeaveRequestFormProps {
+  employeeId: number | null;
   onCancel: () => void;
 }
 
-export default function LeaveRequestForm({ onCancel }: LeaveRequestFormProps) {
+export default function LeaveRequestForm({ employeeId, onCancel }: LeaveRequestFormProps) {
   // State
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
   const [balances, setBalances] = useState<LeaveBalance[]>([]);
@@ -31,22 +32,25 @@ export default function LeaveRequestForm({ onCancel }: LeaveRequestFormProps) {
   const [primaryApprover, setPrimaryApprover] = useState<string>("");
 
   // Mock Employee ID (In real app, get from auth context)
-  const EMPLOYEE_ID = 2; // John Doe
+
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (employeeId) {
+       loadData();
+    }
+  }, [employeeId]);
 
   useEffect(() => {
     setFormData(prev => ({ ...prev, totalDays: calculateTotalDays() }));
   }, [formData.startDate, formData.endDate, formData.isHalfDayStart, formData.isHalfDayEnd]);
 
   const loadData = async () => {
+    if (!employeeId) return;
     try {
       const [types, userBalances, approver] = await Promise.all([
         leaveService.getLeaveTypes(),
-        leaveService.getMyBalances(EMPLOYEE_ID),
-        leaveService.getPrimaryApprover(EMPLOYEE_ID)
+        leaveService.getMyBalances(employeeId),
+        leaveService.getPrimaryApprover(employeeId)
       ]);
       setLeaveTypes(types);
       setBalances(userBalances);
@@ -101,9 +105,9 @@ export default function LeaveRequestForm({ onCancel }: LeaveRequestFormProps) {
       setLoading(false);
       return;
     }
-
+    if (!employeeId) return;
     try {
-      await leaveService.createLeaveRequest(EMPLOYEE_ID, {
+      await leaveService.createLeaveRequest(employeeId, {
         ...formData,
         attachments: files
       });

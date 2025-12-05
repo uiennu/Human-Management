@@ -209,6 +209,7 @@ export default function LeaveHistoryPage() {
   if (showCreateForm) {
     return (
       <LeaveRequestForm
+        employeeId={employeeId}
         onCancel={() => setShowCreateForm(false)}
       />
     )
