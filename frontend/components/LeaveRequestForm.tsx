@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { ArrowLeft, CloudUpload } from "lucide-react"
 import { leaveService } from "@/lib/api/leave-service"
 import type { LeaveType, LeaveBalance } from "@/types/leave"
@@ -17,12 +17,12 @@ export default function LeaveRequestForm({ employeeId, onCancel }: LeaveRequestF
 
   const [formData, setFormData] = useState({
     leaveTypeID: 0,
-    startDate: new Date().toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0],
+    startDate: "",
+    endDate: "",
     reason: "",
     isHalfDayStart: false,
     isHalfDayEnd: false,
-    totalDays: 1
+    totalDays: 0
   });
 
   const [files, setFiles] = useState<File[]>([])
@@ -31,18 +31,26 @@ export default function LeaveRequestForm({ employeeId, onCancel }: LeaveRequestF
   const [error, setError] = useState("");
   const [primaryApprover, setPrimaryApprover] = useState<string>("");
 
+  const topRef = useRef<HTMLDivElement>(null);
+
   // Mock Employee ID (In real app, get from auth context)
 
 
   useEffect(() => {
     if (employeeId) {
-       loadData();
+      loadData();
     }
   }, [employeeId]);
 
   useEffect(() => {
     setFormData(prev => ({ ...prev, totalDays: calculateTotalDays() }));
   }, [formData.startDate, formData.endDate, formData.isHalfDayStart, formData.isHalfDayEnd]);
+
+  useEffect(() => {
+    if (error && topRef.current) {
+      topRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [error]);
 
   const loadData = async () => {
     if (!employeeId) return;
@@ -55,9 +63,7 @@ export default function LeaveRequestForm({ employeeId, onCancel }: LeaveRequestF
       setLeaveTypes(types);
       setBalances(userBalances);
       setPrimaryApprover(approver.managerName);
-      if (types.length > 0) {
-        setFormData(prev => ({ ...prev, leaveTypeID: types[0].leaveTypeID }));
-      }
+      // Removed auto-select logic
     } catch (err) {
       console.error(err);
       setError("Failed to load leave data");
@@ -70,6 +76,8 @@ export default function LeaveRequestForm({ employeeId, onCancel }: LeaveRequestF
   };
 
   const calculateTotalDays = () => {
+    if (!formData.startDate || !formData.endDate) return 0;
+
     const start = new Date(formData.startDate);
     const end = new Date(formData.endDate);
     const diffTime = Math.abs(end.getTime() - start.getTime());
@@ -101,6 +109,24 @@ export default function LeaveRequestForm({ employeeId, onCancel }: LeaveRequestF
     setLoading(true);
     setError("");
 
+    if (formData.leaveTypeID === 0) {
+      setError("Please select a leave type");
+      setLoading(false);
+      return;
+    }
+
+    if (!formData.startDate || !formData.endDate) {
+      setError("Please select start and end dates");
+      setLoading(false);
+      return;
+    }
+
+    if (new Date(formData.endDate) < new Date(formData.startDate)) {
+      setError("End date cannot be earlier than start date");
+      setLoading(false);
+      return;
+    }
+
     if (fileError) {
       setLoading(false);
       return;
@@ -121,7 +147,7 @@ export default function LeaveRequestForm({ employeeId, onCancel }: LeaveRequestF
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#F9FAFB] p-4 md:p-8">
+    <div ref={topRef} className="min-h-screen w-full bg-[#F9FAFB] p-4 md:p-8">
       <div className="mx-auto max-w-7xl h-full">
         <div className="flex flex-col h-full">
           {/* Header */}
@@ -162,7 +188,8 @@ export default function LeaveRequestForm({ employeeId, onCancel }: LeaveRequestF
                     <p className="pb-2 text-sm font-medium text-gray-700">Leave Type</p>
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                       <select
-                        className="h-12 flex-1 rounded-lg border border-gray-300 bg-white px-4 text-base text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                        className={`h-12 flex-1 rounded-lg border border-gray-300 bg-white px-4 text-base focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${formData.leaveTypeID === 0 ? "text-gray-400" : "text-gray-900"
+                          }`}
                         value={formData.leaveTypeID.toString()}
                         onChange={(e) =>
                           setFormData({
@@ -171,6 +198,7 @@ export default function LeaveRequestForm({ employeeId, onCancel }: LeaveRequestF
                           })
                         }
                       >
+                        <option value="0">Please select</option>
                         {leaveTypes.map((type) => (
                           <option key={type.leaveTypeID} value={type.leaveTypeID}>
                             {type.name}
@@ -196,7 +224,8 @@ export default function LeaveRequestForm({ employeeId, onCancel }: LeaveRequestF
                         onChange={(e) =>
                           setFormData({ ...formData, startDate: e.target.value })
                         }
-                        className="h-12 w-full rounded-lg border border-gray-300 bg-white px-4 text-base text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                        className={`h-12 w-full rounded-lg border border-gray-300 bg-white px-4 text-base focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${formData.startDate ? "text-gray-900" : "text-gray-400"
+                          }`}
                       />
                     </label>
                     <label className="flex flex-col">
@@ -207,7 +236,8 @@ export default function LeaveRequestForm({ employeeId, onCancel }: LeaveRequestF
                         onChange={(e) =>
                           setFormData({ ...formData, endDate: e.target.value })
                         }
-                        className="h-12 w-full rounded-lg border border-gray-300 bg-white px-4 text-base text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                        className={`h-12 w-full rounded-lg border border-gray-300 bg-white px-4 text-base focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${formData.endDate ? "text-gray-900" : "text-gray-400"
+                          }`}
                       />
                     </label>
                   </div>
@@ -348,28 +378,7 @@ export default function LeaveRequestForm({ employeeId, onCancel }: LeaveRequestF
                   </div>
                 </div>
 
-                <div className="mt-8 flex flex-col space-y-3 border-t border-gray-200 pt-6">
-                  <button
-                    type="submit"
-                    disabled={loading || !!fileError}
-                    className="w-full rounded-lg bg-blue-500 px-4 py-2.5 font-semibold text-white transition-colors duration-200 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 disabled:opacity-70"
-                  >
-                    {loading ? "Submitting..." : "Submit Request"}
-                  </button>
-                  <button
-                    type="button"
-                    className="w-full rounded-lg bg-gray-200 px-4 py-2.5 font-semibold text-gray-800 transition-colors duration-200 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400/50"
-                  >
-                    Save as Draft
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onCancel}
-                    className="w-full rounded-lg px-4 py-2.5 font-semibold text-gray-500 transition-colors duration-200 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400/50"
-                  >
-                    Cancel
-                  </button>
-                </div>
+
               </form>
             </div>
 
@@ -408,6 +417,13 @@ export default function LeaveRequestForm({ employeeId, onCancel }: LeaveRequestF
                   >
                     {loading ? "Submitting..." : "Submit Request"}
                   </button>
+                  <button
+                    type="button"
+                    className="w-full rounded-lg bg-gray-200 px-4 py-2.5 font-semibold text-gray-800 transition-colors duration-200 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400/50"
+                  >
+                    Save as Draft
+                  </button>
+
                   <button
                     onClick={onCancel}
                     className="w-full rounded-lg bg-gray-200 px-4 py-2.5 font-semibold text-gray-800 transition-colors duration-200 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400/50"

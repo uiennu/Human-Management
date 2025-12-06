@@ -38,9 +38,9 @@ function postRequest(email, password) {
     req.end();
 }
 
-console.log('Starting login teom', '123456');
-postRequest('user@hrm.com', '123456');sts...');
+console.log('Starting login tests...');
 // Try a few common emails
 postRequest('admin@hrm.com', '123456');
 postRequest('test@example.com', '123456');
-postRequest('nguyenvana@example.c
+postRequest('nguyenvana@example.com', '123456');
+postRequest('user@hrm.com', '123456');
