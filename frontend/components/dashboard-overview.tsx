@@ -10,22 +10,23 @@ import { useEffect, useState } from "react"
 import { profileApi } from "@/lib/api/profile"
 import type { EmployeeProfile } from "@/types/profile"
 import { useAuth } from "@/lib/hooks/use-auth"
+import { leaveService } from "@/lib/api/leave-service"
+import type { LeaveBalance, LeaveRequestListItem } from "@/types/leave"
 
-const upcomingLeaves = [
-  { id: 1, type: "Vacation", startDate: "Dec 24, 2023", endDate: "Dec 28, 2023", days: 5, status: "Approved" },
-  { id: 2, type: "Sick Leave", startDate: "Nov 15, 2023", endDate: "Nov 15, 2023", days: 1, status: "Pending" },
-]
 
-const recentActivities = [
-  { id: 1, action: "Leave request submitted", date: "2 hours ago", type: "leave" },
-  { id: 2, action: "Timesheet update approved", date: "1 day ago", type: "timesheet" },
-  { id: 3, action: "WFH request approved", date: "3 days ago", type: "wfh" },
-]
+
+
 
 export function DashboardOverview() {
   const { token } = useAuth();
   const [profile, setProfile] = useState<EmployeeProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [employeeId, setEmployeeId] = useState<number | null>(null);
+  const [balances, setBalances] = useState<LeaveBalance[]>([]);
+  const [upcomingRequests, setUpcomingRequests] = useState<LeaveRequestListItem[]>([]);
+
+  const [recentRequests, setRecentRequests] = useState<LeaveRequestListItem[]>([]);
+  const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -41,8 +42,71 @@ export function DashboardOverview() {
 
     if (token) {
       fetchProfile();
+
+      // Decode token to get EmployeeID
+      try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function (c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+
+        const payload = JSON.parse(jsonPayload);
+        const id = payload.EmployeeID || payload.employeeID || payload.nameid || payload.sub;
+
+        if (id) {
+          setEmployeeId(Number(id));
+        }
+      } catch (e) {
+        console.error("Error decoding token:", e);
+      }
     }
   }, [token]);
+  useEffect(() => {
+    async function fetchLeaveData() {
+      if (!employeeId) return;
+
+      try {
+        const [balancesData, approvedData, recentData, pendingData] = await Promise.all([
+          leaveService.getMyBalances(employeeId),
+          leaveService.getMyRequests(employeeId, {
+            status: 'Approved',
+            page: 1,
+            pageSize: 20
+          }),
+          leaveService.getMyRequests(employeeId, {
+            page: 1,
+            pageSize: 5
+          }),
+          leaveService.getMyRequests(employeeId, {
+            status: 'Pending',
+            page: 1,
+            pageSize: 1
+          })
+        ]);
+
+        setBalances(balancesData || []);
+
+        // Filter for future requests
+        const now = new Date();
+        const futureRequests = (approvedData.data || []).filter(req => {
+          const startDate = new Date(req.startDate);
+          return startDate >= now;
+        }).slice(0, 3);
+
+        setUpcomingRequests(futureRequests);
+
+        setRecentRequests(recentData.data || []);
+        setPendingCount(pendingData.totalItems || 0);
+      } catch (err) {
+        console.error("Error fetching leave data:", err);
+      }
+    }
+
+    if (employeeId) {
+      fetchLeaveData();
+    }
+  }, [employeeId]);
 
   if (loading) {
     return (
@@ -54,11 +118,18 @@ export function DashboardOverview() {
 
   // Fallback if profile fails to load
   const displayName = profile ? `${profile.firstName} ${profile.lastName}` : "Employee";
-  const position = profile?.position || "Staff";
-  const annualLeave = profile?.leaveBalance?.annual ?? 0;
-  const sickLeave = profile?.leaveBalance?.sick ?? 0;
-  const personalLeave = profile?.leaveBalance?.personal ?? 0;
-  const totalBalance = annualLeave + sickLeave + personalLeave;
+
+  // Calculate balances from fetched data or fallback to profile
+  const getBalance = (type: string) => {
+    const balance = balances.find(b => b.name.toLowerCase().includes(type.toLowerCase()));
+    return balance ? balance.balanceDays : 0;
+  };
+
+  const annualLeave = balances.length > 0 ? getBalance('Annual') : (profile?.leaveBalance?.annual ?? 0);
+  const sickLeave = balances.length > 0 ? getBalance('Sick') : (profile?.leaveBalance?.sick ?? 0);
+  const personalLeave = balances.length > 0 ? getBalance('Personal') : (profile?.leaveBalance?.personal ?? 0);
+  const totalBalance = balances.length > 0 ? balances.reduce((acc, curr) => acc + curr.balanceDays, 0) : (annualLeave + sickLeave + personalLeave);
+
 
   return (
     <div className="space-y-6">
@@ -113,7 +184,7 @@ export function DashboardOverview() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">Pending Requests</p>
-                <p className="mt-2 text-3xl font-bold text-slate-900">0</p>
+                <p className="mt-2 text-3xl font-bold text-slate-900">{pendingCount}</p>
                 <p className="mt-1 text-xs text-slate-500">awaiting approval</p>
               </div>
               <div className="rounded-full bg-amber-100 p-3">
@@ -147,31 +218,31 @@ export function DashboardOverview() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {upcomingLeaves.map((leave) => (
-                <div
-                  key={leave.id}
-                  className="flex items-center justify-between rounded-lg border border-slate-200 p-4"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-slate-900">{leave.type}</p>
-                      <Badge
-                        variant="outline"
-                        className={
-                          leave.status === "Approved"
-                            ? "bg-emerald-100 text-emerald-700 border-emerald-200"
-                            : "bg-amber-100 text-amber-700 border-amber-200"
-                        }
-                      >
-                        {leave.status}
-                      </Badge>
+              {upcomingRequests.length > 0 ? (
+                upcomingRequests.map((leave) => (
+                  <div
+                    key={leave.leaveRequestID}
+                    className="flex items-center justify-between rounded-lg border border-slate-200 p-4"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-slate-900">{leave.leaveTypeName}</p>
+                        <Badge
+                          variant="outline"
+                          className="bg-emerald-100 text-emerald-700 border-emerald-200"
+                        >
+                          {leave.status}
+                        </Badge>
+                      </div>
+                      <p className="mt-1 text-sm text-slate-600">
+                        {new Date(leave.startDate).toLocaleDateString()} - {new Date(leave.endDate).toLocaleDateString()} ({leave.totalDays} days)
+                      </p>
                     </div>
-                    <p className="mt-1 text-sm text-slate-600">
-                      {leave.startDate} - {leave.endDate} ({leave.days} days)
-                    </p>
                   </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-sm text-slate-500 text-center py-4">No upcoming leaves</p>
+              )}
               <Link href="/leave">
                 <Button variant="outline" className="w-full bg-transparent">
                   View All Leaves
@@ -188,17 +259,26 @@ export function DashboardOverview() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentActivities.map((activity) => (
-                <div key={activity.id} className="flex items-start gap-3">
-                  <div className="rounded-full bg-blue-100 p-2">
-                    <AlertCircle className="h-4 w-4 text-blue-600" />
+
+              {recentRequests.length > 0 ? (
+                recentRequests.map((activity) => (
+                  <div key={activity.leaveRequestID} className="flex items-start gap-3">
+                    <div className="rounded-full bg-blue-100 p-2">
+                      <AlertCircle className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-slate-900">
+                        Leave request for {activity.leaveTypeName} was {activity.status.toLowerCase()}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {new Date(activity.requestedDate).toLocaleDateString()}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-slate-900">{activity.action}</p>
-                    <p className="text-xs text-slate-500">{activity.date}</p>
-                  </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-sm text-slate-500 text-center py-4">No recent activity</p>
+              )}
               <Button variant="outline" className="w-full bg-transparent">
                 View All Activity
               </Button>
