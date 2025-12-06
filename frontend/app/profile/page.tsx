@@ -11,12 +11,19 @@ import { useEffect, useState } from "react";
 import { profileApi } from "@/lib/api/profile";
 import type { EmployeeProfile } from "@/types/profile";
 import { useAuth } from "@/lib/hooks/use-auth";
+import { leaveService } from "@/lib/api/leave-service";
+import type { LeaveBalance } from "@/types/leave";
 
 export default function ProfilePage() {
   const { token } = useAuth();
   const [profile, setProfile] = useState<EmployeeProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [employeeId, setEmployeeId] = useState<number | null>(null);
+  const [balances, setBalances] = useState<LeaveBalance[]>([]);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [totalLeavesTaken, setTotalLeavesTaken] = useState(0);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -33,8 +40,63 @@ export default function ProfilePage() {
 
     if (token) {
       fetchProfile();
+
+      // Decode token to get EmployeeID
+      try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function (c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+
+        const payload = JSON.parse(jsonPayload);
+        const id = payload.EmployeeID || payload.employeeID || payload.nameid || payload.sub;
+
+        if (id) {
+          setEmployeeId(Number(id));
+        }
+      } catch (e) {
+        console.error("Error decoding token:", e);
+      }
     }
   }, [token]);
+
+  useEffect(() => {
+    async function fetchLeaveData() {
+      if (!employeeId) return;
+
+      try {
+        const [balancesData, approvedData, pendingData] = await Promise.all([
+          leaveService.getMyBalances(employeeId),
+          leaveService.getMyRequests(employeeId, {
+            status: 'Approved',
+            dateRange: 'this-year',
+            page: 1,
+            pageSize: 1000 // Fetch all approved to calculate total
+          }),
+          leaveService.getMyRequests(employeeId, {
+            status: 'Pending',
+            page: 1,
+            pageSize: 1
+          })
+        ]);
+
+        setBalances(balancesData || []);
+
+        // Calculate total leaves taken this year
+        const totalTaken = (approvedData.data || []).reduce((acc, curr) => acc + curr.totalDays, 0);
+        setTotalLeavesTaken(totalTaken);
+
+        setPendingCount(pendingData.totalItems || 0);
+      } catch (err) {
+        console.error("Error fetching leave data:", err);
+      }
+    }
+
+    if (employeeId) {
+      fetchLeaveData();
+    }
+  }, [employeeId]);
 
   if (loading) {
     return (
@@ -58,6 +120,13 @@ export default function ProfilePage() {
       </RequireAuth>
     );
   }
+
+  // Helper to get balance safely
+  const getBalance = (type: string) => {
+    if (!balances || balances.length === 0) return 0;
+    const balance = balances.find(b => b.name.toLowerCase().includes(type.toLowerCase()));
+    return balance ? balance.balanceDays : 0;
+  };
 
   return (
     <RequireAuth>
@@ -149,17 +218,23 @@ export default function ProfilePage() {
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div className="rounded-lg bg-blue-50 p-4">
                     <p className="text-sm font-medium text-blue-900">Annual Leave</p>
-                    <p className="mt-2 text-3xl font-bold text-blue-900">{profile.leaveBalance?.annual ?? 0}</p>
+                    <p className="mt-2 text-3xl font-bold text-blue-900">
+                      {getBalance('Annual')}
+                    </p>
                     <p className="text-xs text-blue-700">days remaining</p>
                   </div>
                   <div className="rounded-lg bg-emerald-50 p-4">
                     <p className="text-sm font-medium text-emerald-900">Sick Leave</p>
-                    <p className="mt-2 text-3xl font-bold text-emerald-900">{profile.leaveBalance?.sick ?? 0}</p>
+                    <p className="mt-2 text-3xl font-bold text-emerald-900">
+                      {getBalance('Sick')}
+                    </p>
                     <p className="text-xs text-emerald-700">days remaining</p>
                   </div>
                   <div className="rounded-lg bg-purple-50 p-4">
                     <p className="text-sm font-medium text-purple-900">Personal Days</p>
-                    <p className="mt-2 text-3xl font-bold text-purple-900">{profile.leaveBalance?.personal ?? 0}</p>
+                    <p className="mt-2 text-3xl font-bold text-purple-900">
+                      {getBalance('Personal')}
+                    </p>
                     <p className="text-xs text-purple-700">days remaining</p>
                   </div>
                 </div>
@@ -176,13 +251,13 @@ export default function ProfilePage() {
                   <div className="flex items-center justify-between rounded-lg border border-slate-200 p-4">
                     <div>
                       <p className="text-sm text-slate-600">Total Leaves Taken</p>
-                      <p className="mt-1 text-2xl font-bold text-slate-900">0</p>
+                      <p className="mt-1 text-2xl font-bold text-slate-900">{totalLeavesTaken}</p>
                     </div>
                   </div>
                   <div className="flex items-center justify-between rounded-lg border border-slate-200 p-4">
                     <div>
                       <p className="text-sm text-slate-600">Pending Requests</p>
-                      <p className="mt-1 text-2xl font-bold text-slate-900">0</p>
+                      <p className="mt-1 text-2xl font-bold text-slate-900">{pendingCount}</p>
                     </div>
                   </div>
                   <div className="flex items-center justify-between rounded-lg border border-slate-200 p-4">
