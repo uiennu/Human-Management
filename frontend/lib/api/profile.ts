@@ -25,11 +25,25 @@ export const profileApi = {
       },
     })
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.message || 'Failed to fetch employee profile')
+    if (response.status === 401) {
+      // Có thể clear token ở đây hoặc throw lỗi để component xử lý redirect
+      throw new Error("UNAUTHORIZED"); 
     }
 
+    if (!response.ok) {
+      let errorMessage = 'Failed to fetch employee profile';
+      try {
+        // Cố gắng đọc lỗi dạng JSON
+        const error = await response.json();
+        errorMessage = error.message || errorMessage;
+      } catch (e) {
+        // Nếu không phải JSON (body rỗng hoặc text), code sẽ nhảy vào đây
+        // giúp app không bị crash. Ta có thể đọc dạng text hoặc bỏ qua.
+        console.warn("API Error response is not JSON");
+      }
+      
+      throw new Error(errorMessage);
+    }
     return response.json()
   },
 

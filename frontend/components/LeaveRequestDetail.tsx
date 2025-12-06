@@ -46,7 +46,8 @@ const SERVER_ROOT = "http://localhost:5204";
   }
 
   // Normalize API base: remove trailing /api if NEXT_PUBLIC_API_URL includes it
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5204";
+  const rawApi = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5204";
+  const API_BASE = rawApi.replace(/\/api\/?$/, "");
 
   const status = details.status || request.status;
   const statusStyle = statusStyles[status] || statusStyles.Cancelled;
