@@ -3,7 +3,11 @@
 import { useState } from "react"
 import { Plus, Edit2, Trash2, Users, Eye, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+
+// --- IMPORT CÁC MODAL ---
 import { AddDepartmentModal } from "@/components/add-department-modal"
+import { AddTeamModal } from "@/components/add-team-modal"
+import { AddSubTeamModal } from "@/components/add-subteam-modal"
 import { EditDepartmentModal } from "@/components/edit-department-modal"
 import { AddEmployeesModal } from "@/components/add-employees-modal"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -27,6 +31,7 @@ interface Employee {
 }
 
 export function OrganizationStructure() {
+  // --- MOCK DATA (ĐÃ KHÔI PHỤC ĐẦY ĐỦ) ---
   const [departments, setDepartments] = useState<Department[]>([
     {
       id: "root",
@@ -43,7 +48,7 @@ export function OrganizationStructure() {
           code: "ENG",
           manager: "Raj Patel",
           managerId: "mgr-001",
-          description: "Product engineering team",
+          description: "Manager",
           subdepartments: [
             {
               id: "1-1",
@@ -88,22 +93,59 @@ export function OrganizationStructure() {
     },
   ])
 
-  const [addModalOpen, setAddModalOpen] = useState(false)
+  // --- STATE QUẢN LÝ 3 LOẠI MODAL ---
+  const [addDeptModalOpen, setAddDeptModalOpen] = useState(false)
+  const [addTeamModalOpen, setAddTeamModalOpen] = useState(false)
+  const [addSubTeamModalOpen, setAddSubTeamModalOpen] = useState(false)
+
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [addEmployeesModalOpen, setAddEmployeesModalOpen] = useState(false)
   const [selectedDept, setSelectedDept] = useState<Department | null>(null)
+  
+  // Lưu cha hiện tại để biết đang add con vào đâu
+  const [parentDeptForAdd, setParentDeptForAdd] = useState<Department | null>(null)
 
-  const handleAddDepartment = (dept: Omit<Department, "id" | "employees" | "subdepartments">) => {
-    const newDept: Department = {
-      ...dept,
+  // --- HANDLER CHUNG ---
+  const handleAddEntity = (data: Omit<Department, "id" | "employees" | "subdepartments">) => {
+    const newEntity: Department = {
+      ...data,
       id: Date.now().toString(),
       employees: [],
       subdepartments: [],
     }
-    setDepartments([...departments, newDept])
-    setAddModalOpen(false)
+
+    if (parentDeptForAdd) {
+      // Logic đệ quy tìm cha và thêm con vào subdepartments
+      const addRecursive = (depts: Department[]): Department[] => {
+        return depts.map((d) => {
+          if (d.id === parentDeptForAdd.id) {
+            return {
+              ...d,
+              subdepartments: [...(d.subdepartments || []), newEntity],
+            }
+          }
+          if (d.subdepartments && d.subdepartments.length > 0) {
+            return {
+              ...d,
+              subdepartments: addRecursive(d.subdepartments),
+            }
+          }
+          return d
+        })
+      }
+      setDepartments(addRecursive(departments))
+    } else {
+      setDepartments([...departments, newEntity])
+    }
+    
+    // Đóng tất cả modal sau khi submit
+    setAddDeptModalOpen(false)
+    setAddTeamModalOpen(false)
+    setAddSubTeamModalOpen(false)
+    setParentDeptForAdd(null)
   }
 
+  // --- CÁC HÀM EDIT/DELETE ---
   const handleEditDepartment = (updated: Omit<Department, "employees" | "subdepartments">) => {
     const updateRecursive = (depts: Department[]): Department[] =>
       depts.map((dept) =>
@@ -144,212 +186,177 @@ export function OrganizationStructure() {
     setDepartments(updateRecursive(departments))
   }
 
-  const DepartmentCard = ({ dept, isRoot }: { dept: Department; isRoot?: boolean }) => (
-    <div className="flex flex-col items-center gap-2">
-      <div
-        className={`rounded-lg border ${
-          isRoot ? "bg-background border-border px-6 py-3" : "bg-card border-border px-4 py-3"
-        } min-w-fit`}
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h3 className={`font-semibold ${isRoot ? "text-base" : "text-sm"}`}>{dept.name}</h3>
-            <p className="text-xs text-muted-foreground">
-              {isRoot ? dept.description : `${dept.description}: ${dept.manager}`}
-            </p>
+  // --- DEPARTMENT CARD ---
+  const DepartmentCard = ({ dept, isRoot, level = 0 }: { dept: Department; isRoot?: boolean, level?: number }) => {
+    
+    // Logic: Khi bấm dấu + thì mở modal nào?
+    const handleAddClick = () => {
+      setParentDeptForAdd(dept) // Set cha là card hiện tại
+      
+      if (level === 0) {
+        setAddDeptModalOpen(true)
+      } else if (level === 1) {
+        setAddTeamModalOpen(true)
+      } else {
+        setAddSubTeamModalOpen(true)
+      }
+    }
+
+    // Tooltip text
+    const getTooltip = () => {
+      if (level === 0) return "Add Department"
+      if (level === 1) return "Add Team"
+      return "Add Sub-team"
+    }
+
+    return (
+      <div className="flex flex-col items-center z-10 relative">
+        <div className="w-72 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
+          <div className="p-4">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <h3 className="font-bold text-gray-900 text-base">{dept.name}</h3>
+                <p className="text-sm text-gray-500">{dept.description}: {dept.manager}</p>
+              </div>
+              
+              {!isRoot && (
+                <div className="flex gap-1">
+                  {/* NÚT ADD (+) */}
+                  <button
+                    onClick={handleAddClick}
+                    title={getTooltip()}
+                    className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-md transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+
+                  <button
+                    onClick={() => { setSelectedDept(dept); setEditModalOpen(true); }}
+                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteDepartment(dept.id)}
+                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3 mt-4">
+              {dept.employees.map((emp) => (
+                <div key={emp.id} className="flex items-center justify-between group py-1">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8 bg-gray-100">
+                      <AvatarFallback className="text-xs text-gray-600 font-medium">
+                        {emp.name.split(" ").map((n) => n[0]).join("")}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">{emp.name}</p>
+                      <p className="text-[10px] text-gray-400">{emp.position}</p>
+                    </div>
+                  </div>
+                  <div className="flex opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => handleDeleteEmployee(dept.id, emp.id)} className="p-1 text-gray-400 hover:text-red-500">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           {!isRoot && (
-            <div className="flex gap-1 ml-2 flex-shrink-0">
+            <div className="border-t border-gray-100 p-2 bg-gray-50/50">
               <button
-                onClick={() => {
-                  setSelectedDept(dept)
-                  setAddEmployeesModalOpen(true)
-                }}
-                className="p-1 hover:bg-muted rounded transition-colors"
-                title="Add employees"
+                onClick={() => { setSelectedDept(dept); setAddEmployeesModalOpen(true); }}
+                className="w-full flex items-center justify-center gap-2 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
               >
-                <Users className="h-3.5 w-3.5 text-muted-foreground" />
-              </button>
-              <button
-                onClick={() => {
-                  setSelectedDept(dept)
-                  setEditModalOpen(true)
-                }}
-                className="p-1 hover:bg-muted rounded transition-colors"
-                title="Edit department"
-              >
-                <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
-              </button>
-              <button
-                onClick={() => handleDeleteDepartment(dept.id)}
-                className="p-1 hover:bg-destructive/10 rounded transition-colors"
-                title="Delete department"
-              >
-                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                <Plus className="h-4 w-4" />
+                Add Employee
               </button>
             </div>
           )}
         </div>
-
-        {dept.employees.length > 0 && (
-          <div className="mt-2 pt-2 border-t border-muted space-y-1.5">
-            {dept.employees.map((emp) => (
-              <div key={emp.id} className="flex items-center gap-1.5 text-xs justify-between group">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <Avatar className="h-5 w-5 flex-shrink-0">
-                    <AvatarFallback className="text-[10px]">
-                      {emp.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-muted-foreground truncate">{emp.name}</span>
-                </div>
-                <div className="flex gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={() => console.log("View employee:", emp)}
-                    className="p-0.5 hover:bg-muted rounded transition-colors"
-                    title="View employee details"
-                  >
-                    <Eye className="h-3 w-3 text-muted-foreground" />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteEmployee(dept.id, emp.id)}
-                    className="p-0.5 hover:bg-destructive/10 rounded transition-colors"
-                    title="Remove employee"
-                  >
-                    <X className="h-3 w-3 text-destructive" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {!isRoot && dept.employees.length === 0 && (
-          <button
-            onClick={() => {
-              setSelectedDept(dept)
-              setAddEmployeesModalOpen(true)
-            }}
-            className="mt-2 text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
-          >
-            + Add Employee
-          </button>
-        )}
       </div>
-    </div>
-  )
-
-  const TreeLevel = ({ departments: depts, level = 0 }: { departments: Department[]; level?: number }) => {
-    if (level === 0) {
-      const rootDept = depts[0]
-      if (!rootDept) return null
-
-      return (
-        <div className="flex flex-col items-center gap-6">
-          {/* Root node */}
-          <DepartmentCard dept={rootDept} isRoot />
-
-          {/* Connector line from root */}
-          {rootDept.subdepartments && rootDept.subdepartments.length > 0 && (
-            <>
-              <div className="w-px h-6 bg-border" />
-
-              {/* First level departments */}
-              <div className="relative">
-                <div className="flex gap-8 justify-center">
-                  {rootDept.subdepartments?.map((dept, idx) => (
-                    <div key={dept.id} className="flex flex-col items-center">
-                      {/* Horizontal connector line */}
-                      <div
-                        className="absolute top-0 h-px bg-border"
-                        style={{
-                          left: `${(idx + 0.5) * 220 - 110}px`,
-                          right: `${(rootDept.subdepartments && rootDept.subdepartments.length > 1) ? 0 : "auto"}`,
-                          width: (rootDept.subdepartments && rootDept.subdepartments.length > 1) ? undefined : "0",
-                        }}
-                      />
-
-                      {/* Vertical connector to department */}
-                      <div className="w-px h-4 bg-border" />
-
-                      {/* Department card */}
-                      <div className="flex flex-col items-center gap-4">
-                        <DepartmentCard dept={dept} />
-
-                        {/* Sub-departments */}
-                        {dept.subdepartments && dept.subdepartments.length > 0 && (
-                          <div className="flex flex-col items-center gap-4">
-                            <div className="w-px h-4 bg-border" />
-
-                            <div className="flex gap-8">
-                              {dept.subdepartments.map((subdept) => (
-                                <div key={subdept.id} className="flex flex-col items-center gap-2">
-                                  <div className="w-px h-4 bg-border" />
-                                  <DepartmentCard dept={subdept} />
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Horizontal line connecting all first-level departments */}
-                {rootDept.subdepartments && rootDept.subdepartments.length > 1 && (
-                  <div className="absolute top-0 left-0 right-0 h-px bg-border" style={{ width: "100%" }} />
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      )
-    }
-
-    return null
+    )
   }
 
+  // --- TREE NODE ---
+  const TreeNode = ({ dept, isRoot = false, level = 0 }: { dept: Department; isRoot?: boolean, level?: number }) => {
+    const hasChildren = dept.subdepartments && dept.subdepartments.length > 0;
+    return (
+      <div className="flex flex-col items-center">
+        <DepartmentCard dept={dept} isRoot={isRoot} level={level} />
+
+        {hasChildren && (
+          <>
+            <div className="h-8 w-px bg-gray-300" />
+            <div className="flex pt-0">
+              {dept.subdepartments!.map((sub, index, arr) => (
+                <div key={sub.id} className="relative px-6 pt-6"> 
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-6 bg-gray-300" />
+                  {index > 0 && <div className="absolute top-0 left-0 w-1/2 h-px bg-gray-300" />}
+                  {index < arr.length - 1 && <div className="absolute top-0 right-0 w-1/2 h-px bg-gray-300" />}
+                  <TreeNode dept={sub} isRoot={false} level={level + 1} />
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-gray-50/50 min-h-screen p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Organization Structure</h1>
-          <p className="text-muted-foreground mt-1">
-            Visualize and manage your company's hierarchy. Drag and drop departments to adjust reporting lines.
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900">Organization Structure</h1>
+          <p className="text-muted-foreground mt-1">Visualize and manage your company's hierarchy.</p>
         </div>
-        <Button onClick={() => setAddModalOpen(true)}>
+        <Button 
+          onClick={() => { setParentDeptForAdd(null); setAddDeptModalOpen(true); }}
+          className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+        >
           <Plus className="mr-2 h-4 w-4" />
           Add Department
         </Button>
       </div>
 
-      <div className="bg-muted/30 rounded-lg p-8 overflow-x-auto min-h-96">
-        <div className="flex justify-center">
-          <TreeLevel departments={departments} level={0} />
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-12 overflow-x-auto min-h-[600px]">
+        <div className="flex justify-center min-w-max pt-4">
+          {departments.length > 0 && <TreeNode dept={departments[0]} isRoot={true} level={0} />}
         </div>
       </div>
 
-      <AddDepartmentModal open={addModalOpen} onOpenChange={setAddModalOpen} onSubmit={handleAddDepartment} />
+      {/* RENDER CÁC MODAL */}
+      <AddDepartmentModal 
+        open={addDeptModalOpen} 
+        onOpenChange={setAddDeptModalOpen} 
+        onSubmit={handleAddEntity} 
+      />
+      
+      <AddTeamModal 
+        open={addTeamModalOpen} 
+        onOpenChange={setAddTeamModalOpen} 
+        onSubmit={handleAddEntity} 
+      />
+      
+      <AddSubTeamModal 
+        open={addSubTeamModalOpen} 
+        onOpenChange={setAddSubTeamModalOpen} 
+        onSubmit={handleAddEntity} 
+      />
 
       {selectedDept && (
         <>
-          <EditDepartmentModal
-            open={editModalOpen}
-            onOpenChange={setEditModalOpen}
-            department={selectedDept}
-            onSubmit={handleEditDepartment}
-          />
-          <AddEmployeesModal
-            open={addEmployeesModalOpen}
-            onOpenChange={setAddEmployeesModalOpen}
-            department={selectedDept}
-          />
+          <EditDepartmentModal open={editModalOpen} onOpenChange={setEditModalOpen} department={selectedDept} onSubmit={handleEditDepartment} />
+          <AddEmployeesModal open={addEmployeesModalOpen} onOpenChange={setAddEmployeesModalOpen} department={selectedDept} />
         </>
       )}
     </div>
