@@ -52,42 +52,42 @@ export default function LeaveHistoryPage() {
   // 2. useEffect: Lấy ID từ Token (thay vì lấy từ user object bị null)
   useEffect(() => {
     const token = localStorage.getItem('token');
-    
+
     if (token) {
       try {
         // --- ĐOẠN CODE GIẢI MÃ JWT TOKEN ---
         const base64Url = token.split('.')[1];
         const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
-            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function (c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
         }).join(''));
-        
+
         const payload = JSON.parse(jsonPayload);
-        console.log("Token Payload đã giải mã:", payload); 
+        console.log("Token Payload đã giải mã:", payload);
 
         // Dựa vào log của bạn, key trong token là "EmployeeID"
         // (Lưu ý chữ hoa chữ thường tùy server, nên mình check vài trường hợp)
         const id = payload.EmployeeID || payload.employeeID || payload.nameid || payload.sub;
 
         if (id) {
-            console.log("Đã tìm thấy ID từ Token:", id);
-            setEmployeeId(Number(id));
+          console.log("Đã tìm thấy ID từ Token:", id);
+          setEmployeeId(Number(id));
         } else {
-            console.error("Không tìm thấy EmployeeID trong token");
+          console.error("Không tìm thấy EmployeeID trong token");
         }
       } catch (e) {
         console.error("Lỗi khi giải mã token:", e);
       }
     } else {
-        console.log("Không tìm thấy token trong localStorage");
+      console.log("Không tìm thấy token trong localStorage");
     }
   }, []);
 
   useEffect(() => {
     if (employeeId && employeeId > 0) {
-        loadRequests();
-        loadBalances();
-        loadLeaveTypes();
+      loadRequests();
+      loadBalances();
+      loadLeaveTypes();
     }
   }, [showCreateForm, employeeId]);
 
@@ -103,8 +103,8 @@ export default function LeaveHistoryPage() {
   const loadRequests = async () => {
     // --- THÊM ĐOẠN NÀY ĐỂ CHẶN LỖI ---
     if (!employeeId || employeeId === 0) {
-        console.log("🛑 Đang chờ ID... (Chưa gọi API)");
-        return; // Dừng ngay lập tức, không cho chạy tiếp
+      console.log("🛑 Đang chờ ID... (Chưa gọi API)");
+      return; // Dừng ngay lập tức, không cho chạy tiếp
     }
     // ----------------------------------
 
@@ -182,7 +182,7 @@ export default function LeaveHistoryPage() {
     setTimeout(() => {
       // Manually call loadRequests with default values since state might not be updated yet in this closure
       setLoading(true);
-      leaveService.getMyRequests(employeeId||0, {
+      leaveService.getMyRequests(employeeId || 0, {
         status: "all",
         dateRange: "last-30-days",
         leaveTypeId: "all",
@@ -216,7 +216,7 @@ export default function LeaveHistoryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 space-y-6">
+    <div className="min-h-screen bg-slate-50 space-y-8">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -257,7 +257,7 @@ export default function LeaveHistoryPage() {
         </div>
 
         {/* Filters */}
-        <Card className="mb-6">
+        <Card>
           <CardContent className="p-6">
             <h2 className="mb-4 text-sm font-semibold text-slate-900">Filter by</h2>
             <div className="flex flex-wrap items-end gap-4">

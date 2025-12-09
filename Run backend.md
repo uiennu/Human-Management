@@ -55,7 +55,7 @@ Mở browser:
 ## 🎯 Tóm tắt các bước chạy
 
 1. `docker-compose up -d` (Chỉ cần chạy 1 lần để bật DB)
-2. `cd backend/HRM.Api`
+2. `cd backend/HRM.Api`docker-compose up -d
 3. `dotnet run`
 
 ---

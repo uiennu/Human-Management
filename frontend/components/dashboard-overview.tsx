@@ -8,6 +8,7 @@ import { Calendar, Clock, TrendingUp, CalendarCheck, AlertCircle, Loader2 } from
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { profileApi } from "@/lib/api/profile"
+import { useRouter } from "next/navigation"
 import type { EmployeeProfile } from "@/types/profile"
 import { useAuth } from "@/lib/hooks/use-auth"
 import { leaveService } from "@/lib/api/leave-service"
@@ -18,7 +19,8 @@ import type { LeaveBalance, LeaveRequestListItem } from "@/types/leave"
 
 
 export function DashboardOverview() {
-  const { token } = useAuth();
+  const { token, logout } = useAuth();
+  const router = useRouter();
   const [profile, setProfile] = useState<EmployeeProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [employeeId, setEmployeeId] = useState<number | null>(null);
@@ -33,8 +35,12 @@ export function DashboardOverview() {
       try {
         const data = await profileApi.getProfile();
         setProfile(data);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error fetching profile for dashboard:", err);
+        if (err.message === "UNAUTHORIZED") {
+          logout();
+          router.replace("/login");
+        }
       } finally {
         setLoading(false);
       }

@@ -33,8 +33,12 @@ export function AppSidebar() {
       try {
         const data = await profileApi.getProfile();
         setProfile(data);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error fetching profile for sidebar:", err);
+        if (err.message === "UNAUTHORIZED") {
+          logout();
+          router.replace("/login");
+        }
       }
     }
 
