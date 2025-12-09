@@ -13,14 +13,14 @@ import { useEffect, useState } from "react"
 import { profileApi } from "@/lib/api/profile"
 import type { EmployeeProfile } from "@/types/profile"
 
-const navigation = [
+const baseNavigation = [
   { name: "Dashboard", href: "/", icon: Home },
   { name: "Leave Requests", href: "/leave", icon: Calendar },
   { name: "Timesheet Updates", href: "/timesheet", icon: FileText },
   { name: "Check-In/Out Requests", href: "/checkin", icon: Clock },
   { name: "Work From Home", href: "/wfh", icon: Wifi },
   { name: "My Profile", href: "/profile", icon: User },
-]
+];
 
 export function AppSidebar() {
   const pathname = usePathname()
@@ -55,6 +55,18 @@ export function AppSidebar() {
   const displayName = profile ? `${profile.firstName} ${profile.lastName}` : "User";
   const displayPosition = profile?.position || "Employee";
 
+  // Determine if user is HR
+  const [role, setRole] = useState<string>(displayPosition.toLowerCase().includes('hr') ? 'HR' : 'Employee');
+  const isHR = role === 'HR';
+  const navigation = isHR
+    ? [
+        ...baseNavigation.slice(0, 1),
+        { name: "Organization Management", href: "/organization", icon: FileText },
+        { name: "Reports", href: "/reports", icon: FileText },
+        ...baseNavigation.slice(1)
+      ]
+    : baseNavigation;
+
   return (
     <div className="flex h-full w-64 flex-col bg-slate-900 text-slate-100">
       {/* Logo & App Name */}
@@ -71,7 +83,7 @@ export function AppSidebar() {
       {/* Navigation */}
       <nav className="flex-1 space-y-1 px-3 py-4">
         {navigation.map((item) => {
-          const isActive = pathname === item.href
+          const isActive = pathname === item.href;
           return (
             <Link
               key={item.name}
@@ -84,7 +96,7 @@ export function AppSidebar() {
               <item.icon className="h-5 w-5" />
               {item.name}
             </Link>
-          )
+          );
         })}
       </nav>
 
@@ -103,6 +115,18 @@ export function AppSidebar() {
             <p className="truncate text-sm font-medium text-white">{displayName}</p>
             <p className="truncate text-xs text-slate-400">{displayPosition}</p>
           </div>
+        </div>
+        {/* Role Switcher - always show */}
+        <div className="mt-3">
+          <label className="block text-xs text-slate-400 mb-1">Switch Role</label>
+          <select
+            className="w-full rounded bg-slate-900 border border-slate-700 text-slate-100 px-2 py-1 text-sm"
+            value={role}
+            onChange={e => setRole(e.target.value)}
+          >
+            <option value="Employee">Employee</option>
+            <option value="HR">HR</option>
+          </select>
         </div>
         <Button
           variant="ghost"
