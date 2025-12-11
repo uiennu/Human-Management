@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 
 // --- IMPORT CÁC MODAL ---
 import { AddDepartmentModal } from "@/components/add-department-modal"
+import { DeleteDepartmentModal } from "@/components/delete-department-modal"
 import { AddTeamModal } from "@/components/add-team-modal"
 import { AddSubTeamModal } from "@/components/add-subteam-modal"
 import { EditDepartmentModal } from "@/components/edit-department-modal"
@@ -101,7 +102,10 @@ export function OrganizationStructure() {
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [addEmployeesModalOpen, setAddEmployeesModalOpen] = useState(false)
   const [selectedDept, setSelectedDept] = useState<Department | null>(null)
-  
+
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [deptToDelete, setDeptToDelete] = useState<Department | null>(null)
+
   // Lưu cha hiện tại để biết đang add con vào đâu
   const [parentDeptForAdd, setParentDeptForAdd] = useState<Department | null>(null)
 
@@ -137,7 +141,7 @@ export function OrganizationStructure() {
     } else {
       setDepartments([...departments, newEntity])
     }
-    
+
     // Đóng tất cả modal sau khi submit
     setAddDeptModalOpen(false)
     setAddTeamModalOpen(false)
@@ -158,7 +162,14 @@ export function OrganizationStructure() {
     setSelectedDept(null)
   }
 
-  const handleDeleteDepartment = (id: string) => {
+  // HÀM NÀY SẼ ĐƯỢC ĐỔI TÊN THÀNH showDeleteConfirmation VÀ CHỈ DÙNG ĐỂ MỞ MODAL
+  const showDeleteConfirmation = (dept: Department) => {
+    setDeptToDelete(dept) // Lưu thông tin phòng ban cần xóa
+    setDeleteModalOpen(true) // Mở modal
+  }
+
+  // HÀM MỚI NÀY SẼ CHỊU TRÁCH NHIỆM XÓA THỰC TẾ SAU KHI XÁC NHẬN
+  const executeDeleteDepartment = (id: string) => {
     const deleteRecursive = (depts: Department[]): Department[] =>
       depts
         .filter((dept) => dept.id !== id)
@@ -167,6 +178,9 @@ export function OrganizationStructure() {
           subdepartments: dept.subdepartments ? deleteRecursive(dept.subdepartments) : [],
         }))
     setDepartments(deleteRecursive(departments))
+    // Cần đóng modal và reset state sau khi xóa xong
+    setDeleteModalOpen(false)
+    setDeptToDelete(null)
   }
 
   const handleDeleteEmployee = (deptId: string, empId: string) => {
@@ -188,11 +202,11 @@ export function OrganizationStructure() {
 
   // --- DEPARTMENT CARD ---
   const DepartmentCard = ({ dept, isRoot, level = 0 }: { dept: Department; isRoot?: boolean, level?: number }) => {
-    
+
     // Logic: Khi bấm dấu + thì mở modal nào?
     const handleAddClick = () => {
       setParentDeptForAdd(dept) // Set cha là card hiện tại
-      
+
       if (level === 0) {
         setAddDeptModalOpen(true)
       } else if (level === 1) {
@@ -218,7 +232,7 @@ export function OrganizationStructure() {
                 <h3 className="font-bold text-gray-900 text-base">{dept.name}</h3>
                 <p className="text-sm text-gray-500">{dept.description}: {dept.manager}</p>
               </div>
-              
+
               {!isRoot && (
                 <div className="flex gap-1">
                   {/* NÚT ADD (+) */}
@@ -237,7 +251,7 @@ export function OrganizationStructure() {
                     <Edit2 className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={() => handleDeleteDepartment(dept.id)}
+                    onClick={() => showDeleteConfirmation(dept)}
                     className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -298,7 +312,7 @@ export function OrganizationStructure() {
             <div className="h-8 w-px bg-gray-300" />
             <div className="flex pt-0">
               {dept.subdepartments!.map((sub, index, arr) => (
-                <div key={sub.id} className="relative px-6 pt-6"> 
+                <div key={sub.id} className="relative px-6 pt-6">
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-6 bg-gray-300" />
                   {index > 0 && <div className="absolute top-0 left-0 w-1/2 h-px bg-gray-300" />}
                   {index < arr.length - 1 && <div className="absolute top-0 right-0 w-1/2 h-px bg-gray-300" />}
@@ -319,7 +333,7 @@ export function OrganizationStructure() {
           <h1 className="text-3xl font-bold tracking-tight text-gray-900">Organization Structure</h1>
           <p className="text-muted-foreground mt-1">Visualize and manage your company's hierarchy.</p>
         </div>
-        <Button 
+        <Button
           onClick={() => { setParentDeptForAdd(null); setAddDeptModalOpen(true); }}
           className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
         >
@@ -335,23 +349,32 @@ export function OrganizationStructure() {
       </div>
 
       {/* RENDER CÁC MODAL */}
-      <AddDepartmentModal 
-        open={addDeptModalOpen} 
-        onOpenChange={setAddDeptModalOpen} 
-        onSubmit={handleAddEntity} 
+      <AddDepartmentModal
+        open={addDeptModalOpen}
+        onOpenChange={setAddDeptModalOpen}
+        onSubmit={handleAddEntity}
       />
-      
-      <AddTeamModal 
-        open={addTeamModalOpen} 
-        onOpenChange={setAddTeamModalOpen} 
-        onSubmit={handleAddEntity} 
+
+      <AddTeamModal
+        open={addTeamModalOpen}
+        onOpenChange={setAddTeamModalOpen}
+        onSubmit={handleAddEntity}
       />
-      
-      <AddSubTeamModal 
-        open={addSubTeamModalOpen} 
-        onOpenChange={setAddSubTeamModalOpen} 
-        onSubmit={handleAddEntity} 
+
+      <AddSubTeamModal
+        open={addSubTeamModalOpen}
+        onOpenChange={setAddSubTeamModalOpen}
+        onSubmit={handleAddEntity}
       />
+
+      {deptToDelete && (
+        <DeleteDepartmentModal
+          open={deleteModalOpen}
+          onOpenChange={setDeleteModalOpen}
+          departmentName={deptToDelete.name}
+          onConfirm={() => executeDeleteDepartment(deptToDelete.id)}
+        />
+      )}
 
       {selectedDept && (
         <>
