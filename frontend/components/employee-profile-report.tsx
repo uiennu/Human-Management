@@ -1,4 +1,5 @@
 "use client"
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -168,14 +169,14 @@ export function EmployeeProfileReport() {
       {/* Summary Section */}
       <Card className="bg-white">
         <CardHeader>
-          <div className="flex items-start justify-between">
+          <div className="flex flex-col md:flex-row items-start justify-between gap-6">
             <div>
               <p className="text-sm text-muted-foreground">Total Employees</p>
               <p className="text-4xl font-bold text-foreground mt-1">{MOCK_EMPLOYEES.length}</p>
             </div>
-            <div className="flex items-center gap-6">
+            <div className="flex flex-col md:flex-row items-center gap-6 w-full md:w-auto">
               {/* Donut Chart */}
-              <div className="relative w-40 h-40">
+              <div className="relative w-40 h-40 shrink-0">
                 <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
                   <circle
                     cx="50"
@@ -228,25 +229,27 @@ export function EmployeeProfileReport() {
               </div>
             </div>
             {/* Active Filters */}
-            <div className="text-right">
+            <div className="text-left md:text-right w-full md:w-auto">
               <p className="text-xs text-muted-foreground mb-2">Active Filters:</p>
-              <div className="flex gap-2 flex-wrap justify-end">
+              <div className="flex gap-2 flex-wrap md:justify-end">
                 <Badge variant="secondary" className="bg-gray-100">
                   {department}
                 </Badge>
-                {selectedStatuses.length === 1 && (
+                {selectedStatuses.map((status) => (
                   <Badge
-                    className={`${
-                      selectedStatuses[0] === "Active"
-                        ? "bg-green-100 text-green-700"
-                        : selectedStatuses[0] === "On Leave"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : "bg-red-100 text-red-700"
-                    }`}
+                    key={status}
+                    className={`
+                      ${
+                        status === "Active"
+                          ? "bg-green-100 text-green-700 hover:bg-green-200"
+                          : status === "On Leave"
+                            ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
+                            : "bg-red-100 text-red-700 hover:bg-red-200"
+                      }`}
                   >
-                    Status: {selectedStatuses[0]}
+                    Status: {status}
                   </Badge>
-                )}
+                ))}
               </div>
             </div>
           </div>
@@ -259,8 +262,13 @@ export function EmployeeProfileReport() {
           <h3 className="font-semibold">Filters</h3>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Filter Row 1 */}
-          <div className="grid grid-cols-4 gap-4">
+          {/* ĐÃ SỬA: Thay grid-cols-4 thành responsive: 
+            - Màn hình nhỏ: 1 cột
+            - Màn hình vừa (md): 2 cột
+            - Màn hình lớn (xl): 4 cột
+            Điều này giúp các ô input không bị đè lên nhau.
+          */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
             <div>
               <label className="text-xs font-medium text-foreground">Department</label>
               <select
@@ -288,7 +296,7 @@ export function EmployeeProfileReport() {
               </div>
             </div>
 
-            <div>
+            <div className="min-w-0">
               <label className="text-xs font-medium text-foreground">Hire Date Range</label>
               <div className="flex gap-2 mt-2">
                 <input
@@ -296,38 +304,62 @@ export function EmployeeProfileReport() {
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
                   placeholder="From"
-                  className="w-full px-2 py-2 text-sm border border-border rounded-md bg-background text-foreground"
+                  className="w-full min-w-0 px-2 py-2 text-sm border border-border rounded-md bg-background text-foreground"
                 />
                 <input
                   type="date"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
                   placeholder="To"
-                  className="w-full px-2 py-2 text-sm border border-border rounded-md bg-background text-foreground"
+                  className="w-full min-w-0 px-2 py-2 text-sm border border-border rounded-md bg-background text-foreground"
                 />
               </div>
             </div>
 
-            <div>
+            <div className="min-w-0">
               <label className="text-xs font-medium text-foreground">Contract Status</label>
-              <div className="flex gap-1.5 mt-2 flex-wrap">
-                {CONTRACT_STATUSES.map((status) => (
-                  <Badge
-                    key={status}
-                    onClick={() => toggleStatus(status)}
-                    className={`cursor-pointer text-xs ${
-                      selectedStatuses.includes(status)
-                        ? status === "Active"
-                          ? "bg-green-500 hover:bg-green-600 text-white"
-                          : status === "On Leave"
-                            ? "bg-yellow-500 hover:bg-yellow-600 text-white"
-                            : "bg-red-500 hover:bg-red-600 text-white"
-                        : "bg-gray-200 hover:bg-gray-300 text-gray-700"
-                    }`}
-                  >
-                    {status}
-                  </Badge>
-                ))}
+              <div className="flex gap-2 mt-2 flex-wrap">
+                {CONTRACT_STATUSES.map((status) => {
+                  const isSelected = selectedStatuses.includes(status)
+                  let colorStyles = ""
+                  let dotColor = ""
+
+                  // Logic xác định màu sắc dựa trên status
+                  switch (status) {
+                    case "Active":
+                      colorStyles = "bg-green-100 text-green-700 border-green-200 hover:bg-green-200"
+                      dotColor = "bg-green-600"
+                      break
+                    case "On Leave":
+                      colorStyles = "bg-yellow-100 text-yellow-700 border-yellow-200 hover:bg-yellow-200"
+                      dotColor = "bg-yellow-500"
+                      break
+                    case "Terminated":
+                      colorStyles = "bg-red-100 text-red-700 border-red-200 hover:bg-red-200"
+                      dotColor = "bg-red-600"
+                      break
+                    default:
+                      break
+                  }
+
+                  return (
+                    <Badge
+                      key={status}
+                      variant="outline"
+                      onClick={() => toggleStatus(status)}
+                      className={`cursor-pointer text-xs px-3 py-1 h-7 rounded-full border transition-all flex items-center gap-2 whitespace-nowrap ${
+                        isSelected
+                          ? colorStyles
+                          : "bg-background text-muted-foreground border-border hover:bg-muted"
+                      }`}
+                    >
+                      <div
+                        className={`w-2 h-2 rounded-full shrink-0 ${isSelected ? dotColor : "bg-muted-foreground/30"}`}
+                      />
+                      {status}
+                    </Badge>
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -374,7 +406,8 @@ export function EmployeeProfileReport() {
                           <td className="py-4 px-4 text-foreground">{emp.hireDate}</td>
                           <td className="py-4 px-4">
                             <Badge
-                              className={`text-xs ${
+                              variant="outline"
+                              className={`text-xs px-3 py-1 rounded-full border-0 flex w-fit items-center gap-2 ${
                                 emp.status === "Active"
                                   ? "bg-green-100 text-green-700"
                                   : emp.status === "On Leave"
@@ -382,7 +415,16 @@ export function EmployeeProfileReport() {
                                     : "bg-red-100 text-red-700"
                               }`}
                             >
-                              ● {emp.status}
+                              <div
+                                className={`w-2 h-2 rounded-full ${
+                                  emp.status === "Active"
+                                    ? "bg-green-600"
+                                    : emp.status === "On Leave"
+                                      ? "bg-yellow-500"
+                                      : "bg-red-600"
+                                }`}
+                              />
+                              {emp.status}
                             </Badge>
                           </td>
                         </tr>
@@ -392,7 +434,7 @@ export function EmployeeProfileReport() {
                 </div>
 
                 {/* Export and Pagination */}
-                <div className="flex gap-3 mt-6 items-center justify-between">
+                <div className="flex flex-col md:flex-row gap-3 mt-6 items-center justify-between">
                   <div className="flex gap-3">
                     <Button
                       onClick={() => handleExport("excel")}
@@ -413,7 +455,7 @@ export function EmployeeProfileReport() {
                       Preview PDF
                     </Button>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 mt-4 md:mt-0">
                     <span className="text-sm text-muted-foreground">
                       Page {currentPage} of {totalPages}
                     </span>
