@@ -1,15 +1,25 @@
+export enum UserRole {
+  Employee = "Employee",
+  Manager = "Manager",
+  HR = "HR",
+  CB = "C&B",
+  Admin = "Admin"
+}
+
 export interface AuthData {
   token: string
-  role: string
+  roles: string[]
   email: string
 }
 
 export interface AuthContextType {
   token: string | null
-  role: string | null
+  roles: string[]
   email: string | null
   isAuthenticated: boolean
   isLoading: boolean
   setAuth: (data: AuthData) => void
   logout: () => void
+  hasRole: (role: string) => boolean
+  hasAnyRole: (roles: string[]) => boolean
 }

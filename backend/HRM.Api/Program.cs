@@ -25,6 +25,16 @@ builder.Services.AddAuthentication("Bearer")
         };
     });
 
+// Add Authorization Policies
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("EmployeeOnly", policy => policy.RequireRole("Employee", "Manager", "HR", "C&B", "Admin"));
+    options.AddPolicy("ManagerOnly", policy => policy.RequireRole("Manager", "HR", "Admin"));
+    options.AddPolicy("HROnly", policy => policy.RequireRole("HR", "Admin"));
+    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
+    options.AddPolicy("CBOnly", policy => policy.RequireRole("C&B", "Admin"));
+});
+
 // Add services
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();

@@ -540,3 +540,6 @@ INSERT INTO RedemptionRequests (EmployeeID, PointsToRedeem, CashValue, Conversio
 (3, 100, 100, 1.0, 'Pending'),
 (2, 20, 20, 1.0, 'Rejected'),
 (4, 5, 5, 1.0, 'Processing');
+
+UPDATE Employees 
+SET PasswordHash = '$2a$11$jPe9nGpFaZHptsngP.dKGe8z/nStZ8YcPap7HN/D4LhjVvbJ5LFfe';

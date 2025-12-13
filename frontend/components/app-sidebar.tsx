@@ -9,9 +9,11 @@ import { Button } from "@/components/ui/button"
 import { useAuth } from "@/lib/hooks/use-auth"
 import { useRouter } from "next/navigation"
 import { Separator } from "@/components/ui/separator"
+import { Badge } from "@/components/ui/badge"
 import { useEffect, useState } from "react"
 import { profileApi } from "@/lib/api/profile"
 import type { EmployeeProfile } from "@/types/profile"
+import { UserRole } from "@/types/auth"
 
 const baseNavigation = [
   { name: "Dashboard", href: "/", icon: Home },
@@ -24,7 +26,7 @@ const baseNavigation = [
 
 export function AppSidebar() {
   const pathname = usePathname()
-  const { logout, token } = useAuth();
+  const { logout, token, roles, hasAnyRole } = useAuth();
   const router = useRouter();
   const [profile, setProfile] = useState<EmployeeProfile | null>(null);
 
@@ -55,10 +57,11 @@ export function AppSidebar() {
   const displayName = profile ? `${profile.firstName} ${profile.lastName}` : "User";
   const displayPosition = profile?.position || "Employee";
 
-  // Determine if user is HR
-  const [role, setRole] = useState<string>(displayPosition.toLowerCase().includes('hr') ? 'HR' : 'Employee');
-  const isHR = role === 'HR';
-  const navigation = isHR
+  // Check if user has HR or Admin role
+  const isHROrAdmin = hasAnyRole([UserRole.HR, UserRole.Admin]);
+  
+  // Build navigation based on actual user roles
+  const navigation = isHROrAdmin
     ? [
         ...baseNavigation.slice(0, 1),
         { name: "Organization Management", href: "/organization", icon: FileText },
@@ -116,18 +119,19 @@ export function AppSidebar() {
             <p className="truncate text-xs text-slate-400">{displayPosition}</p>
           </div>
         </div>
-        {/* Role Switcher - always show */}
-        <div className="mt-3">
-          <label className="block text-xs text-slate-400 mb-1">Switch Role</label>
-          <select
-            className="w-full rounded bg-slate-900 border border-slate-700 text-slate-100 px-2 py-1 text-sm"
-            value={role}
-            onChange={e => setRole(e.target.value)}
-          >
-            <option value="Employee">Employee</option>
-            <option value="HR">HR</option>
-          </select>
-        </div>
+        {/* Display user roles */}
+        {roles.length > 0 && (
+          <div className="mt-3">
+            <label className="block text-xs text-slate-400 mb-1">Your Roles</label>
+            <div className="flex flex-wrap gap-1">
+              {roles.map((role) => (
+                <Badge key={role} variant="secondary" className="text-xs bg-blue-600/20 text-blue-300 border-blue-500/30">
+                  {role}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
         <Button
           variant="ghost"
           className="mt-2 w-full justify-start text-slate-300 hover:bg-slate-800 hover:text-white"

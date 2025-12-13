@@ -7,7 +7,7 @@ namespace HRM.Api.Controllers
 {
     [ApiController]
     [Route("api/employees/me")]
-    [Authorize]
+    [Authorize(Policy = "EmployeeOnly")]
     public class EmployeeProfileController : ControllerBase
     {
         private readonly IEmployeeProfileService _service;
@@ -62,6 +62,7 @@ namespace HRM.Api.Controllers
         /// Update basic information (phone, address, personal email, emergency contact)
         /// </summary>
         [HttpPut("basic-info")]
+        [Authorize(Policy = "EmployeeOnly")]
         public async Task<IActionResult> UpdateBasicInfo([FromBody] UpdateBasicInfoDto dto)
         {
             try
@@ -93,6 +94,7 @@ namespace HRM.Api.Controllers
         /// This will generate and send an OTP to the employee's email
         /// </summary>
         [HttpPost("sensitive-update-requests")]
+        [Authorize(Policy = "EmployeeOnly")]
         public async Task<IActionResult> RequestSensitiveUpdate([FromBody] SensitiveUpdateRequestDto dto)
         {
             try
@@ -121,6 +123,7 @@ namespace HRM.Api.Controllers
         /// Verify OTP and submit sensitive information change request to HR for approval
         /// </summary>
         [HttpPost("sensitive-update-requests/verify")]
+        [Authorize(Policy = "EmployeeOnly")]
         public async Task<IActionResult> VerifySensitiveOtp([FromBody] VerifyOtpDto dto)
         {
             try
