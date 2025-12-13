@@ -66,7 +66,7 @@ namespace HRM.Api.Controllers
         /// GET: /api/leave/balances/{employeeId}
         /// </summary>
         [HttpGet("balances/{employeeId}")]
-        [Authorize]
+        [Authorize(Policy = "EmployeeOnly")]
         public async Task<ActionResult<LeaveBalanceResponseDto>> GetMyLeaveBalance(int employeeId)
         {
             var currentEmployeeId = _currentUserService.GetCurrentEmployeeId();
@@ -105,6 +105,7 @@ namespace HRM.Api.Controllers
         /// POST: /api/leave/request
         /// </summary>
         [HttpPost("request")]
+        [Authorize(Policy = "EmployeeOnly")]
         public async Task<ActionResult<LeaveRequestResponseDto>> CreateLeaveRequest(
             [FromForm] CreateLeaveRequestDto dto,
             [FromQuery] int? employeeId = null) // For development - remove when auth is implemented
@@ -132,6 +133,7 @@ namespace HRM.Api.Controllers
         /// GET: /api/leave/requests
         /// </summary>
         [HttpGet("requests")]
+        [Authorize(Policy = "EmployeeOnly")]
         public async Task<ActionResult<PagedResultDto<LeaveRequestListItemDto>>> GetLeaveRequests(
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10,
@@ -175,6 +177,7 @@ namespace HRM.Api.Controllers
         /// PUT: /api/leave/leave-requests/{id}/cancel
         /// </summary>
         [HttpPut("leave-requests/{id}/cancel")]
+        [Authorize(Policy = "EmployeeOnly")]
         public async Task<ActionResult> CancelLeaveRequest(int id)
         {
             var employeeId = _currentUserService.GetCurrentEmployeeId();
@@ -203,6 +206,7 @@ namespace HRM.Api.Controllers
         /// POST: /api/leave/work-handovers
         /// </summary>
         [HttpPost("work-handovers")]
+        [Authorize(Policy = "ManagerOnly")]
         public async Task<ActionResult<WorkHandoverDto>> CreateWorkHandover([FromBody] CreateWorkHandoverDto dto)
         {
             if (!ModelState.IsValid)
@@ -241,6 +245,7 @@ namespace HRM.Api.Controllers
         /// GET: /api/leave/my-handovers
         /// </summary>
         [HttpGet("my-handovers")]
+        [Authorize(Policy = "EmployeeOnly")]
         public async Task<ActionResult<List<WorkHandoverDto>>> GetMyHandovers()
         {
             var employeeId = _currentUserService.GetCurrentEmployeeId();
@@ -272,6 +277,7 @@ namespace HRM.Api.Controllers
         /// DELETE: /api/leave/work-handovers/{id}
         /// </summary>
         [HttpDelete("work-handovers/{id}")]
+        [Authorize(Policy = "ManagerOnly")]
         public async Task<ActionResult> DeleteWorkHandover(int id)
         {
             var managerId = _currentUserService.GetCurrentEmployeeId();
@@ -291,7 +297,7 @@ namespace HRM.Api.Controllers
         /// GET /api/LeaveRequest/employee/{employeeId}
         /// </summary>
         [HttpGet("employee/{employeeId}")]
-        [Authorize(Roles = "Manager,Admin")]
+        [Authorize(Policy = "ManagerOnly")]
         public async Task<IActionResult> GetEmployeeLeaveRequests(
             int employeeId,
             [FromQuery] string? status = null,
