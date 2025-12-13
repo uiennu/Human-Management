@@ -15,7 +15,7 @@ CREATE TABLE Roles (
     RoleName VARCHAR(50) NOT NULL UNIQUE
 );
 
-CREATE TABLE Departments (
+CREATE TABLE Departments (  
     DepartmentID INT PRIMARY KEY AUTO_INCREMENT,
     DepartmentName VARCHAR(100) NOT NULL,
     DepartmentCode VARCHAR(20) UNIQUE,
@@ -80,6 +80,66 @@ CREATE TABLE EmployeeProfileChanges (
     CONSTRAINT FK_ProfileChanges_Employee FOREIGN KEY (EmployeeID) REFERENCES Employees(EmployeeID),
     CONSTRAINT FK_ProfileChanges_Approver FOREIGN KEY (ApproverID) REFERENCES Employees(EmployeeID)
 );
+
+CREATE TABLE SubTeams (
+    SubTeamID INT PRIMARY KEY AUTO_INCREMENT,
+    TeamName VARCHAR(100) NOT NULL,
+    Description VARCHAR(500),
+    DepartmentID INT NOT NULL,
+    TeamLeadID INT NULL,
+
+    CONSTRAINT FK_SubTeam_Department 
+        FOREIGN KEY (DepartmentID) REFERENCES Departments(DepartmentID),
+
+    CONSTRAINT FK_SubTeam_Lead 
+        FOREIGN KEY (TeamLeadID) REFERENCES Employees(EmployeeID)
+);
+
+
+CREATE TABLE SubTeamMembers (
+    ID INT PRIMARY KEY AUTO_INCREMENT,
+    SubTeamID INT NOT NULL,
+    EmployeeID INT NOT NULL,
+    
+    UNIQUE(EmployeeID),
+
+    CONSTRAINT FK_SubTeamMembers_SubTeam 
+        FOREIGN KEY (SubTeamID) REFERENCES SubTeams(SubTeamID) ON DELETE CASCADE,
+
+    CONSTRAINT FK_SubTeamMembers_Employee 
+        FOREIGN KEY (EmployeeID) REFERENCES Employees(EmployeeID) ON DELETE CASCADE
+);
+
+
+
+CREATE TABLE OrganizationStructureLogs (
+    LogID INT PRIMARY KEY AUTO_INCREMENT,
+
+    ActionType VARCHAR(50) NOT NULL,  -- AddDepartment, EditSubTeam, MoveEmployee...
+    Description VARCHAR(1000),
+
+    EmployeeID INT NULL,      -- nhân viên bị ảnh hưởng (nếu có)
+    DepartmentID INT NULL,    -- phòng ban chính bị tác động
+    SubTeamID INT NULL,       -- team bị tác động
+
+    OldManagerID INT NULL,
+    NewManagerID INT NULL,
+
+    OldDepartmentID INT NULL,
+    NewDepartmentID INT NULL,
+
+    OldSubTeamID INT NULL,
+    NewSubTeamID INT NULL,
+
+    PerformedBy INT NOT NULL,     -- HR thực hiện
+    PerformedAt DATETIME NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT FK_Log_Employee FOREIGN KEY (EmployeeID) REFERENCES Employees(EmployeeID),
+    CONSTRAINT FK_Log_Department FOREIGN KEY (DepartmentID) REFERENCES Departments(DepartmentID),
+    CONSTRAINT FK_Log_SubTeam FOREIGN KEY (SubTeamID) REFERENCES SubTeams(SubTeamID),
+    CONSTRAINT FK_Log_Performer FOREIGN KEY (PerformedBy) REFERENCES Employees(EmployeeID)
+);
+
 
 -- =================================================================
 -- SECTION 2: LEAVE MANAGEMENT
