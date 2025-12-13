@@ -43,7 +43,8 @@ interface DepartmentCardProps {
   onAddEmployeeClick: (dept: Department) => void
   onDeleteEmployee: (deptId: string, empId: string) => void
   onDragStart: (e: React.DragEvent, employee: Employee, sourceDept: Department) => void
-  onDrop: (e: React.DragEvent, targetDept: Department) => void
+
+  onDrop: (e: React.DragEvent, targetDept: Department, level: number) => void
 }
 
 interface TreeNodeProps {
@@ -56,10 +57,16 @@ interface TreeNodeProps {
   onAddEmployeeClick: (dept: Department) => void
   onDeleteEmployee: (deptId: string, empId: string) => void
   onDragStart: (e: React.DragEvent, employee: Employee, sourceDept: Department) => void
-  onDrop: (e: React.DragEvent, targetDept: Department) => void
+  onDrop: (e: React.DragEvent, targetDept: Department, level: number) => void
 }
 
 // --- EXTRACTED COMPONENTS ---
+
+// Custom Image Cursors
+const cursorGrabFinal = `url('/grab.png') 16 16, grab`
+const cursorGrabbingFinal = `url('/grabbing.png') 16 16, grabbing`
+const cursorPointerFinal = `url('/pointer.png') 10 0, pointer`
+
 
 const DepartmentCard = ({
   dept,
@@ -91,7 +98,7 @@ const DepartmentCard = ({
     <div
       className="flex flex-col items-center z-10 relative"
       onDragOver={handleDragOver}
-      onDrop={(e) => onDrop(e, dept)}
+      onDrop={(e) => onDrop(e, dept, level)}
     >
       <div className="w-72 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
         <div className="p-4">
@@ -103,24 +110,17 @@ const DepartmentCard = ({
 
             {!isRoot && (
               <div className="flex gap-1">
-                {/* NÚT ADD (+) */}
-                <button
-                  onClick={() => onAddClick(dept, level)}
-                  title={getTooltip()}
-                  className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-md transition-colors"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-
                 <button
                   onClick={() => onEditClick(dept)}
                   className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                  style={{ cursor: cursorPointerFinal }}
                 >
                   <Edit2 className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => onDeleteClick(dept)}
                   className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                  style={{ cursor: cursorPointerFinal }}
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -134,6 +134,7 @@ const DepartmentCard = ({
               <button
                 onClick={() => setIsEmployeesOpen(true)}
                 className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-900 transition-colors focus:outline-none"
+                style={{ cursor: cursorPointerFinal }}
               >
                 <ChevronDown className="h-3 w-3" />
                 Show {dept.employees.length} Employees
@@ -150,7 +151,8 @@ const DepartmentCard = ({
                 key={emp.id}
                 draggable
                 onDragStart={(e) => onDragStart(e, emp, dept)}
-                className="relative flex items-center gap-3 p-3 bg-gray-50 border border-gray-100 rounded-lg cursor-grab active:cursor-grabbing hover:bg-gray-100 transition-colors"
+                className="relative flex items-center gap-3 p-3 bg-gray-50 border border-gray-100 rounded-lg hover:bg-gray-100 transition-colors"
+                style={{ cursor: cursorGrabFinal }}
               >
                 <Avatar className="h-8 w-8 bg-gray-200">
                   <AvatarFallback className="text-xs text-gray-600 font-medium">
@@ -161,7 +163,7 @@ const DepartmentCard = ({
                   <p className="text-sm font-medium text-gray-700">{emp.name}</p>
                   <p className="text-[10px] text-gray-400">{emp.position}</p>
                 </div>
-                <button onClick={() => onDeleteEmployee(dept.id, emp.id)} className="ml-auto p-1 text-gray-400 hover:text-red-500">
+                <button onClick={() => onDeleteEmployee(dept.id, emp.id)} className="ml-auto p-1 text-gray-400 hover:text-red-500" style={{ cursor: cursorPointerFinal }}>
                   <X className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -172,6 +174,7 @@ const DepartmentCard = ({
               <button
                 onClick={() => setIsEmployeesOpen(false)}
                 className="flex items-center gap-1 text-xs font-medium text-gray-400 hover:text-gray-700 transition-colors focus:outline-none"
+                style={{ cursor: cursorPointerFinal }}
               >
                 <ChevronUp className="h-3 w-3" />
                 Close
@@ -186,14 +189,16 @@ const DepartmentCard = ({
               <button
                 onClick={() => onAddClick(dept, level)}
                 className="w-full flex items-center justify-center gap-2 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
+                style={{ cursor: cursorPointerFinal }}
               >
                 <Plus className="h-4 w-4" />
-                Add SubTeam
+                Add Team
               </button>
             ) : (
               <button
                 onClick={() => onAddEmployeeClick(dept)}
                 className="w-full flex items-center justify-center gap-2 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
+                style={{ cursor: cursorPointerFinal }}
               >
                 <Plus className="h-4 w-4" />
                 Add Employee
@@ -267,7 +272,7 @@ const TreeNode = ({
     );
   }
 
-  // LEVEL 1+: DEPARTMENTS -> SUBTEAMS (VERTICAL LAYOUT)
+  // LEVEL 1+: DEPARTMENTS -> TeamS (VERTICAL LAYOUT)
   return (
     <div className="flex flex-col items-center">
       <DepartmentCard
@@ -285,10 +290,10 @@ const TreeNode = ({
 
       {hasSubdepartments && (
         <div className="relative flex flex-col items-center w-full">
-          {/* Line connecting Parent (Card+Emp) to Subteams */}
+          {/* Line connecting Parent (Card+Emp) to Teams */}
           <div className="w-px h-8 bg-gray-300"></div>
 
-          {/* Subteams List */}
+          {/* Teams List */}
           <div className="flex flex-col gap-6 pl-8 border-l border-gray-300 ml-8">
             {dept.subdepartments!.map((sub) => (
               <div key={sub.id} className="relative">
@@ -358,7 +363,7 @@ export function OrganizationStructure() {
               employees: [{ id: "emp-002", name: "Ben Carter", position: "Software Engineer" }],
             },
           ],
-          employees: [],
+          employees: [], // No employees directly in Engineering
         },
         {
           id: "2",
@@ -367,7 +372,18 @@ export function OrganizationStructure() {
           manager: "David Lee",
           managerId: "mgr-004",
           description: "Manager",
-          employees: [{ id: "emp-003", name: "Ava Garcia", position: "Product Designer" }],
+          subdepartments: [
+            {
+              id: "2-1",
+              name: "Design",
+              code: "DES",
+              manager: "Ava Garcia",
+              managerId: "mgr-006",
+              description: "Lead",
+              employees: [{ id: "emp-003", name: "Ava Garcia", position: "Product Designer" }],
+            }
+          ],
+          employees: [], // No employees directly in Product
         },
         {
           id: "3",
@@ -503,12 +519,20 @@ export function OrganizationStructure() {
     e.dataTransfer.effectAllowed = "move"
   }
 
-  const handleDrop = (e: React.DragEvent, target: Department) => {
+  const handleDrop = (e: React.DragEvent, target: Department, targetLevel: number) => {
     e.preventDefault()
     if (!draggedEmployee || !sourceDept) return
 
     // Prevent dropping on the same department
     if (sourceDept.id === target.id) return
+
+    // RESTRICTION: Employees can only be in Teams (Level >= 2)
+    // Level 0 = Root, Level 1 = Department, Level 2 = Team/Sub-team
+    if (targetLevel < 2) {
+      // Optional: Show a toast or visual feedback that drop is invalid
+      console.warn("Cannot drop employee into a Department. Must be a Team.")
+      return
+    }
 
     setTargetDept(target)
     setMoveModalOpen(true)
@@ -553,12 +577,48 @@ export function OrganizationStructure() {
   const [isPanning, setIsPanning] = useState(false)
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 })
   const containerRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
 
   const handleZoomIn = () => setZoom((prev) => Math.min(prev + 0.1, 2))
   const handleZoomOut = () => setZoom((prev) => Math.max(prev - 0.1, 0.5))
   const handleResetZoom = () => {
     setZoom(1)
     setPan({ x: 0, y: 0 })
+  }
+
+  // Helper to constrain pan
+  const clampPan = (newPan: { x: number; y: number }, currentZoom: number) => {
+    const container = containerRef.current
+    const content = contentRef.current
+    if (!container || !content) return newPan
+
+    const containerRect = container.getBoundingClientRect()
+    // We use offsetWidth/Height for the un-scaled dimensions
+    const contentW = content.offsetWidth
+    const contentH = content.offsetHeight
+
+    // Logic for transform-origin: top (center top)
+    // VisualLeft = pan.x + width*(1-zoom)/2
+    // VisualRight = pan.x + width*(1+zoom)/2
+    // VisualTop = pan.y
+    // VisualBottom = pan.y + height*zoom
+
+    // Constraints:
+    // 1. VisualRight > 50  => pan.x > 50 - width*(1+zoom)/2
+    // 2. VisualLeft < containerWidth - 50 => pan.x < containerWidth - 50 - width*(1-zoom)/2
+    // 3. VisualBottom > 50 => pan.y > 50 - height*zoom
+    // 4. VisualTop < containerHeight - 50 => pan.y < containerHeight - 50
+
+    const minX = 50 - (contentW * (1 + currentZoom)) / 2
+    const maxX = containerRect.width - 50 - (contentW * (1 - currentZoom)) / 2
+
+    const minY = 50 - (contentH * currentZoom)
+    const maxY = containerRect.height - 50
+
+    return {
+      x: Math.min(Math.max(newPan.x, minX), maxX),
+      y: Math.min(Math.max(newPan.y, minY), maxY)
+    }
   }
 
   // --- PAN & ZOOM HANDLERS ---
@@ -574,7 +634,10 @@ export function OrganizationStructure() {
         setZoom((prev) => Math.min(Math.max(prev + delta, 0.5), 2))
       } else {
         // Pan
-        setPan((prev) => ({ x: prev.x - e.deltaX, y: prev.y - e.deltaY }))
+        setPan((prev) => {
+          const newPan = { x: prev.x - e.deltaX, y: prev.y - e.deltaY }
+          return clampPan(newPan, zoom)
+        })
       }
     }
 
@@ -583,7 +646,7 @@ export function OrganizationStructure() {
     return () => {
       container.removeEventListener("wheel", onWheel)
     }
-  }, [])
+  }, [zoom])
 
   const handleMouseDown = (e: React.MouseEvent) => {
     // Allow panning with left click (if not on a button/node) or middle click
@@ -599,7 +662,10 @@ export function OrganizationStructure() {
     if (isPanning) {
       const deltaX = e.clientX - lastMousePos.x
       const deltaY = e.clientY - lastMousePos.y
-      setPan((prev) => ({ x: prev.x + deltaX, y: prev.y + deltaY }))
+      setPan((prev) => {
+        const newPan = { x: prev.x + deltaX, y: prev.y + deltaY }
+        return clampPan(newPan, zoom)
+      })
       setLastMousePos({ x: e.clientX, y: e.clientY })
     }
   }
@@ -640,14 +706,14 @@ export function OrganizationStructure() {
         <div className="flex gap-2">
           {/* ZOOM CONTROLS */}
           <div className="flex items-center bg-white border border-gray-200 rounded-md shadow-sm mr-2">
-            <button onClick={handleZoomOut} className="p-2 hover:bg-gray-100 text-gray-600 rounded-l-md" title="Zoom Out">
+            <button onClick={handleZoomOut} className="p-2 hover:bg-gray-100 text-gray-600 rounded-l-md" title="Zoom Out" style={{ cursor: cursorPointerFinal }}>
               <ChevronDown className="h-4 w-4" />
             </button>
             <span className="px-2 text-sm font-medium text-gray-600 w-12 text-center">{Math.round(zoom * 100)}%</span>
-            <button onClick={handleZoomIn} className="p-2 hover:bg-gray-100 text-gray-600 rounded-r-md" title="Zoom In">
+            <button onClick={handleZoomIn} className="p-2 hover:bg-gray-100 text-gray-600 rounded-r-md" title="Zoom In" style={{ cursor: cursorPointerFinal }}>
               <ChevronUp className="h-4 w-4" />
             </button>
-            <button onClick={handleResetZoom} className="p-2 hover:bg-gray-100 text-gray-600 border-l border-gray-200" title="Reset Zoom">
+            <button onClick={handleResetZoom} className="p-2 hover:bg-gray-100 text-gray-600 border-l border-gray-200" title="Reset Zoom" style={{ cursor: cursorPointerFinal }}>
               <Eye className="h-4 w-4" />
             </button>
           </div>
@@ -655,6 +721,7 @@ export function OrganizationStructure() {
           <Button
             onClick={() => { setParentDeptForAdd(null); setAddDeptModalOpen(true); }}
             className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+            style={{ cursor: cursorPointerFinal }}
           >
             <Plus className="mr-2 h-4 w-4" />
             Add Department
@@ -664,13 +731,15 @@ export function OrganizationStructure() {
 
       <div
         ref={containerRef}
-        className="flex-1 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden relative cursor-grab active:cursor-grabbing touch-none"
+        className="flex-1 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden relative touch-none"
+        style={{ cursor: isPanning ? cursorGrabbingFinal : cursorGrabFinal }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       >
         <div
+          ref={contentRef}
           className="flex justify-center min-w-max pt-4 origin-top"
           style={{ transform: "translate(" + pan.x + "px, " + pan.y + "px) scale(" + zoom + ")" }}
         >
@@ -710,32 +779,38 @@ export function OrganizationStructure() {
         onSubmit={handleAddEntity}
       />
 
-      {deptToDelete && (
-        <DeleteDepartmentModal
-          open={deleteModalOpen}
-          onOpenChange={setDeleteModalOpen}
-          departmentName={deptToDelete.name}
-          onConfirm={() => executeDeleteDepartment(deptToDelete.id)}
-        />
-      )}
+      {
+        deptToDelete && (
+          <DeleteDepartmentModal
+            open={deleteModalOpen}
+            onOpenChange={setDeleteModalOpen}
+            departmentName={deptToDelete.name}
+            onConfirm={() => executeDeleteDepartment(deptToDelete.id)}
+          />
+        )
+      }
 
-      {selectedDept && (
-        <>
-          <EditDepartmentModal open={editModalOpen} onOpenChange={setEditModalOpen} department={selectedDept} onSubmit={handleEditDepartment} />
-          <AddEmployeesModal open={addEmployeesModalOpen} onOpenChange={setAddEmployeesModalOpen} department={selectedDept} />
-        </>
-      )}
+      {
+        selectedDept && (
+          <>
+            <EditDepartmentModal open={editModalOpen} onOpenChange={setEditModalOpen} department={selectedDept} onSubmit={handleEditDepartment} />
+            <AddEmployeesModal open={addEmployeesModalOpen} onOpenChange={setAddEmployeesModalOpen} department={selectedDept} />
+          </>
+        )
+      }
 
-      {draggedEmployee && sourceDept && targetDept && (
-        <MoveEmployeeModal
-          open={moveModalOpen}
-          onOpenChange={setMoveModalOpen}
-          employeeName={draggedEmployee.name}
-          sourceTeamName={sourceDept.name}
-          targetTeamName={targetDept.name}
-          onConfirm={confirmMoveEmployee}
-        />
-      )}
-    </div>
+      {
+        draggedEmployee && sourceDept && targetDept && (
+          <MoveEmployeeModal
+            open={moveModalOpen}
+            onOpenChange={setMoveModalOpen}
+            employeeName={draggedEmployee.name}
+            sourceTeamName={sourceDept.name}
+            targetTeamName={targetDept.name}
+            onConfirm={confirmMoveEmployee}
+          />
+        )
+      }
+    </div >
   )
 }
