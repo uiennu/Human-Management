@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using HRM.Api.Data;
 using Microsoft.EntityFrameworkCore;
+using BCrypt.Net;
 
 namespace HRM.Api.Controllers
 {
@@ -19,6 +20,26 @@ namespace HRM.Api.Controllers
             _context = context;
         }
 
+            /// <summary>
+            /// Hash a password using BCrypt. For migration/testing only.
+            /// </summary>
+            /// <param name="request">Object with plain password</param>
+            /// <returns>Hashed password</returns>
+            [HttpPost("hash-password")]
+            public IActionResult HashPassword([FromBody] HashPasswordRequest request)
+            {
+                if (string.IsNullOrWhiteSpace(request?.Password))
+                    return BadRequest(new { error = "Password is required" });
+
+                string hashed = BCrypt.Net.BCrypt.HashPassword(request.Password);
+                return Ok(new { hashedPassword = hashed });
+            }
+
+            public class HashPasswordRequest
+            {
+                public string Password { get; set; }
+            }
+
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
@@ -30,8 +51,30 @@ namespace HRM.Api.Controllers
                 return Unauthorized(new { message = "Invalid email or password" });
             }
 
-            // TODO: Implement proper password hashing and verification
-            if (request.Password != "123456") // Temporary - replace with password verification
+            // Verify password using BCrypt
+            // For backward compatibility, accept "123456" OR verify hashed password
+            bool isValidPassword = false;
+            
+            if (string.IsNullOrEmpty(employee.PasswordHash))
+            {
+                // If no hash stored, check against default password (temporary for migration)
+                isValidPassword = request.Password == "123456";
+            }
+            else
+            {
+                // Verify hashed password
+                try
+                {
+                    isValidPassword = BCrypt.Net.BCrypt.Verify(request.Password, employee.PasswordHash);
+                }
+                catch
+                {
+                    // If verification fails, try plain text comparison as fallback
+                    isValidPassword = request.Password == employee.PasswordHash;
+                }
+            }
+
+            if (!isValidPassword)
             {
                 return Unauthorized(new { message = "Invalid email or password" });
             }

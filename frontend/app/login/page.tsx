@@ -27,9 +27,9 @@ export default function LoginPage() {
         throw new Error("Incorrect email or password!");
       }
       const data = await res.json();
-      // Lưu thông tin vào context/provider
-      setAuth({ token: data.token, role: data.role, email: data.email });
-      // Chuyển hướng dashboard theo role
+      // Save auth info to context/provider - backend returns roles array
+      setAuth({ token: data.token, roles: data.roles || [], email: data.email });
+      // Redirect to dashboard
       router.replace("/");
     } catch (err: any) {
       setError(err.message || "Login failed!");
