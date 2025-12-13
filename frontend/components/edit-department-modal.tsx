@@ -69,6 +69,8 @@ export function EditDepartmentModal({ open, onOpenChange, department, onSubmit }
               <Input
                 id="edit-code"
                 value={formData.code}
+                disabled
+                className="bg-gray-100 text-gray-500 cursor-not-allowed"
                 onChange={(e) => setFormData({ ...formData, code: e.target.value })}
               />
             </div>

@@ -10,6 +10,7 @@ import { DeleteDepartmentModal } from "@/components/delete-department-modal"
 import { AddTeamModal } from "@/components/add-team-modal"
 import { AddSubTeamModal } from "@/components/add-subteam-modal"
 import { EditDepartmentModal } from "@/components/edit-department-modal"
+import { EditTeamModal } from "@/components/edit-team-modal"
 import { AddEmployeesModal } from "@/components/add-employees-modal"
 import { MoveEmployeeModal } from "@/components/move-employee-modal"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -38,7 +39,7 @@ interface DepartmentCardProps {
   isRoot?: boolean
   level?: number
   onAddClick: (dept: Department, level: number) => void
-  onEditClick: (dept: Department) => void
+  onEditClick: (dept: Department, level: number) => void
   onDeleteClick: (dept: Department) => void
   onAddEmployeeClick: (dept: Department) => void
   onDeleteEmployee: (deptId: string, empId: string) => void
@@ -52,7 +53,7 @@ interface TreeNodeProps {
   isRoot?: boolean
   level?: number
   onAddClick: (dept: Department, level: number) => void
-  onEditClick: (dept: Department) => void
+  onEditClick: (dept: Department, level: number) => void
   onDeleteClick: (dept: Department) => void
   onAddEmployeeClick: (dept: Department) => void
   onDeleteEmployee: (deptId: string, empId: string) => void
@@ -111,7 +112,7 @@ const DepartmentCard = ({
             {!isRoot && (
               <div className="flex gap-1">
                 <button
-                  onClick={() => onEditClick(dept)}
+                  onClick={() => onEditClick(dept, level)}
                   className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                   style={{ cursor: cursorPointerFinal }}
                 >
@@ -404,6 +405,7 @@ export function OrganizationStructure() {
   const [addSubTeamModalOpen, setAddSubTeamModalOpen] = useState(false)
 
   const [editModalOpen, setEditModalOpen] = useState(false)
+  const [editTeamModalOpen, setEditTeamModalOpen] = useState(false)
   const [addEmployeesModalOpen, setAddEmployeesModalOpen] = useState(false)
   const [selectedDept, setSelectedDept] = useState<Department | null>(null)
 
@@ -469,6 +471,7 @@ export function OrganizationStructure() {
       )
     setDepartments(updateRecursive(departments))
     setEditModalOpen(false)
+    setEditTeamModalOpen(false)
     setSelectedDept(null)
   }
 
@@ -686,9 +689,13 @@ export function OrganizationStructure() {
     }
   }
 
-  const handleEditClick = (dept: Department) => {
+  const handleEditClick = (dept: Department, level: number = 0) => {
     setSelectedDept(dept)
-    setEditModalOpen(true)
+    if (level === 0 || level === 1) {
+      setEditModalOpen(true)
+    } else {
+      setEditTeamModalOpen(true)
+    }
   }
 
   const handleAddEmployeeClick = (dept: Department) => {
@@ -794,6 +801,7 @@ export function OrganizationStructure() {
         selectedDept && (
           <>
             <EditDepartmentModal open={editModalOpen} onOpenChange={setEditModalOpen} department={selectedDept} onSubmit={handleEditDepartment} />
+            <EditTeamModal open={editTeamModalOpen} onOpenChange={setEditTeamModalOpen} department={selectedDept} onSubmit={handleEditDepartment} />
             <AddEmployeesModal open={addEmployeesModalOpen} onOpenChange={setAddEmployeesModalOpen} department={selectedDept} />
           </>
         )
