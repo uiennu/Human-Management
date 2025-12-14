@@ -1,0 +1,89 @@
+
+export interface DepartmentDto {
+    departmentID: number
+    departmentName: string
+    departmentCode: string
+}
+
+export interface TeamResponseDto {
+    subTeamID: number
+    teamName: string
+    description: string
+    departmentID: number
+    departmentName: string
+    teamLeadID: number | null
+    teamLeadName: string | null
+    memberCount: number
+    members: TeamMemberDto[]
+}
+
+export interface TeamMemberDto {
+    employeeID: number
+    firstName: string
+    lastName: string
+    email: string
+    phone: string | null
+    departmentID: number | null
+    departmentName: string | null
+    // We can add position/avatar if available or needed
+    position: string | null
+}
+
+export interface EmployeeDto {
+    employeeID: number
+    firstName: string
+    lastName: string
+    email: string
+    departmentName: string
+    position?: string
+}
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5204/api'
+
+function getAuthHeaders(): HeadersInit {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : ''
+    return {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+    }
+}
+
+export const organizationService = {
+    async getAllDepartments(): Promise<DepartmentDto[]> {
+        const res = await fetch(`${API_URL}/organization/departments`, {
+            headers: getAuthHeaders(),
+        })
+        if (!res.ok) throw new Error('Failed to fetch departments')
+        return res.json()
+    },
+
+    async getAllTeams(): Promise<TeamResponseDto[]> {
+        const res = await fetch(`${API_URL}/organization/teams`, {
+            headers: getAuthHeaders(),
+        })
+        if (!res.ok) throw new Error('Failed to fetch teams')
+        return res.json()
+    },
+
+    async getAllEmployees(): Promise<EmployeeDto[]> {
+        const res = await fetch(`${API_URL}/organization/employees`, {
+            headers: getAuthHeaders(),
+        })
+        if (!res.ok) throw new Error('Failed to fetch employees')
+        return res.json()
+    },
+
+    async createTeam(departmentId: number, data: { teamName: string; description?: string; teamLeadId?: number | null }) {
+        const res = await fetch(`${API_URL}/organization/departments/${departmentId}/teams`, {
+            method: "POST",
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data),
+        })
+
+        if (!res.ok) {
+            const error = await res.json()
+            throw new Error(error.message || "Failed to create team")
+        }
+        return res.json()
+    },
+}

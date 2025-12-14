@@ -14,6 +14,7 @@ import { EditTeamModal } from "@/components/edit-team-modal"
 import { AddEmployeesModal } from "@/components/add-employees-modal"
 import { MoveEmployeeModal } from "@/components/move-employee-modal"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { organizationService } from "@/lib/api/organization-service"
 
 interface Department {
   id: string
@@ -322,82 +323,97 @@ const TreeNode = ({
 };
 
 export function OrganizationStructure() {
-  // --- MOCK DATA (ĐÃ KHÔI PHỤC ĐẦY ĐỦ) ---
-  const [departments, setDepartments] = useState<Department[]>([
-    {
-      id: "root",
-      name: "Global Tech Inc.",
-      code: "ROOT",
-      manager: "Amanda Chen",
-      managerId: "ceo-001",
-      description: "CEO",
-      employees: [],
-      subdepartments: [
-        {
-          id: "1",
-          name: "Engineering",
-          code: "ENG",
-          manager: "Raj Patel",
-          managerId: "mgr-001",
-          description: "Manager",
-          subdepartments: [
-            {
-              id: "1-1",
-              name: "Frontend",
-              code: "FE",
-              manager: "Emily Carter",
-              managerId: "mgr-002",
-              description: "Lead",
-              employees: [
-                { id: "emp-001", name: "Olivia Chen", position: "Senior Engineer" },
-                { id: "emp-004", name: "Liam Johnson", position: "Frontend Dev" },
-                { id: "emp-005", name: "Sophia Williams", position: "Junior Dev" }
-              ],
-            },
-            {
-              id: "1-2",
-              name: "Backend",
-              code: "BE",
-              manager: "Michael Brown",
-              managerId: "mgr-003",
-              description: "Lead",
-              employees: [{ id: "emp-002", name: "Ben Carter", position: "Software Engineer" }],
-            },
-          ],
-          employees: [], // No employees directly in Engineering
-        },
-        {
-          id: "2",
-          name: "Product",
-          code: "PROD",
-          manager: "David Lee",
-          managerId: "mgr-004",
-          description: "Manager",
-          subdepartments: [
-            {
-              id: "2-1",
-              name: "Design",
-              code: "DES",
-              manager: "Ava Garcia",
-              managerId: "mgr-006",
-              description: "Lead",
-              employees: [{ id: "emp-003", name: "Ava Garcia", position: "Product Designer" }],
-            }
-          ],
-          employees: [], // No employees directly in Product
-        },
-        {
-          id: "3",
-          name: "Human Resources",
-          code: "HR",
-          manager: "Sarah",
-          managerId: "mgr-005",
-          description: "Manager",
-          employees: [],
-        },
-      ],
-    },
-  ])
+  // --- STATE QUẢN LÝ DỮ LIỆU ---
+  const [departments, setDepartments] = useState<Department[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // --- FETCH DATA FROM API ---
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      const [deptData, teamData, empData] = await Promise.all([
+        organizationService.getAllDepartments(),
+        organizationService.getAllTeams(),
+        organizationService.getAllEmployees(),
+      ])
+
+      // 1. Create Root Node
+      const rootNode: Department = {
+        id: "root",
+        name: "Human Resource Management",
+        code: "ROOT",
+        manager: "CEO",
+        managerId: "ceo-001",
+        description: "Organization Root",
+        employees: [],
+        subdepartments: [],
+      }
+
+      // 2. Map Departments to Nodes (Level 1)
+      const deptNodes: Department[] = deptData.map(d => ({
+        id: `dept-${d.departmentID}`,
+        name: d.departmentName,
+        code: d.departmentCode,
+        manager: "Manager", // API doesn't return manager yet, placeholder
+        managerId: "",
+        description: "Department",
+        employees: [], // Will populate later from Unassigned/Direct employees
+        subdepartments: [],
+      }))
+
+      // 3. Map Teams to Nodes (Level 2) and attach to Departments
+      console.log("DEBUG: teamData from API:", teamData)
+      teamData.forEach(team => {
+        const parentDept = deptNodes.find(d => d.id === `dept-${team.departmentID}`)
+        if (parentDept) {
+          console.log(`DEBUG: Mapping team ${team.teamName} to dept ${parentDept.name}`)
+          const teamNode: Department = {
+            id: `team-${team.subTeamID}`,
+            name: team.teamName,
+            code: `TEAM-${team.subTeamID}`,
+            manager: team.teamLeadName || "Team Lead",
+            managerId: team.teamLeadID?.toString() || "",
+            description: team.description,
+            // Map Members to UI Employees
+            employees: team.members.map(m => ({
+              id: m.employeeID.toString(),
+              name: `${m.firstName} ${m.lastName}`,
+              position: m.position || "Member",
+              avatar: undefined
+            })),
+            subdepartments: []
+          }
+          parentDept.subdepartments?.push(teamNode)
+        } else {
+          console.warn(`DEBUG: Orphan team found ${team.teamName} for deptID ${team.departmentID}`)
+        }
+      })
+
+      // 4. Handle "Unassigned" Employees (Employees in Dept but not in Team) if needed
+      // Currently, the API structure for employees direct depency isn't fully clear without filtering
+      // For now, let's keep it simple: Attach dept, attach team.
+
+      // Attach mapped departments to Root
+      rootNode.subdepartments = deptNodes
+
+      const hrDept = deptNodes.find(d => d.id === 'dept-2');
+      if (hrDept) {
+        console.log("DEBUG: Final HR Dept Children Count:", hrDept.subdepartments?.length);
+        console.log("DEBUG: Final HR Dept Children:", JSON.stringify(hrDept.subdepartments, null, 2));
+      }
+
+      setDepartments([rootNode])
+    } catch (error) {
+      console.error("Failed to load organization structure", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchData()
+  }, [])
+
 
   // --- STATE QUẢN LÝ 3 LOẠI MODAL ---
   const [addDeptModalOpen, setAddDeptModalOpen] = useState(false)
@@ -683,7 +699,9 @@ export function OrganizationStructure() {
     if (level === 0) {
       setAddDeptModalOpen(true)
     } else if (level === 1) {
-      setAddTeamModalOpen(true)
+      // Use AddDepartmentModal for adding teams to departments (level 1 parents)
+      // because AddDepartmentModal is the one integrated with the API
+      setAddDeptModalOpen(true)
     } else {
       setAddSubTeamModalOpen(true)
     }
@@ -768,10 +786,16 @@ export function OrganizationStructure() {
       </div>
 
       {/* RENDER CÁC MODAL */}
+      {/* RENDER CÁC MODAL */}
       <AddDepartmentModal
         open={addDeptModalOpen}
         onOpenChange={setAddDeptModalOpen}
-        onSubmit={handleAddEntity}
+        parentId={parentDeptForAdd?.id}
+        parentName={parentDeptForAdd?.name}
+        onSubmit={() => {
+          // Instead of local state recursion, refresh from API
+          fetchData()
+        }}
       />
 
       <AddTeamModal

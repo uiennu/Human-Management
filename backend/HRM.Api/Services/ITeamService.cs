@@ -45,5 +45,9 @@ namespace HRM.Api.Services
         /// Get all employees with details
         /// </summary>
         Task<List<EmployeeListDto>> GetAllEmployeesAsync();
+        /// <summary>
+        /// Create a new team in a department
+        /// </summary>
+        Task<(bool Success, string Message, int? TeamId)> CreateTeamAsync(int departmentId, CreateSubTeamDto dto);
     }
 }

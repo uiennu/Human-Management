@@ -10,6 +10,13 @@ namespace HRM.Api.Repositories
         {
         }
 
+        public async Task<SubTeam> AddSubTeamAsync(SubTeam subTeam)
+        {
+            _context.SubTeams.Add(subTeam);
+            await _context.SaveChangesAsync();
+            return subTeam;
+        }
+
         public async Task<SubTeam?> GetTeamByIdAsync(int teamId)
         {
             return await _context.SubTeams

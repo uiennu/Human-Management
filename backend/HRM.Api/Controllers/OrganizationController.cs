@@ -22,7 +22,7 @@ namespace HRM.Api.Controllers
         /// </summary>
         /// <returns>200 OK with list of teams</returns>
         [HttpGet("teams")]
-        [Authorize(Policy = "HROnly")]
+        [Authorize(Policy = "EmployeeOnly")]
         public async Task<ActionResult<List<TeamResponseDto>>> GetAllTeams()
         {
             try
@@ -167,10 +167,41 @@ namespace HRM.Api.Controllers
         /// GET: /api/organization/departments
         /// </summary>
         [HttpGet("departments")]
-        [Authorize(Policy = "HROnly")]
+        [Authorize(Policy = "EmployeeOnly")]
         public async Task<ActionResult<List<DepartmentDto>>> GetAllDepartments()
         {
             return Ok(await _teamService.GetAllDepartmentsAsync());
+        }
+
+        /// <summary>
+        /// Create a new team in a department
+        /// POST: /api/organization/departments/{departmentId}/teams
+        /// </summary>
+        [HttpPost("departments/{departmentId}/teams")]
+        [Authorize(Policy = "HROnly")]
+        public async Task<ActionResult> CreateTeam(int departmentId, [FromBody] CreateSubTeamDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Invalid request format" });
+            }
+
+            var (success, message, teamId) = await _teamService.CreateTeamAsync(departmentId, dto);
+
+            if (!success)
+            {
+                // Map business errors
+                if (message.Contains("not found"))
+                {
+                    return NotFound(new { message });
+                }
+                else
+                {
+                    return BadRequest(new { message });
+                }
+            }
+
+            return Created($"/api/organization/teams/{teamId}", new { message, teamId });
         }
 
         /// <summary>
@@ -178,7 +209,7 @@ namespace HRM.Api.Controllers
         /// GET: /api/organization/managers
         /// </summary>
         [HttpGet("managers")]
-        [Authorize(Policy = "HROnly")]
+        [Authorize(Policy = "EmployeeOnly")]
         public async Task<ActionResult<List<ManagerDto>>> GetManagers()
         {
             return Ok(await _teamService.GetManagersAsync());
@@ -189,7 +220,7 @@ namespace HRM.Api.Controllers
         /// GET: /api/organization/employees
         /// </summary>
         [HttpGet("employees")]
-        [Authorize(Policy = "HROnly")]
+        [Authorize(Policy = "EmployeeOnly")]
         public async Task<ActionResult<List<EmployeeListDto>>> GetAllEmployees()
         {
             return Ok(await _teamService.GetAllEmployeesAsync());

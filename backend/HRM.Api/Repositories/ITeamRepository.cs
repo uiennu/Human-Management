@@ -63,5 +63,10 @@ namespace HRM.Api.Repositories
         /// Remove employee from team
         /// </summary>
         Task RemoveTeamMemberAsync(SubTeamMember teamMember);
+
+        /// <summary>
+        /// Add a new sub-team
+        /// </summary>
+        Task<SubTeam> AddSubTeamAsync(SubTeam subTeam);
     }
 }

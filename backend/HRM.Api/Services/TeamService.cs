@@ -223,5 +223,45 @@ namespace HRM.Api.Services
                 IsActive = e.IsActive
             }).ToList();
         }
+        public async Task<(bool Success, string Message, int? TeamId)> CreateTeamAsync(int departmentId, CreateSubTeamDto dto)
+        {
+            // 1. Verify Department exists
+            var departments = await _teamRepository.GetAllDepartmentsAsync();
+            var department = departments.FirstOrDefault(d => d.DepartmentID == departmentId);
+            if (department == null)
+            {
+                return (false, "Department not found", null);
+            }
+
+            // 2. Validate Team Lead (if provided)
+            if (dto.TeamLeadId.HasValue)
+            {
+                var employee = await _teamRepository.GetEmployeeByIdAsync(dto.TeamLeadId.Value);
+                if (employee == null)
+                {
+                    return (false, "Team Lead employee not found", null);
+                }
+                
+                // Optional: Check if employee belongs to the same department?
+                // For now, let's just ensure they exist. Business logic might vary.
+                if (employee.DepartmentID != departmentId)
+                {
+                    return (false, "Team Lead must belong to the same department", null);
+                }
+            }
+
+            // 3. Create SubTeam
+            var subTeam = new SubTeam
+            {
+                TeamName = dto.TeamName,
+                Description = dto.Description,
+                DepartmentID = departmentId,
+                TeamLeadID = dto.TeamLeadId
+            };
+
+            var createdTeam = await _teamRepository.AddSubTeamAsync(subTeam);
+
+            return (true, "Team created successfully", createdTeam.SubTeamID);
+        }
     }
 }

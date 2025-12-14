@@ -490,7 +490,11 @@ export default function LeaveHistoryPage() {
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {requests.map((request) => (
-                        <tr key={request.leaveRequestID} className="hover:bg-slate-50">
+                        <tr
+                          key={request.leaveRequestID}
+                          className="hover:bg-slate-50 cursor-pointer"
+                          onClick={() => handleViewDetails(request)}
+                        >
                           <td className="py-2 text-sm text-slate-900">{request.leaveTypeName || 'Unknown'}</td>
                           <td className="py-2 text-sm text-slate-600">
                             {new Date(request.startDate).toLocaleDateString("en-US", {
@@ -522,22 +526,16 @@ export default function LeaveHistoryPage() {
                           </td>
                           <td className="py-2">
                             <div className="flex items-center justify-center gap-2">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 w-8 p-0 text-slate-600 hover:text-slate-900 cursor-pointer"
-                                onClick={() => handleViewDetails(request)}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-
                               <div className="flex w-8 justify-center">
                                 {request.status === "Pending" && (
                                   <Button
                                     size="sm"
                                     variant="ghost"
                                     className="h-8 w-8 p-0 text-slate-600 hover:text-rose-600 cursor-pointer"
-                                    onClick={() => handleCancelRequest(request.leaveRequestID)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleCancelRequest(request.leaveRequestID);
+                                    }}
                                   >
                                     <X className="h-4 w-4" />
                                   </Button>
