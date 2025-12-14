@@ -146,7 +146,7 @@ export function DashboardOverview() {
           <p className="mt-1 text-slate-600">Here's what's happening with your account today.</p>
         </div>
         <Avatar className="h-16 w-16">
-          <AvatarImage src={profile?.avatarUrl || "/professional-portrait.png"} alt={displayName} />
+          <AvatarImage src={profile?.avatarUrl} alt={displayName} />
           <AvatarFallback className="bg-blue-600 text-xl text-white">
             {profile ? `${profile.firstName[0]}${profile.lastName[0]}` : "JD"}
           </AvatarFallback>

@@ -34,12 +34,21 @@ export const leaveService = {
   },
 
   async getMyBalances(employeeId: number): Promise<LeaveBalance[]> {
-    const res = await fetch(`${API_URL}/leave/balances/${employeeId}`, {
-      headers: getAuthHeaders(),
-    })
-    if (!res.ok) throw new Error('Failed to fetch leave balances')
-    const data = await res.json()
-    return data.data
+    try {
+      const res = await fetch(`${API_URL}/leave/balances/${employeeId}`, {
+        headers: getAuthHeaders(),
+      })
+      if (!res.ok) {
+        console.warn('Failed to fetch leave balances:', res.status, res.statusText)
+        return [] // Return empty array instead of throwing
+      }
+      const data = await res.json()
+      // Backend returns { employeeID, data: [...] } structure
+      return data.data || data.Data || []
+    } catch (error) {
+      console.error('Error fetching leave balances:', error)
+      return [] // Return empty array on error
+    }
   },
 
   async createLeaveRequest(employeeId: number, data: CreateLeaveRequestDto) {

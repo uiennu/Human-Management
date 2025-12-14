@@ -148,7 +148,7 @@ export default function ProfilePage() {
             <CardContent className="p-6">
               <div className="flex flex-col items-center text-center">
                 <Avatar className="h-32 w-32">
-                  <AvatarImage src="/professional-portrait.png" alt={profile.firstName} />
+                  <AvatarImage src={profile.avatarUrl} alt={profile.firstName} />
                   <AvatarFallback className="bg-blue-600 text-3xl text-white">
                     {profile.firstName[0]}{profile.lastName[0]}
                   </AvatarFallback>

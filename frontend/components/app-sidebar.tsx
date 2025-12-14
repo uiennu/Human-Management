@@ -59,15 +59,15 @@ export function AppSidebar() {
 
   // Check if user has HR or Admin role
   const isHROrAdmin = hasAnyRole([UserRole.HR, UserRole.Admin]);
-  
+
   // Build navigation based on actual user roles
   const navigation = isHROrAdmin
     ? [
-        ...baseNavigation.slice(0, 1),
-        { name: "Organization Management", href: "/organization", icon: FileText },
-        { name: "Reports", href: "/reports", icon: FileText },
-        ...baseNavigation.slice(1)
-      ]
+      ...baseNavigation.slice(0, 1),
+      { name: "Organization Management", href: "/organization", icon: FileText },
+      { name: "Reports", href: "/reports", icon: FileText },
+      ...baseNavigation.slice(1)
+    ]
     : baseNavigation;
 
   return (
@@ -109,7 +109,7 @@ export function AppSidebar() {
       <div className="p-4">
         <div className="flex items-center gap-3 rounded-lg bg-slate-800 p-3">
           <Avatar className="h-10 w-10">
-            <AvatarImage src={profile?.avatarUrl || "/professional-portrait.png"} alt={displayName} />
+            <AvatarImage src={profile?.avatarUrl} alt={displayName} />
             <AvatarFallback className="bg-blue-600 text-white">
               {profile ? `${profile.firstName[0]}${profile.lastName[0]}` : "JD"}
             </AvatarFallback>
