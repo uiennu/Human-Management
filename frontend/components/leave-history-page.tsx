@@ -95,12 +95,43 @@ export default function LeaveHistoryPage() {
 
 
   useEffect(() => {
+    let ignore = false;
+
     if (employeeId && employeeId > 0) {
-      loadRequests();
+      const fetchRequests = async () => {
+        setLoading(true);
+        try {
+          // console.log("✅ Bắt đầu gọi API với ID:", employeeId);
+          const data = await leaveService.getMyRequests(employeeId, {
+            status: statusFilter,
+            dateRange: dateRangeFilter,
+            leaveTypeId: leaveTypeFilter,
+            page: currentPage
+          });
+          if (!ignore) {
+            setRequests(data.data || []);
+          }
+        } catch (err) {
+          if (!ignore) {
+            console.error(err);
+            setError("Failed to load leave history");
+          }
+        } finally {
+          if (!ignore) {
+            setLoading(false);
+          }
+        }
+      };
+
+      fetchRequests();
       loadBalances();
       loadLeaveTypes();
     }
-  }, [showCreateForm, employeeId]);
+
+    return () => {
+      ignore = true;
+    };
+  }, [employeeId, statusFilter, dateRangeFilter, leaveTypeFilter, currentPage]);
 
   const loadLeaveTypes = async () => {
     try {
@@ -108,32 +139,6 @@ export default function LeaveHistoryPage() {
       setLeaveTypes(types);
     } catch (err) {
       console.error("Failed to load leave types", err);
-    }
-  };
-
-  const loadRequests = async () => {
-    // --- THÊM ĐOẠN NÀY ĐỂ CHẶN LỖI ---
-    if (!employeeId || employeeId === 0) {
-      console.log("🛑 Đang chờ ID... (Chưa gọi API)");
-      return; // Dừng ngay lập tức, không cho chạy tiếp
-    }
-    // ----------------------------------
-
-    setLoading(true);
-    try {
-      console.log("✅ Bắt đầu gọi API với ID:", employeeId);
-      const data = await leaveService.getMyRequests(employeeId, {
-        status: statusFilter,
-        dateRange: dateRangeFilter,
-        leaveTypeId: leaveTypeFilter,
-        page: currentPage
-      });
-      setRequests(data.data || []);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to load leave history");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -146,6 +151,32 @@ export default function LeaveHistoryPage() {
       console.error("Failed to load balances", err);
     }
   };
+
+  // Helper to re-fetch manually if needed (e.g. after cancellation)
+  const refreshData = () => {
+    if (!employeeId) return;
+    const fetchRequests = async () => {
+      setLoading(true);
+      try {
+        const data = await leaveService.getMyRequests(employeeId, {
+          status: statusFilter,
+          dateRange: dateRangeFilter,
+          leaveTypeId: leaveTypeFilter,
+          page: currentPage
+        });
+        setRequests(data.data || []);
+      } catch (err) {
+        console.error(err);
+        setError("Failed to load leave history");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRequests();
+    loadBalances();
+  }
+
 
   const getTotalBalance = () => {
     return balances.reduce((acc, curr) => acc + curr.balanceDays, 0);
@@ -166,7 +197,7 @@ export default function LeaveHistoryPage() {
     if (!selectedRequestId) return;
     try {
       await leaveService.cancelLeaveRequest(selectedRequestId);
-      loadRequests();
+      refreshData();
       setCancelDialogOpen(false);
       setSelectedRequestId(null);
     } catch (error) {
@@ -180,32 +211,15 @@ export default function LeaveHistoryPage() {
   }
 
   const handleApplyFilters = () => {
+    // No-op or just reset page, since state change triggers effect
     setCurrentPage(1);
-    loadRequests();
   }
 
   const handleClearFilters = () => {
     setStatusFilter("all")
     setDateRangeFilter("last-30-days")
     setLeaveTypeFilter("all")
-    // Use timeout to allow state update to propagate before reloading
-    // In a real app, we'd pass the default values directly to loadRequests or use useEffect on filters
-    setTimeout(() => {
-      // Manually call loadRequests with default values since state might not be updated yet in this closure
-      setLoading(true);
-      leaveService.getMyRequests(employeeId || 0, {
-        status: "all",
-        dateRange: "last-30-days",
-        leaveTypeId: "all",
-        page: 1
-      }).then(data => {
-        setRequests(data.data || []);
-        setLoading(false);
-      }).catch(err => {
-        console.error(err);
-        setLoading(false);
-      });
-    }, 0);
+    setCurrentPage(1);
   }
 
   if (viewingRequest) {
@@ -274,10 +288,7 @@ export default function LeaveHistoryPage() {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Card
                 className="cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={() => {
-                  setStatusFilter("all");
-                  setTimeout(() => handleApplyFilters(), 100);
-                }}
+                onClick={() => setStatusFilter("all")}
               >
                 <CardContent className="!px-3 !py-2">
                   <p className="text-sm font-medium text-slate-600">All my request</p>
@@ -286,10 +297,7 @@ export default function LeaveHistoryPage() {
               </Card>
               <Card
                 className="cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={() => {
-                  setStatusFilter("Pending");
-                  setTimeout(() => handleApplyFilters(), 100);
-                }}
+                onClick={() => setStatusFilter("Pending")}
               >
                 <CardContent className="!px-3 !py-2">
                   <p className="text-sm font-medium text-amber-600">Pending request</p>
@@ -300,10 +308,7 @@ export default function LeaveHistoryPage() {
               </Card>
               <Card
                 className="cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={() => {
-                  setStatusFilter("Approved");
-                  setTimeout(() => handleApplyFilters(), 100);
-                }}
+                onClick={() => setStatusFilter("Approved")}
               >
                 <CardContent className="!px-3 !py-2">
                   <p className="text-sm font-medium text-emerald-600">Approved Request</p>
@@ -314,10 +319,7 @@ export default function LeaveHistoryPage() {
               </Card>
               <Card
                 className="cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={() => {
-                  setStatusFilter("Rejected");
-                  setTimeout(() => handleApplyFilters(), 100);
-                }}
+                onClick={() => setStatusFilter("Rejected")}
               >
                 <CardContent className="!px-3 !py-2">
                   <p className="text-sm font-medium text-rose-600">Declined Request</p>
@@ -342,15 +344,22 @@ export default function LeaveHistoryPage() {
                     <ChevronDown className="h-5 w-5 text-slate-600" />
                   )}
                 </button>
-
                 {showBalanceDropdown && (
                   <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                     {balances.length > 0 ? (
                       balances.map((balance) => (
-                        <Card key={balance.leaveTypeID} className="bg-slate-50">
-                          <CardContent className="p-2">
-                            <p className="text-xs font-medium text-slate-600">{balance.leaveTypeName}</p>
-                            <p className="text-base font-bold text-blue-600">{balance.balanceDays} Days</p>
+                        <Card key={balance.leaveTypeID} className="bg-slate-50 border-slate-200">
+                          <CardContent className="flex items-center justify-between p-4">
+                            <div>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Leave Type</span>
+                              <p className="text-sm font-bold text-slate-900 mt-1">{balance.name || balance.Name || 'Unknown'}</p>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-5xl font-extrabold text-blue-600 block leading-none">
+                                {balance.balanceDays}
+                              </span>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Days Available</span>
+                            </div>
                           </CardContent>
                         </Card>
                       ))
@@ -431,9 +440,8 @@ export default function LeaveHistoryPage() {
                 </div>
 
                 <div className="flex gap-2">
-                  <Button onClick={handleApplyFilters} className="bg-blue-600 hover:bg-blue-700 cursor-pointer">
-                    Apply Filters
-                  </Button>
+                  {/* Apply Filters Removed/Hidden since it is auto-applied, or we can keep it just for show/refresh */}
+                  {/* <Button onClick={handleApplyFilters} ...> Apply Filters </Button> */}
                   <Button onClick={handleClearFilters} variant="outline" className="cursor-pointer">
                     Clear Filters
                   </Button>
@@ -583,6 +591,6 @@ export default function LeaveHistoryPage() {
           </div>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </div >
   )
 }
