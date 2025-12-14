@@ -27,6 +27,7 @@ CREATE TABLE Employees (
     EmployeeID INT PRIMARY KEY AUTO_INCREMENT,
     FirstName VARCHAR(50) NOT NULL,
     LastName VARCHAR(50) NOT NULL,
+    Gender VARCHAR(10) NULL,
     Email VARCHAR(100) NOT NULL UNIQUE,
     PasswordHash VARCHAR(255) NOT NULL,
     Phone VARCHAR(20),
@@ -54,6 +55,7 @@ CREATE TABLE Employees (
     CONSTRAINT FK_Employees_Department FOREIGN KEY (DepartmentID) REFERENCES Departments(DepartmentID),
     CONSTRAINT FK_Employees_Manager FOREIGN KEY (ManagerID) REFERENCES Employees(EmployeeID)
 );
+
 
 -- Add the FK for Department Manager
 ALTER TABLE Departments ADD CONSTRAINT FK_Departments_Manager 
@@ -354,10 +356,10 @@ CREATE TABLE RedemptionRequests (
 );
 
 INSERT INTO Roles (RoleName) VALUES 
-('Employee'), -- 1
-('Manager'),  -- 2
-('HR'),       -- 3
-('C&B'),      -- 4
+('IT Employee'), -- 1
+('IT Manager'),  -- 2
+('HR Manager'),       -- 3
+('HR Employee'),      -- 4
 ('Admin');    -- 5
 
 -- 2. Departments
@@ -372,21 +374,23 @@ INSERT INTO Departments (DepartmentName, DepartmentCode, Description, ManagerID)
 -- Logic: Alice (1) quản lý Bob (2) và Charlie (3). 
 -- Charlie (3) quản lý David (4). 
 -- Bob (2) quản lý Eve (5).
-INSERT INTO Employees (FirstName, LastName, Email, PasswordHash, Phone, Address, HireDate, DepartmentID, IsActive, ManagerID, CurrentPoints) VALUES 
+INSERT INTO Employees (FirstName, LastName, Email, PasswordHash, Phone, Address, HireDate, DepartmentID, IsActive, ManagerID, CurrentPoints, Gender) VALUES 
 -- ID 1: Alice (Sếp tổng)
-('Alice', 'Nguyen', 'alice@hrm.com', 'hashed_password_here', '0901000001', 'District 1, HCM', CURDATE(), 1, 1, NULL, 500),
+('Alice', 'Nguyen', 'alice@hrm.com', 'hashed_password_here', '0901000001', 'District 1, HCM', CURDATE(), 1, 1, NULL, 500,'Female'),
 
 -- ID 2: Bob (Sếp HR) -> Báo cáo cho Alice (1)
-('Bob', 'Tran', 'bob@hrm.com', 'hashed_password_here', '0901000002', 'District 3, HCM', CURDATE(), 2, 1, 1, 200),
+('Bob', 'Tran', 'bob@hrm.com', 'hashed_password_here', '0901000002', 'District 3, HCM', CURDATE(), 2, 1, 1, 200,'Male'),
 
 -- ID 3: Charlie (Sếp IT) -> Báo cáo cho Alice (1)
-('Charlie', 'Le', 'charlie@hrm.com', 'hashed_password_here', '0901000003', 'Thu Duc, HCM', CURDATE(), 3, 1, 1, 300),
+('Charlie', 'Le', 'charlie@hrm.com', 'hashed_password_here', '0901000003', 'Thu Duc, HCM', CURDATE(), 3, 1, 1, 300,'Male'),
 
 -- ID 4: David (Nhân viên IT) -> Báo cáo cho Charlie (3)
-('David', 'Pham', 'david@hrm.com', 'hashed_password_here', '0901000004', 'Binh Thanh, HCM', CURDATE(), 3, 1, 3, 150),
+('David', 'Pham', 'david@hrm.com', 'hashed_password_here', '0901000004', 'Binh Thanh, HCM', CURDATE(), 3, 1, 3, 150,'Male'),
 
--- ID 5: Eve (Nhân viên C&B) -> Báo cáo cho Bob (2)
-('Eve', 'Vo', 'eve@hrm.com', 'hashed_password_here', '0901000005', 'District 7, HCM', CURDATE(), 2, 1, 2, 100);
+-- ID 5: Eve (Nhân viên HR) -> Báo cáo cho Bob (2)
+('Eve', 'Vo', 'eve@hrm.com', 'hashed_password_here', '0901000005', 'District 7, HCM', CURDATE(), 2, 1, 2, 100,'Female');
+
+
 
 -- Update lại Manager cho Department
 UPDATE Departments SET ManagerID = 1 WHERE DepartmentID = 1;
@@ -396,10 +400,10 @@ UPDATE Departments SET ManagerID = 3 WHERE DepartmentID = 3;
 -- 4. EmployeeRoles
 INSERT INTO EmployeeRoles (EmployeeID, RoleID) VALUES 
 (1, 5), -- Alice: Admin
-(2, 2), -- Bob: Manager
-(3, 2), -- Charlie: Manager
-(4, 1), -- David: Employee
-(5, 4); -- Eve: C&B
+(2, 3), -- Bob: HR Manager
+(3, 2), -- Charlie: IT Manager
+(4, 1), -- David: IT Employee
+(5, 4); -- Eve: HR Employee
 
 -- 5. EmployeeProfileChanges
 INSERT INTO EmployeeProfileChanges (EmployeeID, FieldName, OldValue, NewValue, Status, ApproverID) VALUES 
@@ -422,8 +426,21 @@ INSERT INTO LeaveTypes (Name, Description, DefaultQuota, Applicability) VALUES
 ('Remote Work', 'Work from home quota', 5, 'Office Staff');
 
 -- 7. EmployeeLeaveBalances
-INSERT INTO EmployeeLeaveBalances (EmployeeID, LeaveTypeID, BalanceDays) VALUES 
-(4, 1, 12.0), (4, 2, 10.0), (5, 1, 12.0), (3, 1, 15.0), (2, 1, 15.0);
+INSERT INTO EmployeeLeaveBalances (EmployeeID, LeaveTypeID, BalanceDays)
+SELECT 
+    e.EmployeeID,
+    lt.LeaveTypeID,
+    lt.DefaultQuota
+FROM Employees e
+CROSS JOIN LeaveTypes lt
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM EmployeeLeaveBalances elb
+    WHERE elb.EmployeeID = e.EmployeeID
+      AND elb.LeaveTypeID = lt.LeaveTypeID
+)
+-- Chỉ thêm Maternity Leave cho nhân viên nữ
+AND (lt.Name != 'Maternity Leave' OR e.Gender = 'Female');
 
 -- 8. LeaveRequests 
 -- LƯU Ý: Cột ManagerID ở đây phải khớp với ManagerID trong bảng Employees
@@ -541,5 +558,7 @@ INSERT INTO RedemptionRequests (EmployeeID, PointsToRedeem, CashValue, Conversio
 (2, 20, 20, 1.0, 'Rejected'),
 (4, 5, 5, 1.0, 'Processing');
 
+SET SQL_SAFE_UPDATES = 0;
 UPDATE Employees 
 SET PasswordHash = '$2a$11$jPe9nGpFaZHptsngP.dKGe8z/nStZ8YcPap7HN/D4LhjVvbJ5LFfe';
+SET SQL_SAFE_UPDATES = 1;
