@@ -3,10 +3,11 @@
 import { OrganizationStructure } from "@/components/OrganizationStructure";
 import { RequireRole } from "@/components/require-role";
 import { UserRole } from "@/types/auth";
+import { User } from "lucide-react";
 
 export default function OrganizationPage() {
   return (
-    <RequireRole roles={[UserRole.HR, UserRole.Admin]}>
+    <RequireRole roles={[UserRole.HRManager, UserRole.Admin, UserRole.HREmployee,UserRole.ITManager,UserRole.ITEmployee]}>
       <OrganizationStructure />
     </RequireRole>
   );

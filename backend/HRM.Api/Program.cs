@@ -28,11 +28,11 @@ builder.Services.AddAuthentication("Bearer")
 // Add Authorization Policies
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("EmployeeOnly", policy => policy.RequireRole("Employee", "Manager", "HR", "C&B", "Admin"));
-    options.AddPolicy("ManagerOnly", policy => policy.RequireRole("Manager", "HR", "Admin"));
-    options.AddPolicy("HROnly", policy => policy.RequireRole("HR", "Admin"));
+    options.AddPolicy("EmployeeOnly", policy => policy.RequireRole("IT Employee", "IT Manager", "HR Manager", "HR Employee", "Admin"));
+    options.AddPolicy("ManagerOnly", policy => policy.RequireRole("IT Manager", "HR Manager", "Admin"));
+    options.AddPolicy("HROnly", policy => policy.RequireRole("HR Manager", "HR Employee", "Admin"));
     options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
-    options.AddPolicy("CBOnly", policy => policy.RequireRole("C&B", "Admin"));
+    options.AddPolicy("CBOnly", policy => policy.RequireRole("HR Employee", "Admin"));
 });
 
 // Add services
