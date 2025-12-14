@@ -50,6 +50,7 @@ builder.Services.AddScoped<ILeaveRequestRepository, LeaveRequestRepository>();
 builder.Services.AddScoped<IWorkHandoverRepository, WorkHandoverRepository>();
 builder.Services.AddScoped<IEmployeeProfileRepository, EmployeeProfileRepository>();
 builder.Services.AddScoped<IEmployeeProfileChangeRepository, EmployeeProfileChangeRepository>();
+builder.Services.AddScoped<ITeamRepository, TeamRepository>();
 
 // Register Services
 builder.Services.AddScoped<ILeaveBalanceService, LeaveBalanceService>();
@@ -61,6 +62,8 @@ builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IEmployeeProfileService, EmployeeProfileService>();
 builder.Services.AddScoped<IOtpService, OtpService>();
 builder.Services.AddScoped<IEmailService, ResendEmailService>();
+builder.Services.AddScoped<ITeamService, TeamService>();
+builder.Services.AddScoped<IPasswordGenerator, PasswordGenerator>();
 
 // Register Resend client correctly
 var resendApiKey = Environment.GetEnvironmentVariable("RESEND_API_KEY") 
@@ -83,6 +86,22 @@ builder.Services.AddCors(options =>
 
 
 var app = builder.Build();
+
+// Seed database
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<AppDbContext>();
+        DbInitializer.Initialize(context);
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred submitting test data to the DB.");
+    }
+}
 
 // ⬇⬇⬇ THÊM ĐOẠN NÀY NGAY Ở ĐÂY
 app.Use((ctx, next) =>
