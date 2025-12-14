@@ -25,6 +25,7 @@ namespace HRM.Api.Models
         // Navigation properties
         public virtual Department? Department { get; set; }
         public virtual Employee? Manager { get; set; }
+        public virtual ICollection<EmployeeRole> EmployeeRoles { get; set; } = new List<EmployeeRole>();
         public virtual ICollection<EmployeeLeaveBalance> LeaveBalances { get; set; } = new List<EmployeeLeaveBalance>();
         public virtual ICollection<LeaveRequest> LeaveRequests { get; set; } = new List<LeaveRequest>();
     }

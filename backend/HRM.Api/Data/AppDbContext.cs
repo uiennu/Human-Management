@@ -22,6 +22,10 @@ namespace HRM.Api.Data
         public DbSet<WorkHandover> WorkHandovers { get; set; }
         public DbSet<EmployeeEvent> EmployeeEvents { get; set; }
 
+        // Team Management DbSets
+        public DbSet<SubTeam> SubTeams { get; set; }
+        public DbSet<SubTeamMember> SubTeamMembers { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

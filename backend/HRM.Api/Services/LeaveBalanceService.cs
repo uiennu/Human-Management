@@ -12,29 +12,67 @@ namespace HRM.Api.Services
     public class LeaveBalanceService : ILeaveBalanceService
     {
         private readonly ILeaveBalanceRepository _leaveBalanceRepository;
+        private readonly ILeaveRequestRepository _leaveRequestRepository;
 
-        public LeaveBalanceService(ILeaveBalanceRepository leaveBalanceRepository)
+        public LeaveBalanceService(
+            ILeaveBalanceRepository leaveBalanceRepository,
+            ILeaveRequestRepository leaveRequestRepository)
         {
             _leaveBalanceRepository = leaveBalanceRepository;
+            _leaveRequestRepository = leaveRequestRepository;
         }
 
         public async Task<LeaveBalanceResponseDto?> GetMyLeaveBalanceAsync(int employeeId)
         {
-            var balances = await _leaveBalanceRepository.GetByEmployeeIdAsync(employeeId);
+            // 1. Get all leave types to ensure we show everything
+            var allLeaveTypes = await _leaveRequestRepository.GetLeaveTypesAsync();
 
-            if (balances == null || balances.Count == 0)
+            // FORCE MATERNITY LEAVE DISPLAY: If missing from DB, add a dummy one so it shows up as 0 days
+            if (!allLeaveTypes.Any(t => t.Name == "Maternity Leave"))
             {
-                return null;
+                allLeaveTypes.Add(new LeaveType 
+                { 
+                    LeaveTypeID = -999, // Dummy ID that won't match any real balance
+                    Name = "Maternity Leave", 
+                    DefaultQuota = 0 
+                });
             }
 
-            var balanceList = balances.Select(b => new LeaveBalanceDto
+            // 2. Get existing balances for the employee
+            var existingBalances = await _leaveBalanceRepository.GetByEmployeeIdAsync(employeeId);
+            
+            // 3. Map to dictionary for easy lookup
+            var balanceMap = existingBalances.ToDictionary(b => b.LeaveTypeID, b => b);
+
+            var balanceList = new List<LeaveBalanceDto>();
+
+            foreach (var type in allLeaveTypes)
             {
-                LeaveTypeID = b.LeaveTypeID,
-                Name = b.LeaveType?.Name ?? "Unknown",
-                DefaultQuota = b.LeaveType?.DefaultQuota ?? 0,
-                BalanceDays = b.BalanceDays,
-                LastUpdatedDate = b.LastUpdatedDate
-            }).ToList();
+                if (balanceMap.TryGetValue(type.LeaveTypeID, out var balance))
+                {
+                    // Existing balance found
+                    balanceList.Add(new LeaveBalanceDto
+                    {
+                        LeaveTypeID = type.LeaveTypeID,
+                        Name = type.Name,
+                        DefaultQuota = type.DefaultQuota,
+                        BalanceDays = balance.BalanceDays,
+                        LastUpdatedDate = balance.LastUpdatedDate
+                    });
+                }
+                else
+                {
+                    // No balance record found, default to 0 (or DefaultQuota if logic dictates, but usually 0 if not allocated)
+                    balanceList.Add(new LeaveBalanceDto
+                    {
+                        LeaveTypeID = type.LeaveTypeID,
+                        Name = type.Name,
+                        DefaultQuota = type.DefaultQuota,
+                        BalanceDays = 0, // Default to 0 instead of DefaultQuota to avoid showing false entitlement
+                        LastUpdatedDate = DateTime.Now
+                    });
+                }
+            }
 
             return new LeaveBalanceResponseDto
             {
