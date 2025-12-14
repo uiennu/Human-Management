@@ -18,6 +18,7 @@ import { UserRole } from "@/types/auth"
 const baseNavigation = [
   { name: "Dashboard", href: "/", icon: Home },
   { name: "Leave Requests", href: "/leave", icon: Calendar },
+  { name: "Organization Management", href: "/organization", icon: FileText },
   { name: "Timesheet Updates", href: "/timesheet", icon: FileText },
   { name: "Check-In/Out Requests", href: "/checkin", icon: Clock },
   { name: "Work From Home", href: "/wfh", icon: Wifi },
@@ -58,13 +59,12 @@ export function AppSidebar() {
   const displayPosition = profile?.position || "Employee";
 
   // Check if user has HR or Admin role
-  const isHROrAdmin = hasAnyRole([UserRole.HR, UserRole.Admin]);
+  const isHROrAdmin = hasAnyRole([UserRole.HRManager, UserRole.Admin, UserRole.HREmployee]);
   
   // Build navigation based on actual user roles
   const navigation = isHROrAdmin
     ? [
         ...baseNavigation.slice(0, 1),
-        { name: "Organization Management", href: "/organization", icon: FileText },
         { name: "Reports", href: "/reports", icon: FileText },
         ...baseNavigation.slice(1)
       ]

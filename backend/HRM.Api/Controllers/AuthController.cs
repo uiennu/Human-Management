@@ -85,10 +85,10 @@ namespace HRM.Api.Controllers
                 .Join(_context.Roles, er => er.RoleID, r => r.RoleID, (er, r) => r.RoleName)
                 .ToListAsync();
 
-            // Default to "Employee" if no roles assigned
+            // Default to "IT Employee" if no roles assigned
             if (!employeeRoles.Any())
             {
-                employeeRoles.Add("Employee");
+                employeeRoles.Add("IT Employee");
             }
 
             // Create claims list
