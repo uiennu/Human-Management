@@ -87,22 +87,6 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Seed database
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    try
-    {
-        var context = services.GetRequiredService<AppDbContext>();
-        DbInitializer.Initialize(context);
-    }
-    catch (Exception ex)
-    {
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred submitting test data to the DB.");
-    }
-}
-
 // ⬇⬇⬇ THÊM ĐOẠN NÀY NGAY Ở ĐÂY
 app.Use((ctx, next) =>
 {
