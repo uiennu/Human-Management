@@ -20,12 +20,22 @@ namespace HRM.Api.Data
         public DbSet<LeaveRequest> LeaveRequests { get; set; }
         public DbSet<LeaveRequestHistory> LeaveRequestHistories { get; set; }
         public DbSet<WorkHandover> WorkHandovers { get; set; }
+        public DbSet<EmployeeEvent> EmployeeEvents { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+
+            modelBuilder.Entity<EmployeeEvent>(entity =>
+            {
+                entity.ToTable("EmployeeEvents");
+                entity.HasKey(e => e.EventID);
+                
+                // Báo cho EF biết cột này là kiểu json trong MySQL
+                entity.Property(e => e.EventData).HasColumnType("json"); 
+            });
         }
     }
 }

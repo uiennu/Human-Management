@@ -142,6 +142,18 @@ CREATE TABLE OrganizationStructureLogs (
     CONSTRAINT FK_Log_Performer FOREIGN KEY (PerformedBy) REFERENCES Employees(EmployeeID)
 );
 
+CREATE TABLE EmployeeEvents (
+    EventID BIGINT PRIMARY KEY AUTO_INCREMENT,
+    AggregateID INT NOT NULL, -- EmployeeID
+    EventType VARCHAR(100) NOT NULL,
+    EventData JSON NOT NULL,
+    Version INT NOT NULL,
+    CreatedBy INT NULL,
+    CreatedAt DATETIME NOT NULL DEFAULT NOW(),
+    CONSTRAINT FK_EmployeeEvents_Employee FOREIGN KEY (AggregateID) REFERENCES Employees(EmployeeID),
+    CONSTRAINT FK_EmployeeEvents_Creator FOREIGN KEY (CreatedBy) REFERENCES Employees(EmployeeID)
+);
+
 
 -- =================================================================
 -- SECTION 2: LEAVE MANAGEMENT

@@ -1,6 +1,9 @@
 using HRM.Api.DTOs;
 using HRM.Api.Models;
 using HRM.Api.Repositories;
+using HRM.Api.Data;
+using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 
 namespace HRM.Api.Services
 {
@@ -12,7 +15,7 @@ namespace HRM.Api.Services
         Task<VerifyOtpResultDto> VerifyOtpAndSubmitAsync(int employeeId, VerifyOtpDto dto);
     }
 
-    public class EmployeeProfileService : IEmployeeProfileService
+    public class EmployeeProfileService : BaseService,IEmployeeProfileService
     {
         private readonly IEmployeeProfileRepository _employeeRepository;
         private readonly IEmployeeProfileChangeRepository _changeRepository;
@@ -24,7 +27,9 @@ namespace HRM.Api.Services
             IEmployeeProfileRepository employeeRepository,
             IEmployeeProfileChangeRepository changeRepository,
             IOtpService otpService,
-            ILogger<EmployeeProfileService> logger)
+            ILogger<EmployeeProfileService> logger,
+            AppDbContext context,ICurrentUserService currentUserService)
+            : base(context, currentUserService)
         {
             _employeeRepository = employeeRepository;
             _changeRepository = changeRepository;
@@ -99,51 +104,29 @@ namespace HRM.Api.Services
 
         public async Task<UpdateResultDto> UpdateBasicInfoAsync(int employeeId, UpdateBasicInfoDto dto)
         {
-            var employee = await _employeeRepository.FindByEmployeeIdAsync(employeeId);
+            // Dùng _context trực tiếp để lấy Entity
+            var employee = await _context.Employees.FindAsync(employeeId);
+
             if (employee == null)
             {
-                return new UpdateResultDto
-                {
-                    Success = false,
-                    Message = "Employee not found"
-                };
+                return new UpdateResultDto { Success = false, Message = "Employee not found" };
             }
 
-            // Validate required fields
+            // --- GIỮ NGUYÊN PHẦN VALIDATION ---
             if (string.IsNullOrWhiteSpace(dto.PhoneNumber) ||
                 string.IsNullOrWhiteSpace(dto.Address) ||
-                string.IsNullOrWhiteSpace(dto.EmergencyContact.Name) ||
-                string.IsNullOrWhiteSpace(dto.EmergencyContact.Phone) ||
-                string.IsNullOrWhiteSpace(dto.EmergencyContact.Relation))
+                string.IsNullOrWhiteSpace(dto.EmergencyContact.Name))
             {
-                return new UpdateResultDto
-                {
-                    Success = false,
-                    Message = "Please fill in all required fields"
-                };
+                return new UpdateResultDto { Success = false, Message = "Please fill in all required fields" };
             }
 
-            // Validate phone format (basic validation)
             if (!IsValidPhone(dto.PhoneNumber))
-            {
-                return new UpdateResultDto
-                {
-                    Success = false,
-                    Message = "Please enter valid phone number"
-                };
-            }
+                return new UpdateResultDto { Success = false, Message = "Please enter valid phone number" };
 
-            // Validate email format if provided
             if (!string.IsNullOrWhiteSpace(dto.PersonalEmail) && !IsValidEmail(dto.PersonalEmail))
-            {
-                return new UpdateResultDto
-                {
-                    Success = false,
-                    Message = "Please enter valid email address"
-                };
-            }
+                return new UpdateResultDto { Success = false, Message = "Please enter valid email address" };
 
-            // Update employee basic info
+            // --- CẬP NHẬT DỮ LIỆU (SNAPSHOT) ---
             employee.Phone = dto.PhoneNumber;
             employee.Address = dto.Address;
             employee.PersonalEmail = dto.PersonalEmail;
@@ -151,10 +134,12 @@ namespace HRM.Api.Services
             employee.EmergencyContactPhone = dto.EmergencyContact.Phone;
             employee.EmergencyContactRelation = dto.EmergencyContact.Relation;
 
-            await _employeeRepository.UpdateAsync(employee);
-            await _employeeRepository.SaveAsync();
+            // [ĐÃ SỬA LẠI CHỖ NÀY] 
+            // Truyền biến 'employee' (Entity) thay vì 'employeeId' (int)
+            // Để BaseService có thể dùng ChangeTracker soi ra sự thay đổi
+            await SaveChangesWithEventAsync(employee, "InfoUpdated");
 
-            _logger.LogInformation($"Employee {employeeId} updated basic info at {DateTime.Now}");
+            _logger.LogInformation($"Employee {employeeId} updated info with Event Sourcing at {DateTime.Now}");
 
             return new UpdateResultDto
             {

@@ -2,6 +2,8 @@ using HRM.Api.DTOs;
 using HRM.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using HRM.Api.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace HRM.Api.Controllers
 {
@@ -13,15 +15,17 @@ namespace HRM.Api.Controllers
         private readonly IEmployeeProfileService _service;
         private readonly ICurrentUserService _currentUserService;
         private readonly ILogger<EmployeeProfileController> _logger;
-
+        private readonly AppDbContext _context;
         public EmployeeProfileController(   
             IEmployeeProfileService service,
             ICurrentUserService currentUserService,
-            ILogger<EmployeeProfileController> logger)
+            ILogger<EmployeeProfileController> logger,
+            AppDbContext context)
         {
             _service = service;
             _currentUserService = currentUserService;
             _logger = logger;
+            _context = context;
         }
 
         /// <summary>
@@ -149,5 +153,24 @@ namespace HRM.Api.Controllers
                 return StatusCode(500, new { message = "An error occurred while verifying OTP" });
             }
         }
+
+        [HttpGet("{id}/history")]
+    public async Task<IActionResult> GetHistory(int id)
+    {
+        // Query trực tiếp từ bảng EventStore
+        var history = await _context.EmployeeEvents
+            .Where(e => e.AggregateID == id)
+            .OrderByDescending(e => e.Version) // Mới nhất xếp trên
+            .Select(e => new 
+            {
+                EventName = e.EventType,
+                Data = e.EventData, // Frontend sẽ parse JSON này để hiển thị chi tiết
+                Time = e.CreatedAt,
+                Version = e.Version
+            })
+            .ToListAsync();
+
+        return Ok(history);
+    }
     }
 }
