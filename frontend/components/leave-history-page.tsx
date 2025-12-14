@@ -133,6 +133,39 @@ export default function LeaveHistoryPage() {
     };
   }, [employeeId, statusFilter, dateRangeFilter, leaveTypeFilter, currentPage]);
 
+  // State for stats counts
+  const [stats, setStats] = useState({ all: 0, pending: 0, approved: 0, rejected: 0 })
+
+  // Separate effect for Stats to prevent them from changing when Status Filter changes
+  useEffect(() => {
+    if (employeeId && employeeId > 0) {
+      const fetchStats = async () => {
+        try {
+          // Fetch ALL requests for current date/type range to calculate stats
+          // We use a large pageSize to get all relevant items for counting
+          const data = await leaveService.getMyRequests(employeeId, {
+            status: 'all', // Always fetch all for stats
+            dateRange: dateRangeFilter,
+            leaveTypeId: leaveTypeFilter,
+            page: 1,
+            pageSize: 1000 // Assume max 1000 for stats overview
+          });
+
+          const allReqs = data.data || [];
+          setStats({
+            all: allReqs.length,
+            pending: allReqs.filter((r: any) => r.status === 'Pending').length,
+            approved: allReqs.filter((r: any) => r.status === 'Approved').length,
+            rejected: allReqs.filter((r: any) => r.status === 'Rejected').length
+          })
+        } catch (err) {
+          console.error("Failed to load stats", err);
+        }
+      }
+      fetchStats();
+    }
+  }, [employeeId, dateRangeFilter, leaveTypeFilter]); // Intentionally exclude statusFilter
+
   const loadLeaveTypes = async () => {
     try {
       const types = await leaveService.getLeaveTypes();
@@ -292,7 +325,7 @@ export default function LeaveHistoryPage() {
               >
                 <CardContent className="!px-3 !py-2">
                   <p className="text-sm font-medium text-slate-600">All my request</p>
-                  <p className="text-2xl font-bold text-slate-900">{requests.length}</p>
+                  <p className="text-2xl font-bold text-slate-900">{stats.all}</p>
                 </CardContent>
               </Card>
               <Card
@@ -302,7 +335,7 @@ export default function LeaveHistoryPage() {
                 <CardContent className="!px-3 !py-2">
                   <p className="text-sm font-medium text-amber-600">Pending request</p>
                   <p className="text-2xl font-bold text-amber-700">
-                    {requests.filter(r => r.status === 'Pending').length}
+                    {stats.pending}
                   </p>
                 </CardContent>
               </Card>
@@ -313,7 +346,7 @@ export default function LeaveHistoryPage() {
                 <CardContent className="!px-3 !py-2">
                   <p className="text-sm font-medium text-emerald-600">Approved Request</p>
                   <p className="text-2xl font-bold text-emerald-700">
-                    {requests.filter(r => r.status === 'Approved').length}
+                    {stats.approved}
                   </p>
                 </CardContent>
               </Card>
@@ -324,7 +357,7 @@ export default function LeaveHistoryPage() {
                 <CardContent className="!px-3 !py-2">
                   <p className="text-sm font-medium text-rose-600">Declined Request</p>
                   <p className="text-2xl font-bold text-rose-700">
-                    {requests.filter(r => r.status === 'Rejected').length}
+                    {stats.rejected}
                   </p>
                 </CardContent>
               </Card>
