@@ -142,18 +142,6 @@ CREATE TABLE OrganizationStructureLogs (
     CONSTRAINT FK_Log_Performer FOREIGN KEY (PerformedBy) REFERENCES Employees(EmployeeID)
 );
 
-CREATE TABLE EmployeeEvents (
-    EventID BIGINT PRIMARY KEY AUTO_INCREMENT,
-    AggregateID INT NOT NULL, -- EmployeeID
-    EventType VARCHAR(100) NOT NULL,
-    EventData JSON NOT NULL,
-    Version INT NOT NULL,
-    CreatedBy INT NULL,
-    CreatedAt DATETIME NOT NULL DEFAULT NOW(),
-    CONSTRAINT FK_EmployeeEvents_Employee FOREIGN KEY (AggregateID) REFERENCES Employees(EmployeeID),
-    CONSTRAINT FK_EmployeeEvents_Creator FOREIGN KEY (CreatedBy) REFERENCES Employees(EmployeeID)
-);
-
 
 -- =================================================================
 -- SECTION 2: LEAVE MANAGEMENT
@@ -367,6 +355,36 @@ CREATE TABLE RedemptionRequests (
     CONSTRAINT FK_Redemption_Approver FOREIGN KEY (ApproverID) REFERENCES Employees(EmployeeID)
 );
 
+CREATE TABLE EmployeeEvents (
+    EventID BIGINT PRIMARY KEY AUTO_INCREMENT,
+    
+    -- AggregateID: ID của đối tượng bị tác động (ở đây là EmployeeID)
+    AggregateID INT NOT NULL, 
+    
+    -- Tên sự kiện: VD: EmployeeCreated, EmailChanged, DepartmentMoved...
+    EventType VARCHAR(100) NOT NULL, 
+    
+    -- Dữ liệu chi tiết của sự kiện (Lưu dạng JSON để linh hoạt)
+    EventData JSON NOT NULL, 
+    
+    -- Phiên bản của dữ liệu (1, 2, 3...) dùng để sắp xếp timeline và xử lý đụng độ
+    Version INT NOT NULL, 
+    
+    -- Metadata: Ai làm, lúc nào
+    CreatedBy INT NULL, -- Người thực hiện (User ID)
+    CreatedAt DATETIME DEFAULT NOW(),
+
+    -- Ràng buộc: Một nhân viên tại 1 version chỉ có 1 sự kiện duy nhất
+    UNIQUE KEY UQ_Employee_Version (AggregateID, Version),
+    
+    -- Index để truy vấn lịch sử nhanh hơn
+    INDEX IX_AggregateID (AggregateID)
+);
+
+
+-- =================================================================
+-- INSERT
+-- =================================================================
 INSERT INTO Roles (RoleName) VALUES 
 ('IT Employee'), -- 1
 ('IT Manager'),  -- 2
@@ -424,6 +442,9 @@ INSERT INTO EmployeeProfileChanges (EmployeeID, FieldName, OldValue, NewValue, S
 (3, 'EmergencyContact', 'None', 'Wife', 'Approved', 1), -- Charlie đổi, Alice duyệt
 (2, 'TaxID', NULL, 'TAX-12345', 'Rejected', 1),
 (4, 'BankAccount', '0001', '0002', 'Pending', NULL);
+
+
+
 
 -- =================================================================
 -- 3. INSERT LEAVE MANAGEMENT DATA (Logic ManagerID chặt chẽ)
@@ -570,13 +591,50 @@ INSERT INTO RedemptionRequests (EmployeeID, PointsToRedeem, CashValue, Conversio
 (2, 20, 20, 1.0, 'Rejected'),
 (4, 5, 5, 1.0, 'Processing');
 
--- 21. SubTeams (Test Data for Team Management)
-INSERT INTO SubTeams (TeamName, Description, DepartmentID, TeamLeadID) VALUES 
-('Backend Team', 'Backend development team', 3, 3),  -- IT Development, TeamLead: Charlie (IT Manager)
-('Frontend Team', 'Frontend development team', 3, NULL),  -- IT Development, No team lead yet
-('HR Operations', 'HR operations team', 2, 2);  -- Human Resources, TeamLead: Bob (HR Manager)
-
+-- 21 Update PasswordHash
 SET SQL_SAFE_UPDATES = 0;
 UPDATE Employees 
 SET PasswordHash = '$2a$11$jPe9nGpFaZHptsngP.dKGe8z/nStZ8YcPap7HN/D4LhjVvbJ5LFfe';
 SET SQL_SAFE_UPDATES = 1;
+
+
+-- 21. EmployeeEvents
+INSERT INTO EmployeeEvents (AggregateID, EventType, EventData, Version, CreatedBy, CreatedAt)
+SELECT 
+    EmployeeID,                -- AggregateID
+    'EmployeeImported',        -- Tên sự kiện: Import dữ liệu cũ
+    JSON_OBJECT(
+        -- Thông tin cơ bản
+        'FirstName', FirstName,
+        'LastName', LastName,
+        'Gender', Gender,
+        'Email', Email,
+        'PasswordHash', PasswordHash, -- Quan trọng để giữ mật khẩu cũ
+        'Phone', Phone,
+        'Address', Address,
+        'HireDate', HireDate,
+        'IsActive', IsActive,
+        
+        -- Thông tin nhạy cảm & Liên hệ
+        'PersonalEmail', PersonalEmail,
+        'EmergencyContactName', EmergencyContactName,
+        'EmergencyContactPhone', EmergencyContactPhone,
+        'EmergencyContactRelation', EmergencyContactRelation,
+        
+        -- Tài chính
+        'BankAccountNumber', BankAccountNumber,
+        'TaxID', TaxID,
+        
+        -- Quan hệ công việc
+        'DepartmentID', DepartmentID,
+        'ManagerID', ManagerID,
+        
+        -- Rewards & Khác
+        'CurrentPoints', CurrentPoints,
+        'AvatarUrl', AvatarUrl
+    ),
+    1,                         -- Version 1 (Khởi tạo)
+    1,                         -- Giả sử Admin (ID 1) thực hiện import
+    NOW()
+FROM Employees;
+
