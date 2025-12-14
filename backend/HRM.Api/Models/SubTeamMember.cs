@@ -1,12 +1,13 @@
 namespace HRM.Api.Models
 {
-    public class EmployeeRole
+    public class SubTeamMember
     {
+        public int ID { get; set; }
+        public int SubTeamID { get; set; }
         public int EmployeeID { get; set; }
-        public int RoleID { get; set; }
 
         // Navigation properties
+        public virtual SubTeam? SubTeam { get; set; }
         public virtual Employee? Employee { get; set; }
-        public virtual Role? Role { get; set; }
     }
 }

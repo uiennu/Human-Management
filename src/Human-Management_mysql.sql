@@ -558,6 +558,12 @@ INSERT INTO RedemptionRequests (EmployeeID, PointsToRedeem, CashValue, Conversio
 (2, 20, 20, 1.0, 'Rejected'),
 (4, 5, 5, 1.0, 'Processing');
 
+-- 21. SubTeams (Test Data for Team Management)
+INSERT INTO SubTeams (TeamName, Description, DepartmentID, TeamLeadID) VALUES 
+('Backend Team', 'Backend development team', 3, 3),  -- IT Development, TeamLead: Charlie (IT Manager)
+('Frontend Team', 'Frontend development team', 3, NULL),  -- IT Development, No team lead yet
+('HR Operations', 'HR operations team', 2, 2);  -- Human Resources, TeamLead: Bob (HR Manager)
+
 SET SQL_SAFE_UPDATES = 0;
 UPDATE Employees 
 SET PasswordHash = '$2a$11$jPe9nGpFaZHptsngP.dKGe8z/nStZ8YcPap7HN/D4LhjVvbJ5LFfe';

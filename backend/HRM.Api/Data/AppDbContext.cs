@@ -21,6 +21,10 @@ namespace HRM.Api.Data
         public DbSet<LeaveRequestHistory> LeaveRequestHistories { get; set; }
         public DbSet<WorkHandover> WorkHandovers { get; set; }
 
+        // Team Management DbSets
+        public DbSet<SubTeam> SubTeams { get; set; }
+        public DbSet<SubTeamMember> SubTeamMembers { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

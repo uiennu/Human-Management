@@ -1,6 +1,6 @@
 "use client"
 
-import { Calendar, Clock, FileText, Home, User, LogOut, CalendarClock, Wifi } from "lucide-react"
+import { Calendar, Clock, FileText, Home, User, LogOut, CalendarClock, Wifi, Users, UserPlus } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -66,7 +66,10 @@ export function AppSidebar() {
     ? [
       ...baseNavigation.slice(0, 1),
       { name: "Reports", href: "/reports", icon: FileText },
-      ...baseNavigation.slice(1)
+      ...baseNavigation.slice(1, 3),
+      { name: "Team Management", href: "/organization/teams", icon: Users },
+      { name: "Register Employee", href: "/organization/employees/register", icon: UserPlus },
+      ...baseNavigation.slice(3)
     ]
     : baseNavigation;
 
