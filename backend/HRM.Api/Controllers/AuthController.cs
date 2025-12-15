@@ -18,12 +18,12 @@ namespace HRM.Api.Controllers
     public class AuthController : ControllerBase
     {
         private readonly AppDbContext _context;
-        private readonly IPasswordGenerator _passwordGenerator;
+        private readonly IAuthService _authService;
 
-        public AuthController(AppDbContext context, IPasswordGenerator passwordGenerator)
+        public AuthController(AppDbContext context, IAuthService authService)
         {
             _context = context;
-            _passwordGenerator = passwordGenerator;
+            _authService = authService;
         }
 
             /// <summary>
@@ -59,109 +59,14 @@ namespace HRM.Api.Controllers
                 return BadRequest(ModelState);
             }
 
-            // Check if email already exists
-            var existingEmployee = await _context.Employees
-                .FirstOrDefaultAsync(e => e.Email == dto.Email);
-            
-            if (existingEmployee != null)
+            var (success, message, response) = await _authService.RegisterEmployeeAsync(dto);
+
+            if (!success)
             {
-                return BadRequest(new { message = "Email already exists" });
+                return BadRequest(new { message });
             }
 
-            // Validate department exists (if provided)
-            if (dto.DepartmentID.HasValue)
-            {
-                var departmentExists = await _context.Departments
-                    .AnyAsync(d => d.DepartmentID == dto.DepartmentID.Value);
-                
-                if (!departmentExists)
-                {
-                    return BadRequest(new { message = "Department not found" });
-                }
-            }
-
-            // Validate manager exists (if provided)
-            if (dto.ManagerID.HasValue)
-            {
-                var managerExists = await _context.Employees
-                    .AnyAsync(e => e.EmployeeID == dto.ManagerID.Value);
-                
-                if (!managerExists)
-                {
-                    return BadRequest(new { message = "Manager not found" });
-                }
-            }
-
-            // Validate role exists
-            var roleExists = await _context.Roles
-                .AnyAsync(r => r.RoleID == dto.RoleID);
-            
-            if (!roleExists)
-            {
-                return BadRequest(new { message = "Role not found" });
-            }
-
-            // Validate hire date is not in the future
-            if (dto.HireDate > DateTime.Now.Date)
-            {
-                return BadRequest(new { message = "Hire date cannot be in the future" });
-            }
-
-            try
-            {
-                // Generate temporary password
-                var tempPassword = _passwordGenerator.GenerateTemporaryPassword();
-
-                // Hash the password
-                var hashedPassword = BCrypt.Net.BCrypt.HashPassword(tempPassword);
-
-                // Create employee
-                var employee = new Employee
-                {
-                    FirstName = dto.FirstName,
-                    LastName = dto.LastName,
-                    Email = dto.Email,
-                    PasswordHash = hashedPassword,
-                    Phone = dto.Phone,
-                    Address = dto.Address,
-                    HireDate = dto.HireDate,
-                    DepartmentID = dto.DepartmentID,
-                    ManagerID = dto.ManagerID,
-                    PersonalEmail = dto.PersonalEmail,
-                    IsActive = true,
-                    CurrentPoints = 0
-                };
-
-                // Add to database
-                await _context.Employees.AddAsync(employee);
-                await _context.SaveChangesAsync();
-
-                // Assign role
-                var employeeRole = new EmployeeRole
-                {
-                    EmployeeID = employee.EmployeeID,
-                    RoleID = dto.RoleID
-                };
-                await _context.EmployeeRoles.AddAsync(employeeRole);
-                await _context.SaveChangesAsync();
-
-                // Return response
-                var response = new RegisterEmployeeResponseDto
-                {
-                    EmployeeId = employee.EmployeeID,
-                    Email = employee.Email,
-                    TempPassword = tempPassword,
-                    Message = "Employee registered successfully. Please share the temporary password securely with the employee."
-                };
-
-                return Created($"/api/employees/{employee.EmployeeID}", response);
-            }
-            catch (Exception ex)
-            {
-                // Log the error (in production, use proper logging)
-                Console.WriteLine($"Error registering employee: {ex.Message}");
-                return StatusCode(500, new { message = "An error occurred while registering the employee" });
-            }
+            return Created($"/api/employees/{response!.EmployeeId}", response);
         }
 
 

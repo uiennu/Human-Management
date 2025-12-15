@@ -64,6 +64,7 @@ builder.Services.AddScoped<IOtpService, OtpService>();
 builder.Services.AddScoped<IEmailService, ResendEmailService>();
 builder.Services.AddScoped<ITeamService, TeamService>();
 builder.Services.AddScoped<IPasswordGenerator, PasswordGenerator>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 // Register Resend client correctly
 var resendApiKey = Environment.GetEnvironmentVariable("RESEND_API_KEY") 
