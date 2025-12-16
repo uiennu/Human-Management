@@ -52,6 +52,8 @@ export interface UpdateBasicInfoRequest {
 export interface RequestSensitiveUpdateRequest {
   idNumber: string
   bankAccount: string
+  firstName?: string
+  lastName?: string
 }
 
 export interface RequestSensitiveUpdateResponse {

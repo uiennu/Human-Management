@@ -61,6 +61,16 @@ CREATE TABLE Employees (
 ALTER TABLE Departments ADD CONSTRAINT FK_Departments_Manager 
     FOREIGN KEY (ManagerID) REFERENCES Employees(EmployeeID);
 
+
+CREATE TABLE EmployeeEmergencyContacts (
+    ID INT PRIMARY KEY AUTO_INCREMENT,
+    EmployeeID INT NOT NULL,
+    Name VARCHAR(100) NOT NULL,
+    Relation VARCHAR(50),
+    Phone VARCHAR(20),
+    CONSTRAINT FK_EmergContact_Employee FOREIGN KEY (EmployeeID) REFERENCES Employees(EmployeeID) ON DELETE CASCADE
+);
+
 CREATE TABLE EmployeeRoles (
     EmployeeID INT NOT NULL,
     RoleID INT NOT NULL,

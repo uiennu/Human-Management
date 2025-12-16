@@ -29,6 +29,7 @@ namespace HRM.Api.Repositories
                 .Include(e => e.Manager)
                 .Include(e => e.LeaveBalances)
                     .ThenInclude(lb => lb.LeaveType)
+                .Include(e => e.EmergencyContacts)
                 .FirstOrDefaultAsync(e => e.EmployeeID == employeeId);
         }
     }

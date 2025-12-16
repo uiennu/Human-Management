@@ -13,9 +13,10 @@ namespace HRM.Api.Services
         Task<UpdateResultDto> UpdateBasicInfoAsync(int employeeId, UpdateBasicInfoDto dto);
         Task<SensitiveRequestResponseDto> CreateSensitiveUpdateRequestAsync(int employeeId, SensitiveUpdateRequestDto dto);
         Task<VerifyOtpResultDto> VerifyOtpAndSubmitAsync(int employeeId, VerifyOtpDto dto);
+        Task<string> UploadAvatarAsync(int employeeId, IFormFile file);
     }
 
-    public class EmployeeProfileService : BaseService,IEmployeeProfileService
+    public class EmployeeProfileService : BaseService, IEmployeeProfileService
     {
         private readonly IEmployeeProfileRepository _employeeRepository;
         private readonly IEmployeeProfileChangeRepository _changeRepository;
@@ -28,13 +29,49 @@ namespace HRM.Api.Services
             IEmployeeProfileChangeRepository changeRepository,
             IOtpService otpService,
             ILogger<EmployeeProfileService> logger,
-            AppDbContext context,ICurrentUserService currentUserService)
+            AppDbContext context, ICurrentUserService currentUserService)
             : base(context, currentUserService)
         {
             _employeeRepository = employeeRepository;
             _changeRepository = changeRepository;
             _otpService = otpService;
             _logger = logger;
+        }
+
+        public async Task<string> UploadAvatarAsync(int employeeId, IFormFile file)
+        {
+            var employee = await _context.Employees.FindAsync(employeeId);
+            if (employee == null) throw new InvalidOperationException("Employee not found");
+
+            if (file == null || file.Length == 0)
+                throw new ArgumentException("No file uploaded");
+
+            // 1. Tạo đường dẫn lưu file
+            // Tạo thư mục nếu chưa có: backend/HRM.Api/wwwroot/uploads/avatars
+            var uploadFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "avatars");
+            if (!Directory.Exists(uploadFolder))
+            {
+                Directory.CreateDirectory(uploadFolder);
+            }
+
+            // 2. Tạo tên file độc nhất (tránh trùng tên)
+            var uniqueFileName = $"{employeeId}_{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
+            var filePath = Path.Combine(uploadFolder, uniqueFileName);
+
+            // 3. Lưu file vào ổ cứng
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            // 4. Lưu đường dẫn vào Database (URL tương đối)
+            // Frontend sẽ gọi kiểu: http://localhost:5000/uploads/avatars/tenfile.jpg
+            var avatarUrl = $"/uploads/avatars/{uniqueFileName}";
+            
+            employee.AvatarUrl = avatarUrl;
+            await _context.SaveChangesAsync();
+
+            return avatarUrl;
         }
 
         public async Task<MyProfileResponseDto?> GetMyProfileAsync(int employeeId)
@@ -80,12 +117,12 @@ namespace HRM.Api.Services
                     PhoneNumber = employee.Phone ?? "",
                     Address = employee.Address ?? "",
                     PersonalEmail = employee.PersonalEmail ?? "",
-                    EmergencyContact = new EmergencyContactDto
+                    EmergencyContacts = employee.EmergencyContacts.Select(c => new EmergencyContactDto
                     {
-                        Name = employee.EmergencyContactName ?? "",
-                        Phone = employee.EmergencyContactPhone ?? "",
-                        Relation = employee.EmergencyContactRelation ?? ""
-                    }
+                        Name = c.Name,
+                        Phone = c.Phone ?? "",
+                        Relation = c.Relation ?? ""
+                    }).ToList()
                 },
                 SensitiveInfo = new SensitiveInfoDto
                 {
@@ -104,132 +141,133 @@ namespace HRM.Api.Services
 
         public async Task<UpdateResultDto> UpdateBasicInfoAsync(int employeeId, UpdateBasicInfoDto dto)
         {
-            // Dùng _context trực tiếp để lấy Entity
-            var employee = await _context.Employees.FindAsync(employeeId);
+            // Load employee kèm danh sách liên hệ cũ
+            var employee = await _context.Employees
+                .Include(e => e.EmergencyContacts)
+                .FirstOrDefaultAsync(e => e.EmployeeID == employeeId);
 
-            if (employee == null)
+            if (employee == null) return new UpdateResultDto { Success = false, Message = "Employee not found" };
+
+            // 1. Validate thông tin cơ bản
+            if (string.IsNullOrWhiteSpace(dto.PhoneNumber) || string.IsNullOrWhiteSpace(dto.Address))
             {
-                return new UpdateResultDto { Success = false, Message = "Employee not found" };
+                return new UpdateResultDto { Success = false, Message = "Phone number and Address are required" };
             }
 
-            // --- GIỮ NGUYÊN PHẦN VALIDATION ---
-            if (string.IsNullOrWhiteSpace(dto.PhoneNumber) ||
-                string.IsNullOrWhiteSpace(dto.Address) ||
-                string.IsNullOrWhiteSpace(dto.EmergencyContact.Name))
+            // 2. Validate Emergency Contacts (BẮT BUỘC ÍT NHẤT 1)
+            if (dto.EmergencyContacts == null || dto.EmergencyContacts.Count == 0)
             {
-                return new UpdateResultDto { Success = false, Message = "Please fill in all required fields" };
+                return new UpdateResultDto { Success = false, Message = "At least one emergency contact is required" };
             }
 
-            if (!IsValidPhone(dto.PhoneNumber))
-                return new UpdateResultDto { Success = false, Message = "Please enter valid phone number" };
+            foreach (var contact in dto.EmergencyContacts)
+            {
+                if (string.IsNullOrWhiteSpace(contact.Name) ||
+                    string.IsNullOrWhiteSpace(contact.Phone) ||
+                    string.IsNullOrWhiteSpace(contact.Relation))
+                {
+                    return new UpdateResultDto { Success = false, Message = "All emergency contact fields (Name, Phone, Relation) are required" };
+                }
+            }
 
-            if (!string.IsNullOrWhiteSpace(dto.PersonalEmail) && !IsValidEmail(dto.PersonalEmail))
-                return new UpdateResultDto { Success = false, Message = "Please enter valid email address" };
+            // --- CẬP NHẬT DỮ LIỆU ---
 
-            // --- CẬP NHẬT DỮ LIỆU (SNAPSHOT) ---
+            // Update thông tin bản thân
             employee.Phone = dto.PhoneNumber;
             employee.Address = dto.Address;
             employee.PersonalEmail = dto.PersonalEmail;
-            employee.EmergencyContactName = dto.EmergencyContact.Name;
-            employee.EmergencyContactPhone = dto.EmergencyContact.Phone;
-            employee.EmergencyContactRelation = dto.EmergencyContact.Relation;
 
-            // [ĐÃ SỬA LẠI CHỖ NÀY] 
-            // Truyền biến 'employee' (Entity) thay vì 'employeeId' (int)
-            // Để BaseService có thể dùng ChangeTracker soi ra sự thay đổi
-            await SaveChangesWithEventAsync(employee, "InfoUpdated");
+            // Update Emergency Contacts (Xóa danh sách cũ -> Thêm danh sách mới)
+            _context.EmployeeEmergencyContacts.RemoveRange(employee.EmergencyContacts);
 
-            _logger.LogInformation($"Employee {employeeId} updated info with Event Sourcing at {DateTime.Now}");
-
-            return new UpdateResultDto
+            foreach (var contact in dto.EmergencyContacts)
             {
-                Success = true,
-                Message = "Profile updated successfully",
-                UpdatedAt = DateTime.Now
-            };
-        }
+                employee.EmergencyContacts.Add(new EmployeeEmergencyContact
+                {
+                    Name = contact.Name,
+                    Phone = contact.Phone,
+                    Relation = contact.Relation
+                });
+            }
 
+            await _context.SaveChangesAsync();
+            return new UpdateResultDto { Success = true, Message = "Profile updated successfully", UpdatedAt = DateTime.Now };
+        }
         public async Task<SensitiveRequestResponseDto> CreateSensitiveUpdateRequestAsync(int employeeId, SensitiveUpdateRequestDto dto)
         {
             var employee = await _employeeRepository.FindByEmployeeIdAsync(employeeId);
-            if (employee == null)
-            {
-                throw new InvalidOperationException("Employee not found");
-            }
+            if (employee == null) throw new InvalidOperationException("Employee not found");
 
-            if (string.IsNullOrWhiteSpace(dto.IdNumber) && string.IsNullOrWhiteSpace(dto.BankAccount))
-            {
-                throw new InvalidOperationException("At least one sensitive field must be provided");
-            }
+            // Xóa OTP cũ để tránh rác
+            await _changeRepository.DeleteAllOtpsByEmployeeIdAsync(employeeId);
 
-            // Xóa tất cả OTP cũ của employee trước khi gửi mới bằng SQL
-            var deletedCount = await _changeRepository.DeleteAllOtpsByEmployeeIdAsync(employeeId);
-            _logger.LogInformation($"Deleted {deletedCount} old OTP records for employee {employeeId}");
-
-            // Generate OTP
             var otp = _otpService.GenerateOtp();
-            var expiryTime = DateTime.Now.AddSeconds(OTP_EXPIRY_SECONDS);
+            var changeId = 0; // Biến này dùng để gom nhóm các thay đổi vào chung 1 mã OTP
 
-            // Create change requests for sensitive fields
-            var changeId = 0;
-
-            if (!string.IsNullOrWhiteSpace(dto.IdNumber))
+            // Helper Function: Giúp tạo bản ghi thay đổi cho từng trường
+            async Task AddChange(string field, string? oldVal, string? newVal)
             {
-                var taxIdChange = new EmployeeProfileChange
+                // Nếu không nhập mới hoặc giá trị mới y hệt cũ -> Bỏ qua
+                if (string.IsNullOrWhiteSpace(newVal)) return;
+                if (oldVal == newVal) return;
+
+                var change = new EmployeeProfileChange
                 {
                     EmployeeID = employeeId,
-                    FieldName = "TaxID",
-                    OldValue = employee.TaxID,
-                    NewValue = dto.IdNumber,
-                    Status = "PendingOTP", // Custom status to indicate waiting for OTP
+                    FieldName = field,
+                    OldValue = oldVal ?? "",
+                    NewValue = newVal,
+                    Status = "PendingOTP", // Trạng thái chờ OTP
                     RequestedDate = DateTime.Now
                 };
-                await _changeRepository.AddAsync(taxIdChange);
+                await _changeRepository.AddAsync(change);
                 await _changeRepository.SaveAsync();
-                changeId = taxIdChange.ChangeID;
+
+                // Lấy ID của thay đổi đầu tiên làm "RequestId" đại diện cho đợt này
+                if (changeId == 0) changeId = change.ChangeID;
             }
 
-            if (!string.IsNullOrWhiteSpace(dto.BankAccount))
+            // 2. XỬ LÝ CÁC TRƯỜNG (Dùng hàm helper ở trên)
+
+            // Tax ID
+            await AddChange("TaxID", employee.TaxID, dto.IdNumber);
+
+            // Bank Account
+            await AddChange("BankAccountNumber", employee.BankAccountNumber, dto.BankAccount);
+
+            // FirstName (Tên)
+            await AddChange("FirstName", employee.FirstName, dto.FirstName);
+
+            // LastName (Họ)
+            await AddChange("LastName", employee.LastName, dto.LastName);
+
+            // Nếu không có thay đổi nào hợp lệ được tạo ra (do user nhập giống cũ hoặc để trống hết)
+            if (changeId == 0)
             {
-                var bankChange = new EmployeeProfileChange
-                {
-                    EmployeeID = employeeId,
-                    FieldName = "BankAccountNumber",
-                    OldValue = employee.BankAccountNumber,
-                    NewValue = dto.BankAccount,
-                    Status = "PendingOTP",
-                    RequestedDate = DateTime.Now
-                };
-                await _changeRepository.AddAsync(bankChange);
-                await _changeRepository.SaveAsync();
-                if (changeId == 0) changeId = bankChange.ChangeID;
+                return new SensitiveRequestResponseDto { Message = "No changes detected needing approval." };
             }
 
-            // Store OTP temporarily (in production, use cache like Redis)
-            // For now, we'll store it in a special change record
-            // Store expiry as Unix timestamp to avoid timezone parsing issues
-            var expiryUnixTimestamp = new DateTimeOffset(expiryTime).ToUnixTimeSeconds();
+            // 3. TẠO BẢN GHI OTP
+            var expiryTime = DateTime.Now.AddSeconds(OTP_EXPIRY_SECONDS); // Dùng constant đã khai báo đầu class
             var otpRecord = new EmployeeProfileChange
             {
                 EmployeeID = employeeId,
-                FieldName = $"OTP_{changeId}",
+                FieldName = $"OTP_{changeId}", // Gắn OTP với changeId đầu tiên
                 OldValue = otp,
-                NewValue = expiryUnixTimestamp.ToString(),
+                NewValue = new DateTimeOffset(expiryTime).ToUnixTimeSeconds().ToString(), // Lưu timestamp hết hạn
                 Status = "OTPGenerated",
                 RequestedDate = DateTime.Now
             };
             await _changeRepository.AddAsync(otpRecord);
             await _changeRepository.SaveAsync();
 
-            // Send OTP via email
+            // 4. GỬI MAIL OTP
             await _otpService.SendOtpAsync(employee.Email, otp);
-
-            _logger.LogInformation($"Sensitive update request created for employee {employeeId}, RequestID: {changeId}");
 
             return new SensitiveRequestResponseDto
             {
                 RequestId = changeId,
-                Message = "OTP has been sent to your registered email",
+                Message = "OTP sent to your email",
                 ExpiresInSeconds = OTP_EXPIRY_SECONDS
             };
         }
@@ -283,24 +321,24 @@ namespace HRM.Api.Services
             // Mark OTP as used
             otpRecord.Status = "Used";
             await _changeRepository.UpdateAsync(otpRecord);
-            
+
             // Cleanup: Delete old expired OTP records (older than 10 minutes)
             var cutoffTime = DateTimeOffset.Now.AddMinutes(-10).ToUnixTimeSeconds();
-            var expiredOtps = changes.Where(c => 
-                c.FieldName != null && 
-                c.FieldName.StartsWith("OTP_") && 
+            var expiredOtps = changes.Where(c =>
+                c.FieldName != null &&
+                c.FieldName.StartsWith("OTP_") &&
                 c.Status == "OTPGenerated" &&
                 !string.IsNullOrEmpty(c.NewValue) &&
                 long.TryParse(c.NewValue, out var expiry) &&
                 expiry < cutoffTime
             ).ToList();
-            
+
             foreach (var expired in expiredOtps)
             {
                 await _changeRepository.DeleteAsync(expired.ChangeID);
                 _logger.LogInformation($"Deleted expired OTP record: {expired.FieldName}");
             }
-            
+
             await _changeRepository.SaveAsync();
 
             _logger.LogInformation($"OTP verified for employee {employeeId}, sensitive changes submitted for HR approval");

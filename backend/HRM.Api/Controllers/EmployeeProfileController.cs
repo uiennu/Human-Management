@@ -16,7 +16,7 @@ namespace HRM.Api.Controllers
         private readonly ICurrentUserService _currentUserService;
         private readonly ILogger<EmployeeProfileController> _logger;
         private readonly AppDbContext _context;
-        public EmployeeProfileController(   
+        public EmployeeProfileController(
             IEmployeeProfileService service,
             ICurrentUserService currentUserService,
             ILogger<EmployeeProfileController> logger,
@@ -78,7 +78,7 @@ namespace HRM.Api.Controllers
                 }
 
                 var result = await _service.UpdateBasicInfoAsync(employeeId, dto);
-                
+
                 if (!result.Success)
                 {
                     return BadRequest(new { message = result.Message });
@@ -139,7 +139,7 @@ namespace HRM.Api.Controllers
                 }
 
                 var result = await _service.VerifyOtpAndSubmitAsync(employeeId, dto);
-                
+
                 if (!result.Success)
                 {
                     return BadRequest(result);
@@ -155,22 +155,54 @@ namespace HRM.Api.Controllers
         }
 
         [HttpGet("{id}/history")]
-    public async Task<IActionResult> GetHistory(int id)
-    {
-        // Query trực tiếp từ bảng EventStore
-        var history = await _context.EmployeeEvents
-            .Where(e => e.AggregateID == id)
-            .OrderByDescending(e => e.Version) // Mới nhất xếp trên
-            .Select(e => new 
-            {
-                EventName = e.EventType,
-                Data = e.EventData, // Frontend sẽ parse JSON này để hiển thị chi tiết
-                Time = e.CreatedAt,
-                Version = e.Version
-            })
-            .ToListAsync();
+        public async Task<IActionResult> GetHistory(int id)
+        {
+            // Query trực tiếp từ bảng EventStore
+            var history = await _context.EmployeeEvents
+                .Where(e => e.AggregateID == id)
+                .OrderByDescending(e => e.Version) // Mới nhất xếp trên
+                .Select(e => new
+                {
+                    EventName = e.EventType,
+                    Data = e.EventData, // Frontend sẽ parse JSON này để hiển thị chi tiết
+                    Time = e.CreatedAt,
+                    Version = e.Version
+                })
+                .ToListAsync();
 
-        return Ok(history);
-    }
+            return Ok(history);
+        }
+
+        [HttpPost("avatar")]
+        [Authorize] // Bắt buộc phải đăng nhập
+        public async Task<IActionResult> UploadAvatar(IFormFile file)
+        {
+            try
+            {
+                // Lấy ID nhân viên đang đăng nhập từ Token
+                // Lưu ý: Đảm bảo bạn có extension method GetUserId() hoặc lấy từ User.Claims
+                var userIdClaim = User.FindFirst("EmployeeID")?.Value
+                                  ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(userIdClaim)) return Unauthorized();
+
+                int employeeId = int.Parse(userIdClaim);
+
+                // Gọi Service xử lý
+                var newAvatarUrl = await _service.UploadAvatarAsync(employeeId, file);
+
+                // Trả về URL để Frontend hiển thị ngay lập tức
+                // Cần ghép với Base URL của server để thành link đầy đủ
+                var request = HttpContext.Request;
+                var baseUrl = $"{request.Scheme}://{request.Host}";
+                var fullUrl = $"{baseUrl}{newAvatarUrl}";
+
+                return Ok(new { url = fullUrl });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }
