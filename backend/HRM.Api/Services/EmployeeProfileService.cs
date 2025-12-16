@@ -172,10 +172,18 @@ namespace HRM.Api.Services
 
             // --- CẬP NHẬT DỮ LIỆU ---
 
-            // Update thông tin bản thân
-            employee.Phone = dto.PhoneNumber;
-            employee.Address = dto.Address;
-            employee.PersonalEmail = dto.PersonalEmail;
+            // Chỉ cập nhật các field thực sự thay đổi
+            if (employee.Phone != dto.PhoneNumber)
+                employee.Phone = dto.PhoneNumber;
+            
+            if (employee.Address != dto.Address)
+                employee.Address = dto.Address;
+            
+            if (employee.PersonalEmail != dto.PersonalEmail)
+                employee.PersonalEmail = dto.PersonalEmail;
+
+            // Capture old Emergency Contacts for event
+            var oldContacts = employee.EmergencyContacts.Select(c => new { Name = c.Name, Phone = c.Phone ?? "", Relation = c.Relation ?? "" }).ToList();
 
             // Update Emergency Contacts (Xóa danh sách cũ -> Thêm danh sách mới)
             _context.EmployeeEmergencyContacts.RemoveRange(employee.EmergencyContacts);
@@ -190,7 +198,42 @@ namespace HRM.Api.Services
                 });
             }
 
-            await _context.SaveChangesAsync();
+            // Lưu với Event Sourcing: Tự động ghi event "ProfileUpdated" vào bảng EmployeeEvents
+            await SaveChangesWithEventAsync(employee, "ProfileUpdated");
+
+            // Thêm Emergency Contacts vào event nếu có thay đổi
+            var newContacts = dto.EmergencyContacts.Select(c => new { Name = c.Name, Phone = c.Phone ?? "", Relation = c.Relation ?? "" }).ToList();
+            var contactsChanged = JsonSerializer.Serialize(oldContacts) != JsonSerializer.Serialize(newContacts);
+            
+            if (contactsChanged)
+            {
+                var lastEvent = await _context.EmployeeEvents
+                    .Where(e => e.AggregateID == employeeId)
+                    .OrderByDescending(e => e.Version)
+                    .FirstOrDefaultAsync();
+                
+                int nextVersion = (lastEvent?.Version ?? 0) + 1;
+                var performedBy = _currentUserService.GetCurrentEmployeeId();
+
+                var emergencyContactEvent = new EmployeeEvent
+                {
+                    AggregateID = employeeId,
+                    EventType = "EmergencyContactsUpdated",
+                    EventData = JsonSerializer.Serialize(new
+                    {
+                        Old = oldContacts,
+                        New = newContacts,
+                        UpdatedAt = DateTime.Now
+                    }),
+                    Version = nextVersion,
+                    CreatedBy = performedBy,
+                    CreatedAt = DateTime.Now
+                };
+
+                _context.EmployeeEvents.Add(emergencyContactEvent);
+                await _context.SaveChangesAsync();
+            }
+
             return new UpdateResultDto { Success = true, Message = "Profile updated successfully", UpdatedAt = DateTime.Now };
         }
         public async Task<SensitiveRequestResponseDto> CreateSensitiveUpdateRequestAsync(int employeeId, SensitiveUpdateRequestDto dto)
@@ -340,6 +383,45 @@ namespace HRM.Api.Services
             }
 
             await _changeRepository.SaveAsync();
+
+            // Thêm Event Sourcing cho Sensitive Information changes
+            if (pendingChanges.Count > 0)
+            {
+                var lastEvent = await _context.EmployeeEvents
+                    .Where(e => e.AggregateID == employeeId)
+                    .OrderByDescending(e => e.Version)
+                    .FirstOrDefaultAsync();
+                
+                int nextVersion = (lastEvent?.Version ?? 0) + 1;
+
+                var sensitiveChanges = new Dictionary<string, object>();
+                foreach (var change in pendingChanges)
+                {
+                    sensitiveChanges[change.FieldName] = new
+                    {
+                        Old = change.OldValue,
+                        New = change.NewValue
+                    };
+                }
+
+                var sensitiveEvent = new EmployeeEvent
+                {
+                    AggregateID = employeeId,
+                    EventType = "SensitiveInfoUpdateRequested",
+                    EventData = JsonSerializer.Serialize(new
+                    {
+                        Changes = sensitiveChanges,
+                        RequestedAt = DateTime.Now,
+                        Status = "Pending"
+                    }),
+                    Version = nextVersion,
+                    CreatedBy = employeeId,
+                    CreatedAt = DateTime.Now
+                };
+
+                _context.EmployeeEvents.Add(sensitiveEvent);
+                await _context.SaveChangesAsync();
+            }
 
             _logger.LogInformation($"OTP verified for employee {employeeId}, sensitive changes submitted for HR approval");
 

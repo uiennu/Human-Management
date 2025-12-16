@@ -66,11 +66,23 @@ namespace HRM.Api.Services
                 {
                     if (prop.IsModified)
                     {
-                        changes.Add(prop.Metadata.Name, new 
-                        { 
-                            Old = prop.OriginalValue, 
-                            New = prop.CurrentValue 
-                        });
+                        // Chỉ lưu nếu giá trị thực sự thay đổi
+                        var oldVal = prop.OriginalValue;
+                        var newVal = prop.CurrentValue;
+                        
+                        // So sánh giá trị (null-safe)
+                        bool isChanged = oldVal == null && newVal != null ||
+                                       oldVal != null && newVal == null ||
+                                       oldVal != null && newVal != null && !oldVal.Equals(newVal);
+                        
+                        if (isChanged)
+                        {
+                            changes.Add(prop.Metadata.Name, new 
+                            { 
+                                Old = oldVal, 
+                                New = newVal 
+                            });
+                        }
                     }
                 }
 
