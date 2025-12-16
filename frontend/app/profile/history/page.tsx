@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, History, User, Calendar, FileText } from 'lucide-react';
+import { ArrowLeft, History, User, Calendar, FileText, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +21,9 @@ export default function ProfileHistoryPage() {
   const [events, setEvents] = useState<EmployeeEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [employeeId, setEmployeeId] = useState<number | null>(null);
+  // State for toggling sensitive fields (key: event index + field)
+  const [showSensitive, setShowSensitive] = useState<{[k:string]: boolean}>({});
+  const toggleSensitive = (key: string) => setShowSensitive(s => ({...s, [key]: !s[key]}));
 
   useEffect(() => {
     fetchHistory();
@@ -108,7 +111,7 @@ export default function ProfileHistoryPage() {
     return 'bg-gray-100 text-gray-800';
   };
 
-  const renderEventData = (eventType: string, data: any) => {
+  const renderEventData = (eventType: string, data: any, eventIndex?: number) => {
     // For ProfileUpdated event
     if (eventType === 'ProfileUpdated') {
       // UpdatedAt có thể là object hoặc string
@@ -242,10 +245,34 @@ export default function ProfileHistoryPage() {
 
     // For EmployeeCreated or EmployeeImported
     if (eventType === 'EmployeeCreated' || eventType === 'EmployeeImported') {
+      // Helper to render sensitive fields with toggle
+      const renderSensitive = (label: string, value: string, key: string) => (
+        <div className="flex items-center gap-2">
+          <span className="font-medium">{label}:</span>{' '}
+          <span className="select-all">
+            {showSensitive[key]
+              ? value
+              : <span className="select-none font-mono tracking-widest">{'*'.repeat(Math.max(8, value?.length || 8))}</span>
+            }
+          </span>
+          <button
+            type="button"
+            className="ml-1 p-1 rounded hover:bg-gray-100 focus:outline-none"
+            onClick={() => toggleSensitive(key)}
+            aria-label={showSensitive[key] ? 'Hide' : 'Show'}
+          >
+            {showSensitive[key] ? <EyeOff className="w-4 h-4 text-gray-500" /> : <Eye className="w-4 h-4 text-gray-500" />}
+          </button>
+        </div>
+      );
+
       return (
         <div className="mt-2 space-y-1 text-sm">
           {data.FirstName && data.LastName && (
             <div><span className="font-medium">Name:</span> {data.FirstName} {data.LastName}</div>
+          )}
+          {data.FullName && !data.FirstName && !data.LastName && (
+            <div><span className="font-medium">Name:</span> {data.FullName}</div>
           )}
           {data.Email && (
             <div><span className="font-medium">Email:</span> {data.Email}</div>
@@ -255,6 +282,21 @@ export default function ProfileHistoryPage() {
           )}
           {data.HireDate && (
             <div><span className="font-medium">Hire Date:</span> {data.HireDate}</div>
+          )}
+          {data.PersonalEmail && renderSensitive('Personal Email', data.PersonalEmail, `PersonalEmail-${eventIndex}`)}
+          {data.Department && (
+            <div><span className="font-medium">Department:</span> {data.Department}</div>
+          )}
+          {data.Manager && (
+            <div><span className="font-medium">Manager:</span> {data.Manager}</div>
+          )}
+          {data.BankAccountNumber && renderSensitive('Bank Account', data.BankAccountNumber, `BankAccountNumber-${eventIndex}`)}
+          {data.TaxID && renderSensitive('Tax ID', data.TaxID, `TaxID-${eventIndex}`)}
+          {data.CurrentPoints !== undefined && (
+            <div><span className="font-medium">Current Points:</span> {data.CurrentPoints}</div>
+          )}
+          {data.AvatarUrl && (
+            <div><span className="font-medium">Avatar:</span> <a href={data.AvatarUrl} target="_blank" rel="noopener noreferrer">View</a></div>
           )}
         </div>
       );
@@ -335,7 +377,7 @@ export default function ProfileHistoryPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="pt-4">
-                    {renderEventData(event.eventName, eventData)}
+                    {renderEventData(event.eventName, eventData, index)}
                   </CardContent>
                 </Card>
               );

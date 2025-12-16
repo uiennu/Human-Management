@@ -15,11 +15,11 @@ export interface EmployeeProfile {
     phoneNumber: string
     address: string
     personalEmail: string
-    emergencyContact: {
+    emergencyContacts: Array<{
       name: string
       phone: string
       relation: string
-    }
+    }>
   }
   sensitiveInfo: {
     isLocked: boolean
@@ -42,11 +42,11 @@ export interface UpdateBasicInfoRequest {
   phoneNumber: string
   address: string
   personalEmail: string
-  emergencyContact: {
+  emergencyContacts: Array<{
     name: string
     phone: string
     relation: string
-  }
+  }>
 }
 
 export interface RequestSensitiveUpdateRequest {

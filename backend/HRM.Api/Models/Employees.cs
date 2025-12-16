@@ -12,9 +12,6 @@ namespace HRM.Api.Models
         public DateTime HireDate { get; set; }
         public bool IsActive { get; set; } = true;
         public string? PersonalEmail { get; set; }
-        public string? EmergencyContactName { get; set; }
-        public string? EmergencyContactPhone { get; set; }
-        public string? EmergencyContactRelation { get; set; }
         public string? BankAccountNumber { get; set; }
         public string? TaxID { get; set; }
         public int? DepartmentID { get; set; }
