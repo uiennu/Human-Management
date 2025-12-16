@@ -112,9 +112,14 @@ export default function ProfilePage() {
       <div className="space-y-6 pb-10">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold text-slate-900">My Profile</h1>
-          <Link href="/profile/edit">
-            <Button variant="outline"><Edit className="mr-2 h-4 w-4" /> Edit Profile</Button>
-          </Link>
+          <div className="flex gap-2">
+            <Link href="/profile/history">
+              <Button variant="outline"><BarChart3 className="mr-2 h-4 w-4" /> View History</Button>
+            </Link>
+            <Link href="/profile/edit">
+              <Button variant="outline"><Edit className="mr-2 h-4 w-4" /> Edit Profile</Button>
+            </Link>
+          </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
