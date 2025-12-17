@@ -13,9 +13,6 @@ namespace HRM.Api.Models
         public DateTime HireDate { get; set; }
         public bool IsActive { get; set; } = true;
         public string? PersonalEmail { get; set; }
-        public string? EmergencyContactName { get; set; }
-        public string? EmergencyContactPhone { get; set; }
-        public string? EmergencyContactRelation { get; set; }
         public string? BankAccountNumber { get; set; }
         public string? TaxID { get; set; }
         public int? DepartmentID { get; set; }
@@ -29,5 +26,6 @@ namespace HRM.Api.Models
         public virtual ICollection<EmployeeRole> EmployeeRoles { get; set; } = new List<EmployeeRole>();
         public virtual ICollection<EmployeeLeaveBalance> LeaveBalances { get; set; } = new List<EmployeeLeaveBalance>();
         public virtual ICollection<LeaveRequest> LeaveRequests { get; set; } = new List<LeaveRequest>();
+        public virtual ICollection<EmployeeEmergencyContact> EmergencyContacts { get; set; } = new List<EmployeeEmergencyContact>();
     }
 }

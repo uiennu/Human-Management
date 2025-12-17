@@ -27,7 +27,7 @@ export const profileApi = {
 
     if (response.status === 401) {
       // Có thể clear token ở đây hoặc throw lỗi để component xử lý redirect
-      throw new Error("UNAUTHORIZED"); 
+      throw new Error("UNAUTHORIZED");
     }
 
     if (!response.ok) {
@@ -41,7 +41,7 @@ export const profileApi = {
         // giúp app không bị crash. Ta có thể đọc dạng text hoặc bỏ qua.
         console.warn("API Error response is not JSON");
       }
-      
+
       throw new Error(errorMessage);
     }
     return response.json()
@@ -119,5 +119,22 @@ export const profileApi = {
     }
 
     return response.json()
+  },
+
+  async uploadAvatar(file: File): Promise<{ url: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await fetch(`${API_BASE_URL}/employees/me/avatar`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${getAuthToken()}` },
+      body: formData,
+    });
+
+    if (!response.ok) {
+        const errorData = await response.text(); 
+        console.error("Backend Error:", errorData); 
+        throw new Error(errorData || 'Failed to upload avatar');
+    }
+    return response.json();
   },
 }

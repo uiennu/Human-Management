@@ -14,7 +14,7 @@ namespace HRM.Api.DTOs
         public string PhoneNumber { get; set; } = "";
         public string Address { get; set; } = "";
         public string PersonalEmail { get; set; } = "";
-        public EmergencyContactDto EmergencyContact { get; set; } = new();
+        public List<EmergencyContactDto> EmergencyContacts { get; set; } = new();
     }
 
     // Pending Request DTO
@@ -68,7 +68,7 @@ namespace HRM.Api.DTOs
         public string PhoneNumber { get; set; } = "";
         public string Address { get; set; } = "";
         public string PersonalEmail { get; set; } = "";
-        public EmergencyContactDto EmergencyContact { get; set; } = new();
+        public List<EmergencyContactDto> EmergencyContacts { get; set; } = new();
     }
 
     // Sensitive Update Request DTO
@@ -76,6 +76,8 @@ namespace HRM.Api.DTOs
     {
         public string? IdNumber { get; set; }
         public string? BankAccount { get; set; }
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
     }
 
     // Sensitive Request Response DTO

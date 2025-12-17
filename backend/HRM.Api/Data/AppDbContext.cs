@@ -25,6 +25,7 @@ namespace HRM.Api.Data
         // Team Management DbSets
         public DbSet<SubTeam> SubTeams { get; set; }
         public DbSet<SubTeamMember> SubTeamMembers { get; set; }
+        public DbSet<EmployeeEmergencyContact> EmployeeEmergencyContacts { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

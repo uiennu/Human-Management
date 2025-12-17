@@ -37,10 +37,6 @@ CREATE TABLE Employees (
     
     -- Sensitive info
     PersonalEmail VARCHAR(100),
-    EmergencyContactName VARCHAR(100),
-    EmergencyContactPhone VARCHAR(20),
-    EmergencyContactRelation NVARCHAR(50),
-    
     BankAccountNumber VARCHAR(50),
     TaxID VARCHAR(50),
 
@@ -60,6 +56,16 @@ CREATE TABLE Employees (
 -- Add the FK for Department Manager
 ALTER TABLE Departments ADD CONSTRAINT FK_Departments_Manager 
     FOREIGN KEY (ManagerID) REFERENCES Employees(EmployeeID);
+
+
+CREATE TABLE EmployeeEmergencyContacts (
+    ID INT PRIMARY KEY AUTO_INCREMENT,
+    EmployeeID INT NOT NULL,
+    Name VARCHAR(100) NOT NULL,
+    Relation VARCHAR(50),
+    Phone VARCHAR(20),
+    CONSTRAINT FK_EmergContact_Employee FOREIGN KEY (EmployeeID) REFERENCES Employees(EmployeeID) ON DELETE CASCADE
+);
 
 CREATE TABLE EmployeeRoles (
     EmployeeID INT NOT NULL,
@@ -404,21 +410,37 @@ INSERT INTO Departments (DepartmentName, DepartmentCode, Description, ManagerID)
 -- Logic: Alice (1) quản lý Bob (2) và Charlie (3). 
 -- Charlie (3) quản lý David (4). 
 -- Bob (2) quản lý Eve (5).
-INSERT INTO Employees (FirstName, LastName, Email, PasswordHash, Phone, Address, HireDate, DepartmentID, IsActive, ManagerID, CurrentPoints, Gender) VALUES 
+INSERT INTO Employees (
+    FirstName, LastName, Email, PasswordHash, Phone, Address, HireDate, DepartmentID, IsActive, ManagerID, CurrentPoints, Gender, PersonalEmail, BankAccountNumber, TaxID, AvatarUrl
+) VALUES
+
 -- ID 1: Alice (Sếp tổng)
-('Alice', 'Nguyen', 'alice@hrm.com', 'hashed_password_here', '0901000001', 'District 1, HCM', CURDATE(), 1, 1, NULL, 500,'Female'),
+('Alice', 'Nguyen', 'alice@hrm.com', 'hashed_password_here', '0901000001', 'District 1, HCM', CURDATE(), 1, 1, NULL, 500, 'Female',
+ 'alice.personal@gmail.com', '123456789', 'TAX-ALICE', 'https://randomuser.me/api/portraits/women/1.jpg'),
 
 -- ID 2: Bob (Sếp HR) -> Báo cáo cho Alice (1)
-('Bob', 'Tran', 'bob@hrm.com', 'hashed_password_here', '0901000002', 'District 3, HCM', CURDATE(), 2, 1, 1, 200,'Male'),
+('Bob', 'Tran', 'bob@hrm.com', 'hashed_password_here', '0901000002', 'District 3, HCM', CURDATE(), 2, 1, 1, 200, 'Male',
+ 'bob.personal@gmail.com', '987654321', 'TAX-BOB', 'https://randomuser.me/api/portraits/men/2.jpg'),
 
 -- ID 3: Charlie (Sếp IT) -> Báo cáo cho Alice (1)
-('Charlie', 'Le', 'charlie@hrm.com', 'hashed_password_here', '0901000003', 'Thu Duc, HCM', CURDATE(), 3, 1, 1, 300,'Male'),
+('Charlie', 'Le', 'charlie@hrm.com', 'hashed_password_here', '0901000003', 'Thu Duc, HCM', CURDATE(), 3, 1, 1, 300, 'Male',
+ 'charlie.personal@gmail.com', '1122334455', 'TAX-CHARLIE', 'https://randomuser.me/api/portraits/men/3.jpg'),
 
 -- ID 4: David (Nhân viên IT) -> Báo cáo cho Charlie (3)
-('David', 'Pham', 'david@hrm.com', 'hashed_password_here', '0901000004', 'Binh Thanh, HCM', CURDATE(), 3, 1, 3, 150,'Male'),
+('David', 'Pham', 'david@hrm.com', 'hashed_password_here', '0901000004', 'Binh Thanh, HCM', CURDATE(), 3, 1, 3, 150, 'Male',
+ 'david.personal@gmail.com', '5566778899', 'TAX-DAVID', 'https://randomuser.me/api/portraits/men/4.jpg'),
 
 -- ID 5: Eve (Nhân viên HR) -> Báo cáo cho Bob (2)
-('Eve', 'Vo', 'eve@hrm.com', 'hashed_password_here', '0901000005', 'District 7, HCM', CURDATE(), 2, 1, 2, 100,'Female');
+('Eve', 'Vo', 'eve@hrm.com', 'hashed_password_here', '0901000005', 'District 7, HCM', CURDATE(), 2, 1, 2, 100, 'Female',
+ 'eve.personal@gmail.com', '9988776655', 'TAX-EVE', 'https://randomuser.me/api/portraits/women/5.jpg');
+
+-- Emergency contacts for each employee
+INSERT INTO EmployeeEmergencyContacts (EmployeeID, Name, Relation, Phone) VALUES
+(1, 'Bob Nguyen', 'Husband', '0901111111'),
+(2, 'Linda Tran', 'Wife', '0901222222'),
+(3, 'Anna Le', 'Wife', '0901333333'),
+(4, 'Mary Pham', 'Mother', '0901444444'),
+(5, 'Tom Vo', 'Father', '0901555555');
 
 
 
@@ -599,42 +621,38 @@ SET SQL_SAFE_UPDATES = 1;
 
 
 -- 21. EmployeeEvents
-INSERT INTO EmployeeEvents (AggregateID, EventType, EventData, Version, CreatedBy, CreatedAt)
-SELECT 
-    EmployeeID,                -- AggregateID
-    'EmployeeImported',        -- Tên sự kiện: Import dữ liệu cũ
-    JSON_OBJECT(
-        -- Thông tin cơ bản
-        'FirstName', FirstName,
-        'LastName', LastName,
-        'Gender', Gender,
-        'Email', Email,
-        'PasswordHash', PasswordHash, -- Quan trọng để giữ mật khẩu cũ
-        'Phone', Phone,
-        'Address', Address,
-        'HireDate', HireDate,
-        'IsActive', IsActive,
-        
-        -- Thông tin nhạy cảm & Liên hệ
-        'PersonalEmail', PersonalEmail,
-        'EmergencyContactName', EmergencyContactName,
-        'EmergencyContactPhone', EmergencyContactPhone,
-        'EmergencyContactRelation', EmergencyContactRelation,
-        
-        -- Tài chính
-        'BankAccountNumber', BankAccountNumber,
-        'TaxID', TaxID,
-        
-        -- Quan hệ công việc
-        'DepartmentID', DepartmentID,
-        'ManagerID', ManagerID,
-        
-        -- Rewards & Khác
-        'CurrentPoints', CurrentPoints,
-        'AvatarUrl', AvatarUrl
-    ),
-    1,                         -- Version 1 (Khởi tạo)
-    1,                         -- Giả sử Admin (ID 1) thực hiện import
-    NOW()
-FROM Employees;
 
+INSERT INTO EmployeeEvents (AggregateID, EventType, EventData, Version, CreatedBy, CreatedAt)
+SELECT
+    e.EmployeeID,
+    'EmployeeImported',
+    JSON_OBJECT(
+        'EmployeeID', e.EmployeeID,
+        'FirstName', e.FirstName,
+        'LastName', e.LastName,
+        'FullName', CONCAT(e.FirstName, ' ', e.LastName),
+        'Gender', e.Gender,
+        'Email', e.Email,
+        'Phone', e.Phone,
+        'Address', e.Address,
+        'HireDate', DATE_FORMAT(e.HireDate, '%Y-%m-%d'),
+        'IsActive', e.IsActive,
+        
+        'PersonalEmail', e.PersonalEmail,
+        'BankAccountNumber', e.BankAccountNumber,
+        'TaxID', e.TaxID,
+        
+        'DepartmentID', e.DepartmentID,
+        'Department', d.DepartmentName,
+        'ManagerID', e.ManagerID,
+        'Manager', CASE WHEN m.EmployeeID IS NOT NULL THEN CONCAT(m.FirstName, ' ', m.LastName) ELSE NULL END,
+        
+        'CurrentPoints', e.CurrentPoints,
+        'AvatarUrl', e.AvatarUrl
+    ),
+    1,
+    1,
+    NOW()
+FROM Employees e
+LEFT JOIN Departments d ON e.DepartmentID = d.DepartmentID
+LEFT JOIN Employees m ON e.ManagerID = m.EmployeeID;
