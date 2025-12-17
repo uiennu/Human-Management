@@ -1,6 +1,6 @@
 "use client"
 
-import { Calendar, Clock, FileText, Home, User, LogOut, CalendarClock, Wifi, Users, UserPlus } from "lucide-react"
+import { Calendar, Clock, FileText, Home, User, LogOut, CalendarClock, Wifi, Users, UserPlus, History } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -60,6 +60,7 @@ export function AppSidebar() {
 
   // Check if user has HR or Admin role
   const isHROrAdmin = hasAnyRole([UserRole.HRManager, UserRole.Admin, UserRole.HREmployee]);
+  const isAdmin = hasAnyRole([UserRole.Admin]);
 
   // Build navigation based on actual user roles
   const navigation = isHROrAdmin
@@ -69,6 +70,7 @@ export function AppSidebar() {
       ...baseNavigation.slice(1, 3),
       { name: "Team Management", href: "/organization/teams", icon: Users },
       { name: "Register Employee", href: "/organization/employees/register", icon: UserPlus },
+      ...(isAdmin ? [{ name: "Registration History", href: "/organization/employees/registration-history", icon: History }] : []),
       ...baseNavigation.slice(3)
     ]
     : baseNavigation;

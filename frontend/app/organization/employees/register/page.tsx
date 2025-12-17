@@ -76,6 +76,11 @@ export default function RegisterEmployeePage() {
 
             setShowPasswordModal(true)
 
+            toast({
+                title: "Registration Successful",
+                description: `Employee ${formData.firstName} ${formData.lastName} has been registered successfully.`,
+            })
+
             // Reset form
             setFormData({
                 firstName: "",
@@ -90,9 +95,15 @@ export default function RegisterEmployeePage() {
             })
             setHireDate(new Date())
         } catch (error: any) {
+            const errorMessage = error.message || "Failed to register employee"
+            const isDuplicate = errorMessage.toLowerCase().includes("already exists") || 
+                               errorMessage.toLowerCase().includes("duplicate")
+
             toast({
-                title: "Registration Failed",
-                description: error.message || "Failed to register employee",
+                title: isDuplicate ? "Duplicate Registration Detected" : "Registration Failed",
+                description: isDuplicate 
+                    ? "This employee has already been registered. Duplicate registration prevented."
+                    : errorMessage,
                 variant: "destructive",
             })
         } finally {

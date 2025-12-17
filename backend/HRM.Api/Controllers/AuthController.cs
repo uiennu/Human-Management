@@ -69,6 +69,31 @@ namespace HRM.Api.Controllers
             return Created($"/api/employees/{response!.EmployeeId}", response);
         }
 
+        /// <summary>
+        /// Get registration history (all EmployeeCreated events) - Admin only
+        /// GET: /api/auth/registration-history
+        /// </summary>
+        [HttpGet("registration-history")]
+        [Authorize(Policy = "AdminOnly")]
+        public async Task<IActionResult> GetRegistrationHistory()
+        {
+            var events = await _context.EmployeeEvents
+                .Where(e => e.EventType == "EmployeeCreated")
+                .OrderByDescending(e => e.CreatedAt)
+                .Select(e => new
+                {
+                    EventID = e.EventID,
+                    EmployeeID = e.AggregateID,
+                    EventType = e.EventType,
+                    EventData = e.EventData,
+                    Version = e.Version,
+                    CreatedBy = e.CreatedBy,
+                    CreatedAt = e.CreatedAt
+                })
+                .ToListAsync();
+
+            return Ok(events);
+        }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)

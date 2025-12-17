@@ -2,6 +2,7 @@ using HRM.Api.Data;
 using HRM.Api.DTOs;
 using HRM.Api.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace HRM.Api.Services
 {
@@ -22,7 +23,32 @@ namespace HRM.Api.Services
         {
             try
             {
-                // Check if email already exists
+                // DEDUPLICATION: Check event store first to prevent duplicate registrations
+                // This prevents duplicates from double-clicks, network retries, etc.
+                var existingCreatedEvent = await _context.EmployeeEvents
+                    .Where(e => e.EventType == "EmployeeCreated")
+                    .ToListAsync();
+
+                // Check if any EmployeeCreated event has this email in its EventData
+                foreach (var evt in existingCreatedEvent)
+                {
+                    try
+                    {
+                        var eventData = JsonSerializer.Deserialize<Employee>(evt.EventData);
+                        if (eventData != null && eventData.Email.Equals(dto.Email, StringComparison.OrdinalIgnoreCase))
+                        {
+                            // Found existing EmployeeCreated event for this email - prevent duplicate
+                            return (false, "Email already exists", null);
+                        }
+                    }
+                    catch
+                    {
+                        // Skip events that can't be deserialized
+                        continue;
+                    }
+                }
+
+                // Fallback: Also check database directly (in case event store is out of sync)
                 var existingEmployee = await _context.Employees
                     .FirstOrDefaultAsync(e => e.Email == dto.Email);
                 
@@ -118,6 +144,22 @@ namespace HRM.Api.Services
                 };
 
                 return (true, "Employee registered successfully", response);
+            }
+            catch (DbUpdateException dbEx)
+            {
+                // Handle database constraint violations (including duplicate key)
+                var errorMessage = dbEx.InnerException?.Message ?? dbEx.Message;
+                
+                // Check for duplicate email constraint violation
+                if (errorMessage.Contains("Duplicate entry") && errorMessage.Contains("Email") ||
+                    errorMessage.Contains("UNIQUE constraint") && errorMessage.Contains("Email"))
+                {
+                    return (false, "Email already exists", null);
+                }
+                
+                // Log the error (in production, use proper logging)
+                Console.WriteLine($"Database error registering employee: {errorMessage}");
+                return (false, "An error occurred while registering the employee. Please try again.", null);
             }
             catch (Exception ex)
             {
