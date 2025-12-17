@@ -85,6 +85,9 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.AddScoped<IOrganizationRepository, OrganizationRepository>();
+builder.Services.AddScoped<IOrganizationService, OrganizationService>();
+
 
 var app = builder.Build();
 

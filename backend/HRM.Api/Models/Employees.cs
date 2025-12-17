@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 namespace HRM.Api.Models
 {
     public class Employee
