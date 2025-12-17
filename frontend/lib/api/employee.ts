@@ -121,5 +121,30 @@ export const employeeApi = {
 
     return res.json();
   },
+
+  /**
+   * Get registration history (all EmployeeCreated events)
+   */
+  async getRegistrationHistory(): Promise<RegistrationEvent[]> {
+    const res = await fetch(`${API_URL}/api/auth/registration-history`, {
+      headers: getAuthHeaders(),
+    });
+
+    if (!res.ok) {
+      throw new Error("Failed to fetch registration history");
+    }
+
+    return res.json();
+  },
 };
+
+export interface RegistrationEvent {
+  eventID: number;
+  employeeID: number;
+  eventType: string;
+  eventData: string; // JSON string
+  version: number;
+  createdBy: number | null;
+  createdAt: string;
+}
 
