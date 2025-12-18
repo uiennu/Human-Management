@@ -6,7 +6,7 @@ import { UserRole } from "@/types/auth";
 
 export default function ReportsPage() {
   return (
-    <RequireRole roles={[UserRole.HRManager, UserRole.Admin, UserRole.ITManager]}>
+    <RequireRole roles={[UserRole.HRManager, UserRole.Admin, UserRole.ITManager, UserRole.SalesManager, UserRole.FinanceManager, UserRole.BODAssistant]}>
       <EmployeeProfileReport />
     </RequireRole>
   );

@@ -82,8 +82,8 @@ namespace HRM.Api.Controllers
             // Logic:
             // 1. Admin & HR & Manager can view anyone's balance
             // 2. Employee can ONLY view their own balance
-            
-            bool isPrivilegedUser = roles.Any(r => r == "Admin" || r == "HR Manager" || r == "HR Employee" || r == "IT Manager");
+
+            bool isPrivilegedUser = roles.Any(r => r == "Admin" || r == "HR Manager" || r == "HR Employee");
 
             if (!isPrivilegedUser && employeeId != currentEmployeeId)
             {
