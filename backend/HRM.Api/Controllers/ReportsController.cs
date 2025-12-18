@@ -55,4 +55,11 @@ public class ReportsController : ControllerBase
 
         return File(fileContent, contentType, fileName);
     }
+
+    [HttpGet("departments")] // API URL sẽ là: GET /api/reports/departments
+    public async Task<IActionResult> GetDepartments()
+    {
+        var departments = await _reportService.GetDepartmentListAsync();
+        return Ok(departments);
+    }
 }

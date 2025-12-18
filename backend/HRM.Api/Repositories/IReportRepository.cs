@@ -11,6 +11,8 @@ public interface IReportRepository
     Task<ReportSummaryDto> GetReportSummaryAsync(
         EmployeeReportRequestDto filter, 
         int currentManagerId);
+
+      Task<List<string>> GetDepartmentNamesAsync();
 }
 
 // Repositories/ReportRepository.cs
@@ -43,6 +45,7 @@ public class ReportRepository : IReportRepository
         }
         else if (!string.IsNullOrEmpty(filter.Department))
         {
+            var filterDept = filter.Department.Trim();
             query = query.Where(e => e.Department.DepartmentName == filter.Department);
         }
 
@@ -101,6 +104,7 @@ public class ReportRepository : IReportRepository
         return projectedQuery;
     }
 
+
     public async Task<(List<EmployeeReportItemDto> Items, int TotalCount)> GetEmployeeReportDataAsync(
         EmployeeReportRequestDto filter, int currentManagerId)
     {
@@ -147,5 +151,14 @@ public class ReportRepository : IReportRepository
             OnLeaveCount = data.Count(x => x.Status == "On Leave"),
             TerminatedCount = data.Count(x => x.Status == "Terminated")
         };
+    }
+
+    public async Task<List<string>> GetDepartmentNamesAsync()
+    {
+        // Lấy danh sách tên phòng ban, loại bỏ trùng lặp
+        return await _context.Departments
+                             .Select(d => d.DepartmentName)
+                             .Distinct()
+                             .ToListAsync();
     }
 }
