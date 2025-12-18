@@ -7,7 +7,7 @@ import { User } from "lucide-react";
 
 export default function OrganizationPage() {
   return (
-    <RequireRole roles={[UserRole.HRManager, UserRole.Admin, UserRole.HREmployee,UserRole.ITManager,UserRole.ITEmployee]}>
+    <RequireRole roles={[UserRole.HRManager, UserRole.Admin, UserRole.HREmployee,UserRole.ITManager,UserRole.ITEmployee, UserRole.FinanceManager,UserRole.FinanceEmployee, UserRole.SalesManager,UserRole.SalesEmployee, UserRole.BODAssistant]}>
       <OrganizationStructure />
     </RequireRole>
   );
