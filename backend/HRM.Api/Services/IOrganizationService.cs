@@ -1,4 +1,5 @@
 using HRM.Api.DTOs;
+using HRM.Api.DTOs.Organization;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -9,5 +10,11 @@ namespace HRM.Api.Services
         Task<IEnumerable<DepartmentDto>> GetAllDepartmentsAsync();
         Task<IEnumerable<TeamDto>> GetAllTeamsWithMembersAsync();
         Task<IEnumerable<EmployeeSimpleDto>> GetAllEmployeesAsync();
+
+        // Restored Methods
+        Task<OrganizationStructureDto> GetStructureAsync();
+        Task<(bool Success, string Message, object? Data)> AddDepartmentAsync(CreateDepartmentDto dto);
+        Task<(bool Success, string Message)> DeleteDepartmentAsync(int id);
+        Task<(bool Success, string Message, int? TeamId)> DeleteTeamAsync(int id);
     }
 }

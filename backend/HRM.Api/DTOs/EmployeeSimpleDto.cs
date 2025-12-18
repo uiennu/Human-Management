@@ -5,5 +5,6 @@ namespace HRM.Api.DTOs
         public int EmployeeID { get; set; }
         public string Name { get; set; }
         public string Position { get; set; }
+        public string? Avatar { get; set; }
     }
 }
