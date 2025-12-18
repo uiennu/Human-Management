@@ -1,117 +1,47 @@
-using HRM.Api.DTOs.Organization;
+using HRM.Api.DTOs;
 using HRM.Api.Repositories;
-using HRM.Api.Models;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace HRM.Api.Services
 {
     public class OrganizationService : IOrganizationService
     {
-        private readonly IOrganizationRepository _repo;
+        private readonly IOrganizationRepository _repository;
 
-        public OrganizationService(IOrganizationRepository repo)
+        public OrganizationService(IOrganizationRepository repository)
         {
-            _repo = repo;
+            _repository = repository;
         }
 
-        public Task<OrganizationStructureDto> GetStructureAsync()
+        public async Task<IEnumerable<DepartmentDto>> GetAllDepartmentsAsync()
         {
-            return _repo.GetStructureAsync();
+            return await _repository.GetDepartmentsAsync();
         }
 
-        public async Task<(bool Success, string Message, object? Data)> AddDepartmentAsync(CreateDepartmentDto dto)
+        public async Task<IEnumerable<TeamDto>> GetAllTeamsWithMembersAsync()
         {
-            // 1. Validate
-            if (string.IsNullOrWhiteSpace(dto.Name) || string.IsNullOrWhiteSpace(dto.DepartmentCode))
+            // 1. Lấy tất cả team từ DB
+            var teams = (await _repository.GetTeamsRawAsync()).ToList();
+
+            // 2. Lấy tất cả thành viên của các team
+            var members = await _repository.GetTeamMembersRawAsync();
+
+            // 3. LOGIC GHÉP: Phân chia member vào đúng team của họ
+            foreach (var team in teams)
             {
-                return (false, "Name and Department Code are required.", null);
+                team.Members = members
+                    .Where(m => m.SubTeamID == team.SubTeamID)
+                    .ToList();
             }
 
-            // 2. Check trùng tên
-            if (await _repo.DepartmentNameExistsAsync(dto.Name))
-            {
-                return (false, "Department name already exists.", null);
-            }
-
-            // 3. Check trùng code
-            if (await _repo.DepartmentCodeExistsAsync(dto.DepartmentCode))
-            {
-                return (false, "Department code already exists.", null);
-            }
-
-            // 4. Tạo Entity
-            var newDept = new Department
-            {
-                DepartmentName = dto.Name,
-                DepartmentCode = dto.DepartmentCode,
-                Description = dto.Description ?? "",
-                ManagerID = dto.ManagerId
-            };
-
-            try
-            {
-                var createdDept = await _repo.AddDepartmentAsync(newDept);
-
-                // 5. Trả về kết quả (Đã bỏ isActive)
-                var responseData = new
-                {
-                    id = createdDept.DepartmentID,
-                    name = createdDept.DepartmentName,
-                    departmentCode = createdDept.DepartmentCode,
-                    managerId = createdDept.ManagerID,
-                    description = createdDept.Description
-                };
-
-                return (true, "Department created successfully", responseData);
-            }
-            catch (Exception ex)
-            {
-                return (false, $"Internal Error: {ex.Message}", null);
-            }
+            return teams;
         }
 
-        public async Task<(bool Success, string Message)> DeleteDepartmentAsync(int id)
+        public async Task<IEnumerable<EmployeeSimpleDto>> GetAllEmployeesAsync()
         {
-            var dept = await _repo.GetDepartmentByIdAsync(id);
-            if (dept == null)
-            {
-                return (false, "Department not found."); // Map 404 ở Controller
-            }
-
-            try
-            {
-                await _repo.DeleteDepartmentAsync(dept);
-                return (true, "Department deleted successfully");
-            }
-            catch (Exception ex)
-            {
-                var msg = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
-                return (false, $"Internal Error: {ex.Message}");
-            }
-        }
-
-        public async Task<(bool Success, string Message, int? TeamId)> DeleteTeamAsync(int id)
-        {
-            var team = await _repo.GetSubTeamByIdAsync(id);
-            if (team == null)
-            {
-                return (false, "Team not found.", null);
-            }
-
-            bool hasMembers = await _repo.SubTeamHasMembersAsync(id);
-            if (hasMembers)
-            {
-                return (false, "Conflict: Team currently has members.", null);
-            }
-
-            try
-            {
-                await _repo.DeleteSubTeamAsync(team);
-                return (true, "Team deleted successfully", id);
-            }
-            catch (Exception ex)
-            {
-                return (false, $"Internal Error: {ex.Message}", null);
-            }
+            return await _repository.GetAllEmployeesAsync();
         }
     }
 }

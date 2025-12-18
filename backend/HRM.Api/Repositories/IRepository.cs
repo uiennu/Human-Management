@@ -11,7 +11,9 @@ namespace HRM.Api.Repositories
         Task UpdateAsync(T entity);
         Task DeleteAsync(int id);
         Task SaveAsync();
+      
         AppDbContext GetContext();
+
     }
 
     public class Repository<T> : IRepository<T> where T : class

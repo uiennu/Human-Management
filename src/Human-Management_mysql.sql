@@ -5,10 +5,10 @@ DROP DATABASE IF EXISTS HRM_System;
 CREATE DATABASE IF NOT EXISTS HRM_System;
 USE HRM_System;
 
-
 -- =================================================================
--- SECTION 1: CORE HR & USERS
+-- SECTION 1: CORE HR & USERS (SCHEMA)
 -- =================================================================
+-- (Giữ nguyên cấu trúc bảng như cũ)
 
 CREATE TABLE Roles (
     RoleID INT PRIMARY KEY AUTO_INCREMENT,
@@ -52,11 +52,8 @@ CREATE TABLE Employees (
     CONSTRAINT FK_Employees_Manager FOREIGN KEY (ManagerID) REFERENCES Employees(EmployeeID)
 );
 
-
--- Add the FK for Department Manager
 ALTER TABLE Departments ADD CONSTRAINT FK_Departments_Manager 
     FOREIGN KEY (ManagerID) REFERENCES Employees(EmployeeID);
-
 
 CREATE TABLE EmployeeEmergencyContacts (
     ID INT PRIMARY KEY AUTO_INCREMENT,
@@ -98,61 +95,47 @@ CREATE TABLE SubTeams (
 
     CONSTRAINT FK_SubTeam_Department 
         FOREIGN KEY (DepartmentID) REFERENCES Departments(DepartmentID),
-
     CONSTRAINT FK_SubTeam_Lead 
         FOREIGN KEY (TeamLeadID) REFERENCES Employees(EmployeeID)
 );
-
 
 CREATE TABLE SubTeamMembers (
     ID INT PRIMARY KEY AUTO_INCREMENT,
     SubTeamID INT NOT NULL,
     EmployeeID INT NOT NULL,
     
-    UNIQUE(EmployeeID),
+    UNIQUE(EmployeeID), -- Một nhân viên chỉ thuộc 1 team tại 1 thời điểm
 
     CONSTRAINT FK_SubTeamMembers_SubTeam 
         FOREIGN KEY (SubTeamID) REFERENCES SubTeams(SubTeamID) ON DELETE CASCADE,
-
     CONSTRAINT FK_SubTeamMembers_Employee 
         FOREIGN KEY (EmployeeID) REFERENCES Employees(EmployeeID) ON DELETE CASCADE
 );
 
-
-
 CREATE TABLE OrganizationStructureLogs (
     LogID INT PRIMARY KEY AUTO_INCREMENT,
-
-    ActionType VARCHAR(50) NOT NULL,  -- AddDepartment, EditSubTeam, MoveEmployee...
+    ActionType VARCHAR(50) NOT NULL,  
     Description VARCHAR(1000),
-
-    EmployeeID INT NULL,      -- nhân viên bị ảnh hưởng (nếu có)
-    DepartmentID INT NULL,    -- phòng ban chính bị tác động
-    SubTeamID INT NULL,       -- team bị tác động
-
+    EmployeeID INT NULL,     
+    DepartmentID INT NULL,    
+    SubTeamID INT NULL,       
     OldManagerID INT NULL,
     NewManagerID INT NULL,
-
     OldDepartmentID INT NULL,
     NewDepartmentID INT NULL,
-
     OldSubTeamID INT NULL,
     NewSubTeamID INT NULL,
-
-    PerformedBy INT NOT NULL,     -- HR thực hiện
+    PerformedBy INT NOT NULL,     
     PerformedAt DATETIME NOT NULL DEFAULT NOW(),
-
     CONSTRAINT FK_Log_Employee FOREIGN KEY (EmployeeID) REFERENCES Employees(EmployeeID),
     CONSTRAINT FK_Log_Department FOREIGN KEY (DepartmentID) REFERENCES Departments(DepartmentID),
     CONSTRAINT FK_Log_SubTeam FOREIGN KEY (SubTeamID) REFERENCES SubTeams(SubTeamID),
     CONSTRAINT FK_Log_Performer FOREIGN KEY (PerformedBy) REFERENCES Employees(EmployeeID)
 );
 
-
 -- =================================================================
--- SECTION 2: LEAVE MANAGEMENT
+-- SECTION 2: LEAVE MANAGEMENT (SCHEMA)
 -- =================================================================
-
 CREATE TABLE LeaveTypes (
     LeaveTypeID INT PRIMARY KEY AUTO_INCREMENT,
     Name VARCHAR(100) NOT NULL UNIQUE,
@@ -217,9 +200,8 @@ CREATE TABLE WorkHandovers (
 );
 
 -- =================================================================
--- SECTION 3: ATTENDANCE & TIMESHEET
+-- SECTION 3: ATTENDANCE & TIMESHEET (SCHEMA)
 -- =================================================================
-
 CREATE TABLE AttendanceLogs (
     LogID INT PRIMARY KEY AUTO_INCREMENT,
     EmployeeID INT NOT NULL,
@@ -281,9 +263,8 @@ CREATE TABLE WFHRequests (
 );
 
 -- =================================================================
--- SECTION 4: ENGAGEMENT & CAMPAIGNS
+-- SECTION 4: ENGAGEMENT & CAMPAIGNS (SCHEMA)
 -- =================================================================
-
 CREATE TABLE Campaigns (
     CampaignID INT PRIMARY KEY AUTO_INCREMENT,
     CampaignName VARCHAR(255) NOT NULL,
@@ -332,9 +313,8 @@ CREATE TABLE CampaignResults (
 );
 
 -- =================================================================
--- SECTION 5: REWARDS & POINTS
+-- SECTION 5: REWARDS & POINTS (SCHEMA)
 -- =================================================================
-
 CREATE TABLE PointTransactions (
     TransactionID INT PRIMARY KEY AUTO_INCREMENT,
     EmployeeID INT NOT NULL,
@@ -363,42 +343,35 @@ CREATE TABLE RedemptionRequests (
 
 CREATE TABLE EmployeeEvents (
     EventID BIGINT PRIMARY KEY AUTO_INCREMENT,
-    
-    -- AggregateID: ID của đối tượng bị tác động (ở đây là EmployeeID)
     AggregateID INT NOT NULL, 
-    
-    -- Tên sự kiện: VD: EmployeeCreated, EmailChanged, DepartmentMoved...
     EventType VARCHAR(100) NOT NULL, 
-    
-    -- Dữ liệu chi tiết của sự kiện (Lưu dạng JSON để linh hoạt)
     EventData JSON NOT NULL, 
-    
-    -- Phiên bản của dữ liệu (1, 2, 3...) dùng để sắp xếp timeline và xử lý đụng độ
     Version INT NOT NULL, 
-    
-    -- Metadata: Ai làm, lúc nào
-    CreatedBy INT NULL, -- Người thực hiện (User ID)
+    CreatedBy INT NULL, 
     CreatedAt DATETIME DEFAULT NOW(),
-
-    -- Ràng buộc: Một nhân viên tại 1 version chỉ có 1 sự kiện duy nhất
     UNIQUE KEY UQ_Employee_Version (AggregateID, Version),
-    
-    -- Index để truy vấn lịch sử nhanh hơn
     INDEX IX_AggregateID (AggregateID)
 );
 
 
 -- =================================================================
--- INSERT
+-- INSERT DATA
 -- =================================================================
+
+-- 1. Roles (Giữ cũ, thêm mới cho Sales và Finance)
 INSERT INTO Roles (RoleName) VALUES 
-('IT Employee'), -- 1
-('IT Manager'),  -- 2
+('IT Employee'),      -- 1
+('IT Manager'),       -- 2
 ('HR Manager'),       -- 3
 ('HR Employee'),      -- 4
-('Admin');    -- 5
+('Admin'),            -- 5
+('Sales Manager'),    -- 6 (Mới)
+('Sales Employee'),   -- 7 (Mới)
+('Finance Manager'),  -- 8 (Mới)
+('Finance Employee'), -- 9 (Mới)
+('BOD Assistant');    -- 10 (Mới)
 
--- 2. Departments
+-- 2. Departments (Giữ nguyên)
 INSERT INTO Departments (DepartmentName, DepartmentCode, Description, ManagerID) VALUES 
 ('Board of Directors', 'BOD', 'Top management', NULL),
 ('Human Resources', 'HR', 'People management', NULL),
@@ -407,47 +380,90 @@ INSERT INTO Departments (DepartmentName, DepartmentCode, Description, ManagerID)
 ('Finance', 'FIN', 'Money management', NULL);
 
 -- 3. Employees
--- Logic: Alice (1) quản lý Bob (2) và Charlie (3). 
--- Charlie (3) quản lý David (4). 
--- Bob (2) quản lý Eve (5).
+-- LOGIC CŨ: 1(Alice-BOD), 2(Bob-HR), 3(Charlie-IT), 4(David-IT), 5(Eve-HR)
+-- LOGIC MỚI BỔ SUNG:
+-- ID 6: Frank (Sales Manager) -> Report to Alice
+-- ID 7: Grace (Finance Manager) -> Report to Alice
+-- ID 8: Harry (IT Frontend) -> Report to Charlie (để IT team đủ 2 người trở lên)
+-- ID 9: Ivy (HR C&B) -> Report to Bob (để team C&B đủ người)
+-- ID 10: Jack (HR C&B) -> Report to Bob
+-- ID 11: Liam (Sales Employee) -> Report to Frank
+-- ID 12: Mia (Finance Employee) -> Report to Grace
+-- ID 13: Kevin (BOD Assistant) -> Report to Alice (để BOD có team)
+-- ID 14: Laura (BOD Assistant) -> Report to Alice
+
 INSERT INTO Employees (
     FirstName, LastName, Email, PasswordHash, Phone, Address, HireDate, DepartmentID, IsActive, ManagerID, CurrentPoints, Gender, PersonalEmail, BankAccountNumber, TaxID, AvatarUrl
 ) VALUES
-
+-- --- NHÂN VIÊN CŨ ---
 -- ID 1: Alice (Sếp tổng)
-('Alice', 'Nguyen', 'alice@hrm.com', 'hashed_password_here', '0901000001', 'District 1, HCM', CURDATE(), 1, 1, NULL, 500, 'Female',
- 'alice.personal@gmail.com', '123456789', 'TAX-ALICE', 'https://randomuser.me/api/portraits/women/1.jpg'),
+('Alice', 'Nguyen', 'alice@hrm.com', '$2a$11$jPe9nGpFaZHptsngP.dKGe8z/nStZ8YcPap7HN/D4LhjVvbJ5LFfe', '0901000001', 'District 1, HCM', CURDATE(), 1, 1, NULL, 500, 'Female', 'alice.personal@gmail.com', '123456789', 'TAX-ALICE', 'https://randomuser.me/api/portraits/women/1.jpg'),
 
--- ID 2: Bob (Sếp HR) -> Báo cáo cho Alice (1)
-('Bob', 'Tran', 'bob@hrm.com', 'hashed_password_here', '0901000002', 'District 3, HCM', CURDATE(), 2, 1, 1, 200, 'Male',
- 'bob.personal@gmail.com', '987654321', 'TAX-BOB', 'https://randomuser.me/api/portraits/men/2.jpg'),
+-- ID 2: Bob (Sếp HR)
+('Bob', 'Tran', 'bob@hrm.com', '$2a$11$jPe9nGpFaZHptsngP.dKGe8z/nStZ8YcPap7HN/D4LhjVvbJ5LFfe', '0901000002', 'District 3, HCM', CURDATE(), 2, 1, 1, 200, 'Male', 'bob.personal@gmail.com', '987654321', 'TAX-BOB', 'https://randomuser.me/api/portraits/men/2.jpg'),
 
--- ID 3: Charlie (Sếp IT) -> Báo cáo cho Alice (1)
-('Charlie', 'Le', 'charlie@hrm.com', 'hashed_password_here', '0901000003', 'Thu Duc, HCM', CURDATE(), 3, 1, 1, 300, 'Male',
- 'charlie.personal@gmail.com', '1122334455', 'TAX-CHARLIE', 'https://randomuser.me/api/portraits/men/3.jpg'),
+-- ID 3: Charlie (Sếp IT)
+('Charlie', 'Le', 'charlie@hrm.com', '$2a$11$jPe9nGpFaZHptsngP.dKGe8z/nStZ8YcPap7HN/D4LhjVvbJ5LFfe', '0901000003', 'Thu Duc, HCM', CURDATE(), 3, 1, 1, 300, 'Male', 'charlie.personal@gmail.com', '1122334455', 'TAX-CHARLIE', 'https://randomuser.me/api/portraits/men/3.jpg'),
 
--- ID 4: David (Nhân viên IT) -> Báo cáo cho Charlie (3)
-('David', 'Pham', 'david@hrm.com', 'hashed_password_here', '0901000004', 'Binh Thanh, HCM', CURDATE(), 3, 1, 3, 150, 'Male',
- 'david.personal@gmail.com', '5566778899', 'TAX-DAVID', 'https://randomuser.me/api/portraits/men/4.jpg'),
+-- ID 4: David (Nhân viên IT)
+('David', 'Pham', 'david@hrm.com', '$2a$11$jPe9nGpFaZHptsngP.dKGe8z/nStZ8YcPap7HN/D4LhjVvbJ5LFfe', '0901000004', 'Binh Thanh, HCM', CURDATE(), 3, 1, 3, 150, 'Male', 'david.personal@gmail.com', '5566778899', 'TAX-DAVID', 'https://randomuser.me/api/portraits/men/4.jpg'),
 
--- ID 5: Eve (Nhân viên HR) -> Báo cáo cho Bob (2)
-('Eve', 'Vo', 'eve@hrm.com', 'hashed_password_here', '0901000005', 'District 7, HCM', CURDATE(), 2, 1, 2, 100, 'Female',
- 'eve.personal@gmail.com', '9988776655', 'TAX-EVE', 'https://randomuser.me/api/portraits/women/5.jpg');
+-- ID 5: Eve (Nhân viên HR)
+('Eve', 'Vo', 'eve@hrm.com', '$2a$11$jPe9nGpFaZHptsngP.dKGe8z/nStZ8YcPap7HN/D4LhjVvbJ5LFfe', '0901000005', 'District 7, HCM', CURDATE(), 2, 1, 2, 100, 'Female', 'eve.personal@gmail.com', '9988776655', 'TAX-EVE', 'https://randomuser.me/api/portraits/women/5.jpg'),
 
--- Emergency contacts for each employee
+-- --- NHÂN VIÊN MỚI (Bổ sung để đủ điều kiện Manager cho Dept và đủ người cho Team) ---
+
+-- ID 6: Frank (Sales Manager)
+('Frank', 'Do', 'frank@hrm.com', '$2a$11$jPe9nGpFaZHptsngP.dKGe8z/nStZ8YcPap7HN/D4LhjVvbJ5LFfe', '0901000006', 'District 4, HCM', CURDATE(), 4, 1, 1, 250, 'Male', 'frank.personal@gmail.com', '6655443322', 'TAX-FRANK', 'https://randomuser.me/api/portraits/men/6.jpg'),
+
+-- ID 7: Grace (Finance Manager)
+('Grace', 'Hoang', 'grace@hrm.com', '$2a$11$jPe9nGpFaZHptsngP.dKGe8z/nStZ8YcPap7HN/D4LhjVvbJ5LFfe', '0901000007', 'District 2, HCM', CURDATE(), 5, 1, 1, 250, 'Female', 'grace.personal@gmail.com', '7788990011', 'TAX-GRACE', 'https://randomuser.me/api/portraits/women/7.jpg'),
+
+-- ID 8: Harry (IT Employee - Frontend)
+('Harry', 'Vu', 'harry@hrm.com', '$2a$11$jPe9nGpFaZHptsngP.dKGe8z/nStZ8YcPap7HN/D4LhjVvbJ5LFfe', '0901000008', 'Tan Binh, HCM', CURDATE(), 3, 1, 3, 120, 'Male', 'harry.personal@gmail.com', '2233445566', 'TAX-HARRY', 'https://randomuser.me/api/portraits/men/8.jpg'),
+
+-- ID 9: Ivy (HR Employee - C&B)
+('Ivy', 'Ly', 'ivy@hrm.com', '$2a$11$jPe9nGpFaZHptsngP.dKGe8z/nStZ8YcPap7HN/D4LhjVvbJ5LFfe', '0901000009', 'Go Vap, HCM', CURDATE(), 2, 1, 2, 110, 'Female', 'ivy.personal@gmail.com', '3344556677', 'TAX-IVY', 'https://randomuser.me/api/portraits/women/9.jpg'),
+
+-- ID 10: Jack (HR Employee - C&B)
+('Jack', 'To', 'jack@hrm.com', '$2a$11$jPe9nGpFaZHptsngP.dKGe8z/nStZ8YcPap7HN/D4LhjVvbJ5LFfe', '0901000010', 'Phu Nhuan, HCM', CURDATE(), 2, 1, 2, 110, 'Male', 'jack.personal@gmail.com', '4455667788', 'TAX-JACK', 'https://randomuser.me/api/portraits/men/10.jpg'),
+
+-- ID 11: Liam (Sales Employee)
+('Liam', 'Dang', 'liam@hrm.com', '$2a$11$jPe9nGpFaZHptsngP.dKGe8z/nStZ8YcPap7HN/D4LhjVvbJ5LFfe', '0901000011', 'District 5, HCM', CURDATE(), 4, 1, 6, 130, 'Male', 'liam.personal@gmail.com', '5566778800', 'TAX-LIAM', 'https://randomuser.me/api/portraits/men/11.jpg'),
+
+-- ID 12: Mia (Finance Employee)
+('Mia', 'Cao', 'mia@hrm.com', '$2a$11$jPe9nGpFaZHptsngP.dKGe8z/nStZ8YcPap7HN/D4LhjVvbJ5LFfe', '0901000012', 'District 8, HCM', CURDATE(), 5, 1, 7, 140, 'Female', 'mia.personal@gmail.com', '6677889911', 'TAX-MIA', 'https://randomuser.me/api/portraits/women/12.jpg'),
+
+-- ID 13: Kevin (BOD Assistant)
+('Kevin', 'Truong', 'kevin@hrm.com', '$2a$11$jPe9nGpFaZHptsngP.dKGe8z/nStZ8YcPap7HN/D4LhjVvbJ5LFfe', '0901000013', 'District 1, HCM', CURDATE(), 1, 1, 1, 180, 'Male', 'kevin.personal@gmail.com', '8899001122', 'TAX-KEVIN', 'https://randomuser.me/api/portraits/men/13.jpg'),
+
+-- ID 14: Laura (BOD Assistant)
+('Laura', 'Bui', 'laura@hrm.com', '$2a$11$jPe9nGpFaZHptsngP.dKGe8z/nStZ8YcPap7HN/D4LhjVvbJ5LFfe', '0901000014', 'District 3, HCM', CURDATE(), 1, 1, 1, 180, 'Female', 'laura.personal@gmail.com', '9900112233', 'TAX-LAURA', 'https://randomuser.me/api/portraits/women/14.jpg');
+
+
+-- Emergency contacts
 INSERT INTO EmployeeEmergencyContacts (EmployeeID, Name, Relation, Phone) VALUES
 (1, 'Bob Nguyen', 'Husband', '0901111111'),
 (2, 'Linda Tran', 'Wife', '0901222222'),
 (3, 'Anna Le', 'Wife', '0901333333'),
 (4, 'Mary Pham', 'Mother', '0901444444'),
-(5, 'Tom Vo', 'Father', '0901555555');
+(5, 'Tom Vo', 'Father', '0901555555'),
+(6, 'Sarah Do', 'Wife', '0901666666'),
+(7, 'Paul Hoang', 'Husband', '0901777777'),
+(8, 'Mom Vu', 'Mother', '0901888888'),
+(9, 'Dad Ly', 'Father', '0901999999'),
+(10, 'Sis To', 'Sister', '0901000000'),
+(11, 'Bro Dang', 'Brother', '0901121212'),
+(12, 'Mom Cao', 'Mother', '0901232323'),
+(13, 'Wife Truong', 'Wife', '0901343434'),
+(14, 'Husband Bui', 'Husband', '0901454545');
 
-
-
--- Update lại Manager cho Department
-UPDATE Departments SET ManagerID = 1 WHERE DepartmentID = 1;
-UPDATE Departments SET ManagerID = 2 WHERE DepartmentID = 2;
-UPDATE Departments SET ManagerID = 3 WHERE DepartmentID = 3;
+-- Update lại Manager cho Department (Đảm bảo mỗi phòng ban đều có Manager)
+UPDATE Departments SET ManagerID = 1 WHERE DepartmentID = 1; -- BOD: Alice
+UPDATE Departments SET ManagerID = 2 WHERE DepartmentID = 2; -- HR: Bob
+UPDATE Departments SET ManagerID = 3 WHERE DepartmentID = 3; -- IT: Charlie
+UPDATE Departments SET ManagerID = 6 WHERE DepartmentID = 4; -- Sales: Frank (Mới)
+UPDATE Departments SET ManagerID = 7 WHERE DepartmentID = 5; -- Finance: Grace (Mới)
 
 -- 4. EmployeeRoles
 INSERT INTO EmployeeRoles (EmployeeID, RoleID) VALUES 
@@ -455,21 +471,27 @@ INSERT INTO EmployeeRoles (EmployeeID, RoleID) VALUES
 (2, 3), -- Bob: HR Manager
 (3, 2), -- Charlie: IT Manager
 (4, 1), -- David: IT Employee
-(5, 4); -- Eve: HR Employee
+(5, 4), -- Eve: HR Employee
+(6, 6), -- Frank: Sales Manager
+(7, 8), -- Grace: Finance Manager
+(8, 1), -- Harry: IT Employee
+(9, 4), -- Ivy: HR Employee
+(10, 4), -- Jack: HR Employee
+(11, 7), -- Liam: Sales Employee
+(12, 9), -- Mia: Finance Employee
+(13, 10), -- Kevin: BOD Assistant
+(14, 10); -- Laura: BOD Assistant
 
--- 5. EmployeeProfileChanges
+-- 5. EmployeeProfileChanges (Giữ nguyên mẫu cũ)
 INSERT INTO EmployeeProfileChanges (EmployeeID, FieldName, OldValue, NewValue, Status, ApproverID) VALUES 
-(4, 'Address', 'Old Addr', 'New Addr Binh Thanh', 'Approved', 3), -- David đổi, Charlie duyệt
+(4, 'Address', 'Old Addr', 'New Addr Binh Thanh', 'Approved', 3), 
 (5, 'Phone', '0901000005', '0999999999', 'Pending', NULL),
-(3, 'EmergencyContact', 'None', 'Wife', 'Approved', 1), -- Charlie đổi, Alice duyệt
+(3, 'EmergencyContact', 'None', 'Wife', 'Approved', 1),
 (2, 'TaxID', NULL, 'TAX-12345', 'Rejected', 1),
 (4, 'BankAccount', '0001', '0002', 'Pending', NULL);
 
-
-
-
 -- =================================================================
--- 3. INSERT LEAVE MANAGEMENT DATA (Logic ManagerID chặt chẽ)
+-- 3. INSERT LEAVE MANAGEMENT DATA
 -- =================================================================
 
 -- 6. LeaveTypes
@@ -480,7 +502,7 @@ INSERT INTO LeaveTypes (Name, Description, DefaultQuota, Applicability) VALUES
 ('Maternity Leave', 'For mothers', 180, 'Female'),
 ('Remote Work', 'Work from home quota', 5, 'Office Staff');
 
--- 7. EmployeeLeaveBalances
+-- 7. EmployeeLeaveBalances (Tự động tính cho TẤT CẢ nhân viên, kể cả người mới)
 INSERT INTO EmployeeLeaveBalances (EmployeeID, LeaveTypeID, BalanceDays)
 SELECT 
     e.EmployeeID,
@@ -494,51 +516,30 @@ WHERE NOT EXISTS (
     WHERE elb.EmployeeID = e.EmployeeID
       AND elb.LeaveTypeID = lt.LeaveTypeID
 )
--- Chỉ thêm Maternity Leave cho nhân viên nữ
 AND (lt.Name != 'Maternity Leave' OR e.Gender = 'Female');
 
--- 8. LeaveRequests 
--- LƯU Ý: Cột ManagerID ở đây phải khớp với ManagerID trong bảng Employees
+-- 8. LeaveRequests (Giữ dữ liệu cũ làm mẫu)
 INSERT INTO LeaveRequests (EmployeeID, ManagerID, LeaveTypeID, StartDate, EndDate, TotalDays, Reason, Status, RequestedDate) VALUES 
--- Req 1: David (ID 4) xin nghỉ -> Manager là Charlie (ID 3)
 (4, 3, 1, DATE_ADD(CURDATE(), INTERVAL 5 DAY), DATE_ADD(CURDATE(), INTERVAL 6 DAY), 2.0, 'Holiday', 'Pending', NOW()),
-
--- Req 2: Eve (ID 5) xin nghỉ -> Manager là Bob (ID 2)
 (5, 2, 2, DATE_SUB(CURDATE(), INTERVAL 2 DAY), DATE_SUB(CURDATE(), INTERVAL 1 DAY), 2.0, 'Sick', 'Approved', DATE_SUB(NOW(), INTERVAL 3 DAY)),
-
--- Req 3: Charlie (ID 3) xin nghỉ -> Manager là Alice (ID 1)
 (3, 1, 1, DATE_ADD(CURDATE(), INTERVAL 20 DAY), DATE_ADD(CURDATE(), INTERVAL 25 DAY), 5.0, 'Travel', 'Pending', NOW()),
-
--- Req 4: Bob (ID 2) xin nghỉ -> Manager là Alice (ID 1)
 (2, 1, 3, DATE_ADD(CURDATE(), INTERVAL 1 DAY), DATE_ADD(CURDATE(), INTERVAL 1 DAY), 1.0, 'Personal', 'Approved', DATE_SUB(NOW(), INTERVAL 2 DAY)),
-
--- Req 5: David (ID 4) xin nghỉ -> Manager là Charlie (ID 3)
 (4, 3, 2, DATE_SUB(CURDATE(), INTERVAL 10 DAY), DATE_SUB(CURDATE(), INTERVAL 10 DAY), 1.0, 'Headache', 'Rejected', DATE_SUB(NOW(), INTERVAL 12 DAY));
 
 -- 9. LeaveRequestHistory
--- LOGIC: ChangedByEmployeeID với status 'Approved'/'Rejected' PHẢI LÀ ManagerID tương ứng ở trên.
 INSERT INTO LeaveRequestHistory (LeaveRequestID, Status, Notes, ChangedByEmployeeID, SummitedDate, ChangeDate) VALUES 
--- 1. David (ID 4) vừa nộp -> ChangedBy là David (4)
 (1, 'Pending', 'Submitted', 4, NOW(), NULL),
-
--- 2. Eve (ID 5) đã duyệt -> ChangedBy là Bob (2)
 (2, 'Approved', 'Ok get well', 2, DATE_SUB(NOW(), INTERVAL 3 DAY), DATE_SUB(NOW(), INTERVAL 1 DAY)),
-
--- 3. Charlie (ID 3) vừa nộp -> ChangedBy là Charlie (3)
 (3, 'Pending', 'Submitted', 3, NOW(), NULL),
-
--- 4. Bob (ID 2) đã duyệt -> ChangedBy là Alice (1)
 (4, 'Approved', 'Approved by Director', 1, DATE_SUB(NOW(), INTERVAL 2 DAY), DATE_SUB(NOW(), INTERVAL 1 HOUR)),
-
--- 5. David (ID 4) bị từ chối -> ChangedBy là Charlie (3)
 (5, 'Rejected', 'Not enough info', 3, DATE_SUB(NOW(), INTERVAL 12 DAY), DATE_SUB(NOW(), INTERVAL 10 DAY));
 
 -- 10. WorkHandovers
 INSERT INTO WorkHandovers (LeaveRequestID, AssigneeEmployeeID, ManagerID, HandoverNotes) VALUES 
-(1, 3, 3, 'Code review tasks'), -- David giao lại cho Charlie
-(2, 2, 2, 'Email monitoring'),  -- Eve giao lại cho Bob
-(3, 4, 1, 'Server maintenance'),  -- Charlie giao lại cho David
-(4, 5, 1, 'Meeting notes'),       -- Bob giao lại cho Eve
+(1, 3, 3, 'Code review tasks'),
+(2, 2, 2, 'Email monitoring'), 
+(3, 4, 1, 'Server maintenance'), 
+(4, 5, 1, 'Meeting notes'),       
 (5, 3, 3, 'Pending tasks');
 
 -- =================================================================
@@ -553,17 +554,17 @@ INSERT INTO AttendanceLogs (EmployeeID, LogTime, LogType, Location) VALUES
 (3, CONCAT(CURDATE(), ' 07:55:00'), 'CheckIn', 'Office'),
 (2, CONCAT(CURDATE(), ' 08:05:00'), 'CheckIn', 'Office');
 
--- 12. TimesheetUpdateRequests (ApproverID là Manager tương ứng)
+-- 12. TimesheetUpdateRequests
 INSERT INTO TimesheetUpdateRequests (EmployeeID, WorkDate, OldCheckInTime, NewCheckInTime, Reason, Status, ApproverID) VALUES 
-(4, DATE_SUB(CURDATE(), INTERVAL 1 DAY), NULL, '08:00:00', 'Forgot card', 'Approved', 3), -- Charlie duyệt
+(4, DATE_SUB(CURDATE(), INTERVAL 1 DAY), NULL, '08:00:00', 'Forgot card', 'Approved', 3),
 (5, DATE_SUB(CURDATE(), INTERVAL 1 DAY), '09:00:00', '08:00:00', 'Traffic', 'Pending', NULL),
-(3, DATE_SUB(CURDATE(), INTERVAL 2 DAY), NULL, '17:00:00', 'Forgot out', 'Approved', 1), -- Alice duyệt
-(2, DATE_SUB(CURDATE(), INTERVAL 3 DAY), NULL, '08:00:00', 'System error', 'Rejected', 1), -- Alice từ chối
+(3, DATE_SUB(CURDATE(), INTERVAL 2 DAY), NULL, '17:00:00', 'Forgot out', 'Approved', 1),
+(2, DATE_SUB(CURDATE(), INTERVAL 3 DAY), NULL, '08:00:00', 'System error', 'Rejected', 1),
 (4, DATE_SUB(CURDATE(), INTERVAL 5 DAY), '08:30:00', '08:00:00', 'Late entry', 'Pending', NULL);
 
 -- 13. AttendanceCorrectionRequests
 INSERT INTO AttendanceCorrectionRequests (EmployeeID, WorkDate, RequestType, RequestedTime, Reason, Status, ApproverID) VALUES 
-(4, CURDATE(), 'LateIn', '08:30:00', 'Rain', 'Approved', 3), -- Charlie duyệt
+(4, CURDATE(), 'LateIn', '08:30:00', 'Rain', 'Approved', 3),
 (5, CURDATE(), 'EarlyOut', '16:00:00', 'Doctor', 'Pending', NULL),
 (3, CURDATE(), 'MissingIn', '08:00:00', 'Forgot', 'Approved', 1),
 (2, CURDATE(), 'MissingOut', '17:00:00', 'Meeting', 'Rejected', 1),
@@ -613,15 +614,7 @@ INSERT INTO RedemptionRequests (EmployeeID, PointsToRedeem, CashValue, Conversio
 (2, 20, 20, 1.0, 'Rejected'),
 (4, 5, 5, 1.0, 'Processing');
 
--- 21 Update PasswordHash
-SET SQL_SAFE_UPDATES = 0;
-UPDATE Employees 
-SET PasswordHash = '$2a$11$jPe9nGpFaZHptsngP.dKGe8z/nStZ8YcPap7HN/D4LhjVvbJ5LFfe';
-SET SQL_SAFE_UPDATES = 1;
-
-
--- 21. EmployeeEvents
-
+-- 21. EmployeeEvents (Tự động lấy tất cả Employee mới và cũ)
 INSERT INTO EmployeeEvents (AggregateID, EventType, EventData, Version, CreatedBy, CreatedAt)
 SELECT
     e.EmployeeID,
@@ -656,3 +649,70 @@ SELECT
 FROM Employees e
 LEFT JOIN Departments d ON e.DepartmentID = d.DepartmentID
 LEFT JOIN Employees m ON e.ManagerID = m.EmployeeID;
+
+-- ==============================================
+-- 5. TẠO CÁC SUBTEAMS (Đảm bảo mỗi Department có ít nhất 1 team)
+-- ==============================================
+INSERT INTO SubTeams (TeamName, Description, DepartmentID, TeamLeadID) VALUES
+-- IT (2 Teams cũ)
+('Backend Core', 'Responsible for API, Database', 3, 3),   -- Lead: Charlie
+('Frontend UI', 'Responsible for Interface', 3, 1),        -- Lead: Alice (Dữ liệu cũ)
+
+-- HR (2 Teams cũ)
+('Talent Acquisition', 'Recruiting', 2, 2),                -- Lead: Bob
+('C&B Team', 'Compensation and Benefits', 2, 2),           -- Lead: Bob
+
+-- Sales (1 Team Mới)
+('Sales Force', 'Direct Sales Team', 4, 6),                -- Lead: Frank
+
+-- Finance (1 Team Mới)
+('Finance Audit', 'Internal Audit & Report', 5, 7),        -- Lead: Grace
+
+-- BOD (1 Team Mới)
+('Strategic Board', 'Company Strategy Planning', 1, 1);    -- Lead: Alice
+
+-- ==============================================
+-- 6. THÊM THÀNH VIÊN VÀO SUBTEAMS (Đảm bảo mỗi team >= 2 người)
+-- ==============================================
+INSERT INTO SubTeamMembers (SubTeamID, EmployeeID) VALUES
+-- 1. Backend Core (IT): Charlie (3), David (4) => 2 người
+(1, 3), 
+(1, 4), 
+
+-- 2. Frontend UI (IT): Alice (1), Harry (8-Mới) => 2 người
+(2, 1), 
+(2, 8),
+
+-- 3. Talent Acquisition (HR): Bob (2), Eve (5) => 2 người
+(3, 2), 
+(3, 5),
+
+-- 4. C&B Team (HR): Ivy (9-Mới), Jack (10-Mới) => 2 người
+(4, 9), 
+(4, 10),
+
+-- 5. Sales Force (Sales): Frank (6-Mới), Liam (11-Mới) => 2 người
+(5, 6),
+(5, 11),
+
+-- 6. Finance Audit (Finance): Grace (7-Mới), Mia (12-Mới) => 2 người
+(6, 7),
+(6, 12),
+
+-- 7. Strategic Board (BOD): Kevin (13-Mới), Laura (14-Mới) => 2 người
+(7, 13),
+(7, 14);
+
+-- ==============================================
+-- 7. LOG HOẠT ĐỘNG ORGANIZATION
+-- ==============================================
+INSERT INTO OrganizationStructureLogs (ActionType, Description, SubTeamID, DepartmentID, PerformedBy, PerformedAt) VALUES
+('CreateSubTeam', 'Created Backend Core team for IT', 1, 3, 1, NOW()),
+('CreateSubTeam', 'Created Frontend UI team for IT', 2, 3, 1, NOW()),
+('CreateSubTeam', 'Created Talent Acquisition team for HR', 3, 2, 1, NOW()),
+('CreateSubTeam', 'Created C&B team for HR', 4, 2, 1, NOW()),
+('CreateSubTeam', 'Created Sales Force team', 5, 4, 1, NOW()),
+('CreateSubTeam', 'Created Finance Audit team', 6, 5, 1, NOW()),
+('CreateSubTeam', 'Created Strategic Board team', 7, 1, 1, NOW()),
+
+('AddMemberToTeam', 'Initial setup for teams', 1, 3, 1, NOW());

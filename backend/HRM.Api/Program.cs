@@ -28,8 +28,8 @@ builder.Services.AddAuthentication("Bearer")
 // Add Authorization Policies
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("EmployeeOnly", policy => policy.RequireRole("IT Employee", "IT Manager", "HR Manager", "HR Employee", "Admin"));
-    options.AddPolicy("ManagerOnly", policy => policy.RequireRole("IT Manager", "HR Manager", "Admin"));
+    options.AddPolicy("EmployeeOnly", policy => policy.RequireRole("IT Employee", "IT Manager", "HR Manager", "HR Employee", "Admin", "Sales Manager", "Sales Employee", "Finance Manager", "Finance Employee", "BOD Assistant"));
+    options.AddPolicy("ManagerOnly", policy => policy.RequireRole("IT Manager", "HR Manager", "Admin", "Sales Manager", "Finance Manager", "BOD Assistant"));
     options.AddPolicy("HROnly", policy => policy.RequireRole("HR Manager", "HR Employee", "Admin"));
     options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
     options.AddPolicy("CBOnly", policy => policy.RequireRole("HR Employee", "Admin"));
@@ -40,8 +40,16 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseMySql(builder.Configuration.GetConnectionString("DefaultConnection"), 
-    ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("DefaultConnection"))));
+{
+    // 1. Cấu hình kết nối MySQL
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
+
+    // 2. Cấu hình Log (PHẢI NẰM TRONG CẶP NGOẶC NHỌN NÀY)
+    options.LogTo(Console.WriteLine, Microsoft.Extensions.Logging.LogLevel.Information);
+    options.EnableSensitiveDataLogging(); // Thêm dòng này để xem tham số SQL
+});
+    
 
 // Register Repositories
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
@@ -89,7 +97,10 @@ builder.Services.AddScoped<IOrganizationRepository, OrganizationRepository>();
 builder.Services.AddScoped<IOrganizationService, OrganizationService>();
 
 builder.Services.AddScoped<ITeamRepository, TeamRepository>(); 
-builder.Services.AddScoped<ITeamService, TeamService>();       
+builder.Services.AddScoped<ITeamService, TeamService>();
+
+builder.Services.AddScoped<IReportRepository, ReportRepository>();
+builder.Services.AddScoped<IReportService, ReportService>();
 
 var app = builder.Build();
 

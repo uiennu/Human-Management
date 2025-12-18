@@ -41,6 +41,21 @@ namespace HRM.Api.Data
                 // Báo cho EF biết cột này là kiểu json trong MySQL
                 entity.Property(e => e.EventData).HasColumnType("json"); 
             });
+
+            modelBuilder.Entity<Employee>()
+                .HasOne(e => e.Department)         // Nhân viên có 1 phòng ban
+                .WithMany()                        // Phòng ban có nhiều nhân viên (nếu trong Dept có List<Employee> thì điền vào, ko thì để trống)
+                .HasForeignKey(e => e.DepartmentID) // QUAN TRỌNG NHẤT: Phải dùng cột này!
+                .OnDelete(DeleteBehavior.SetNull); // Hoặc Restrict tuỳ bạn
+
+    // 2. (Tuỳ chọn) Định nghĩa rõ mối quan hệ Manager để tránh nhầm lẫn
+    // Nếu trong class Employee bạn KHÔNG có thuộc tính "ManagedDepartment" thì không cần dòng này cũng được, 
+    // nhưng nên thêm để EF không tự suy diễn lung tung.
+            modelBuilder.Entity<Department>()
+                .HasOne(d => d.Manager)
+                .WithMany() 
+                .HasForeignKey(d => d.ManagerID)
+                .OnDelete(DeleteBehavior.SetNull);
         }
     }
 }

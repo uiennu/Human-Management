@@ -61,19 +61,32 @@ export function AppSidebar() {
   // Check if user has HR or Admin role
   const isHROrAdmin = hasAnyRole([UserRole.HRManager, UserRole.Admin, UserRole.HREmployee]);
   const isAdmin = hasAnyRole([UserRole.Admin]);
-
+  const isManager = hasAnyRole([UserRole.ITManager, UserRole.SalesManager, UserRole.FinanceManager, UserRole.BODAssistant]);
   // Build navigation based on actual user roles
-  const navigation = isHROrAdmin
-    ? [
-      ...baseNavigation.slice(0, 1),
+  let navigation = baseNavigation; // Mặc định là menu cơ bản
+
+  if (isHROrAdmin) {
+    // Nếu là HR/Admin: Hiện full menu (bao gồm Reports, Team Mgmt, Register...)
+    navigation = [
+      ...baseNavigation.slice(0, 1), // Dashboard
       { name: "Reports", href: "/reports", icon: FileText },
-      ...baseNavigation.slice(1, 3),
+      ...baseNavigation.slice(1, 3), // Leave, Org
       { name: "Team Management", href: "/organization/teams", icon: Users },
       { name: "Register Employee", href: "/organization/employees/register", icon: UserPlus },
       ...(isAdmin ? [{ name: "Registration History", href: "/organization/employees/registration-history", icon: History }] : []),
-      ...baseNavigation.slice(3)
-    ]
-    : baseNavigation;
+      ...baseNavigation.slice(3) // Timesheet, Checkin...
+    ];
+  } else if (isManager) {
+    // Nếu KHÔNG phải HR, nhưng là Manager: Hiện menu Manager (thêm Reports)
+    navigation = [
+      ...baseNavigation.slice(0, 1), // Dashboard
+      { name: "Reports", href: "/reports", icon: FileText },
+      ...baseNavigation.slice(1, 3), // Leave, Org
+      ...baseNavigation.slice(3) // Timesheet, Checkin...
+    ];
+  }
+
+    
 
   return (
     <div className="flex h-full w-64 flex-col bg-slate-900 text-slate-100">

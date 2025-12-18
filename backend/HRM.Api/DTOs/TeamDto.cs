@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Collections.Generic;
 
 namespace HRM.Api.DTOs
 {
@@ -49,8 +50,23 @@ namespace HRM.Api.DTOs
         public List<TeamMemberDto> Members { get; set; } = new List<TeamMemberDto>();
     }
 
+    public class TeamDto
+    {
+        public int SubTeamID { get; set; }
+        public string TeamName { get; set; }
+        public string Description { get; set; }
+        public int DepartmentID { get; set; }
+        
+        public int? TeamLeadID { get; set; }
+        public string TeamLeadName { get; set; }
+        
+        // Service sẽ tự ghép danh sách này vào
+        public List<TeamMemberDto> Members { get; set; } = new List<TeamMemberDto>();
+    }
+
     public class TeamMemberDto
     {
+        public int SubTeamID { get; set; }
         public int EmployeeID { get; set; }
         public string FirstName { get; set; } = "";
         public string LastName { get; set; } = "";
@@ -58,5 +74,7 @@ namespace HRM.Api.DTOs
         public string? Phone { get; set; }
         public int? DepartmentID { get; set; }
         public string? DepartmentName { get; set; }
+        public string Position { get; set; }
+        public string AvatarUrl { get; set; }
     }
 }

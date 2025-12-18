@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Plus, Edit2, Trash2, Users, Eye, X, ChevronDown, ChevronUp } from "lucide-react"
+import { Plus, Edit2, Trash2, Users, Eye, X, ChevronDown, ChevronUp, User } from "lucide-react" // Đã thêm icon User
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 
@@ -106,13 +106,36 @@ const DepartmentCard = ({
       <div className="w-72 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
         <div className="p-4">
           <div className="flex justify-between items-start mb-2">
-            <div>
-              <h3 className="font-bold text-gray-900 text-base">{dept.name}</h3>
-              <p className="text-sm text-gray-500">{dept.description}: {dept.manager}</p>
+            
+            {/* --- PHẦN SỬA GIAO DIỆN HIỂN THỊ THÔNG TIN --- */}
+            <div className="flex flex-col gap-1.5 flex-1 mr-2">
+              {/* Tên phòng ban */}
+              <h3 className="font-bold text-gray-900 text-base leading-tight">{dept.name}</h3>
+              
+              {/* Người quản lý (Hiển thị đẹp hơn) */}
+              {dept.manager && dept.manager !== "Chưa có quản lý" && dept.manager !== "Manager" && (
+                <div className="flex items-center gap-1.5">
+                   <div className="bg-blue-50 p-1 rounded-full">
+                      <User className="h-3 w-3 text-blue-600" />
+                   </div>
+                   <span className="text-sm font-medium text-gray-700">{dept.manager}</span>
+                   <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full border border-blue-100">
+                     Lead
+                   </span>
+                </div>
+              )}
+
+              {/* Mô tả (Chữ nhạt, nhỏ hơn) */}
+              {dept.description && (
+                <p className="text-xs text-gray-400 line-clamp-2 mt-0.5" title={dept.description}>
+                  {dept.description}
+                </p>
+              )}
             </div>
+            {/* --- HẾT PHẦN SỬA --- */}
 
             {!isRoot && (
-              <div className="flex gap-1">
+              <div className="flex gap-1 shrink-0">
                 <button
                   onClick={() => onEditClick(dept, level)}
                   className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
@@ -133,7 +156,7 @@ const DepartmentCard = ({
 
           {/* TOGGLE BUTTON (SHOW) */}
           {!isRoot && dept.employees.length > 0 && !isEmployeesOpen && (
-            <div className="mt-2">
+            <div className="mt-3 pt-2 border-t border-gray-50">
               <button
                 onClick={() => setIsEmployeesOpen(true)}
                 className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-900 transition-colors focus:outline-none"
@@ -351,16 +374,17 @@ export function OrganizationStructure() {
       }
 
       // 2. Map Departments to Nodes (Level 1)
-      const deptNodes: Department[] = deptData.map(d => ({
-        id: `dept-${d.departmentID}`,
-        name: d.departmentName,
-        code: d.departmentCode,
-        manager: "Manager", // API doesn't return manager yet, placeholder
-        managerId: "",
-        description: "Department",
-        employees: [], // Will populate later from Unassigned/Direct employees
-        subdepartments: [],
-      }))
+      const deptNodes: Department[] = deptData.map((d: any) => ({
+      id: `dept-${d.departmentID}`,
+      name: d.departmentName,
+      code: d.departmentCode,
+      // SỬA: Lấy trường managerName từ API trả về (khớp với DTO trong C#)
+      manager: d.managerName || "Chưa có quản lý", 
+      managerId: "", // DTO hiện tại chưa trả về ID quản lý, tạm để trống
+      description: "Department Manager",
+      employees: [],
+      subdepartments: [],
+    }))
 
       // 3. Map Teams to Nodes (Level 2) and attach to Departments
       console.log("DEBUG: teamData from API:", teamData)

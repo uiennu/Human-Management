@@ -12,6 +12,7 @@ namespace HRM.Api.DTOs
         public int DepartmentID { get; set; }
         public string DepartmentName { get; set; } = string.Empty;
         public string? DepartmentCode { get; set; }
+        public string ManagerName { get; set; }
     }
 
     public class ManagerDto
@@ -22,4 +23,5 @@ namespace HRM.Api.DTOs
         public string Email { get; set; } = string.Empty;
         public int? DepartmentID { get; set; }
     }
+
 }
