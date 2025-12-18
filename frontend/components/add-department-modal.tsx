@@ -14,31 +14,28 @@ import { toast } from "sonner"
 interface AddDepartmentModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSubmit: () => void // Changed to void as we handle API internally
-  parentId?: string | null // If present, we are adding a Team under this Department
+  onSubmit: () => void
+  parentId?: string | null // Nếu có parentId => Đang tạo Team (Sub-department)
   parentName?: string
 }
 
 export function AddDepartmentModal({ open, onOpenChange, onSubmit, parentId, parentName }: AddDepartmentModalProps) {
+  // Xác định xem đang tạo Team hay tạo Department
   const isTeam = !!parentId
 
   // 1. State lưu dữ liệu form
   const [formData, setFormData] = useState({
     name: "",
-    code: "", // Teams might not strictly need code in UI but DB might not enforce it? DTO has Name, Desc, TeamLead.
+    code: "",
     description: "",
-    managerId: "", // This will be Team Lead ID
+    managerId: "",
   })
 
   const [loading, setLoading] = useState(false)
   const [managers, setManagers] = useState<{ id: number; name: string }[]>([])
+  const [errors, setErrors] = useState({ name: "" })
 
-  // 2. State lưu lỗi
-  const [errors, setErrors] = useState({
-    name: "",
-  })
-
-  // Fetch potential managers/team leads
+  // 2. Fetch danh sách nhân viên khi mở Modal
   useEffect(() => {
     if (open) {
       // Reset form
@@ -49,100 +46,105 @@ export function AddDepartmentModal({ open, onOpenChange, onSubmit, parentId, par
         try {
           const employees = await organizationService.getAllEmployees()
 
+          // Debug: In ra xem thực sự API trả về cái gì
+          console.log("API Employees Response:", employees);
+
           let eligibleManagers = employees
 
-          // Nếu đang thêm Team vào Department, lọc nhân viên thuộc Department đó
-          if (isTeam && parentId && parentName) {
+          // Nếu đang tạo Team, chỉ lấy nhân viên thuộc phòng ban cha
+          if (isTeam && parentName) {
             eligibleManagers = employees.filter(e => e.departmentName === parentName)
+            if (eligibleManagers.length === 0) eligibleManagers = employees;
           }
 
-          // --- SỬA Ở ĐÂY: Lọc trùng lặp ID trước khi map ---
-          // Dùng Map để đảm bảo mỗi employeeID chỉ xuất hiện 1 lần
-          const uniqueManagers = Array.from(
-            new Map(eligibleManagers.map(item => [item.employeeID, item])).values()
-          );
+          const uniqueMap = new Map();
 
-          setManagers(uniqueManagers.map(e => ({
-            id: e.employeeID,
-            name: `${e.firstName} ${e.lastName}`
-          })))
+          eligibleManagers.forEach((e: any) => {
+            const id = e.employeeID || e.EmployeeID;
+
+            // --- LOGIC LẤY TÊN MỚI (QUAN TRỌNG) ---
+            // 1. Thử lấy Name (do Dapper trả về)
+            // 2. Nếu không có, thử ghép FirstName + LastName (do EF Core trả về)
+            let fullName = e.Name || e.name;
+
+            if (!fullName) {
+              const fName = e.firstName || e.FirstName || '';
+              const lName = e.lastName || e.LastName || '';
+              fullName = `${fName} ${lName}`.trim();
+            }
+            // ---------------------------------------
+
+            if (id && !uniqueMap.has(id)) {
+              uniqueMap.set(id, { id, name: fullName || `Employee #${id}` });
+            }
+          });
+
+          setManagers(Array.from(uniqueMap.values()));
 
         } catch (error) {
           console.error("Failed to fetch employees", error)
+          toast.error("Failed to load employees list")
         }
       }
       fetchEmployees()
     }
-  }, [open, isTeam, parentId, parentName])
+  }, [open, isTeam, parentName])
 
-  // 3. Hàm kiểm tra hợp lệ
+  // 3. Validate
   const validateForm = () => {
-    let isValid = true
-    const newErrors = { name: "" }
-
     if (!formData.name.trim()) {
-      newErrors.name = isTeam ? "Team Name is required" : "Department Name is required"
-      isValid = false
+      setErrors({ name: isTeam ? "Team Name is required" : "Department Name is required" })
+      return false
     }
-
-    setErrors(newErrors)
-    return isValid
+    return true
   }
 
+  // 4. Submit Form
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // 1. Validate các trường chung (như Name)
-    if (validateForm()) {
-      try {
-        setLoading(true)
+    if (!validateForm()) return
 
-        // TRƯỜNG HỢP 1: TẠO TEAM (SUB-DEPARTMENT)
-        if (isTeam && parentId) {
-          const deptId = parseInt(parentId.replace("dept-", ""))
+    try {
+      setLoading(true)
 
-          if (isNaN(deptId)) {
-            toast.error("Invalid Department ID for creating a team.")
-            return // Thoát hàm, finally sẽ chạy để tắt loading
-          }
+      // --- TRƯỜNG HỢP 1: TẠO TEAM (Tạm thời tắt để bạn của bạn làm) ---
+      if (isTeam && parentId) {
+        // const deptId = parseInt(parentId.replace("dept-", ""))
+        // await organizationService.createTeam(...)
 
-          await organizationService.createTeam(deptId, {
-            teamName: formData.name,
-            description: formData.description,
-            teamLeadId: formData.managerId ? parseInt(formData.managerId) : null
-          })
+        toast.info("Add Team feature is currently handled by another member.")
+        // return; // Uncomment dòng này nếu muốn chặn luôn không cho đóng modal
+      }
 
-          toast.success("Team created successfully")
-        }
-        // TRƯỜNG HỢP 2: TẠO DEPARTMENT (PHÒNG BAN CẤP CAO)
-        else {
-          // Validate riêng cho Department: Bắt buộc phải có Code
-          if (!formData.code.trim()) {
-            toast.error("Department Code is required")
-            return // Thoát hàm, finally sẽ chạy để tắt loading
-          }
-
-          await organizationService.createDepartment({
-            name: formData.name,
-            departmentCode: formData.code,
-            description: formData.description,
-            managerId: formData.managerId ? parseInt(formData.managerId) : null
-          })
-
-          toast.success("Department created successfully")
+      // --- TRƯỜNG HỢP 2: TẠO DEPARTMENT (Phòng ban cấp cao) ---
+      else {
+        // Validate Department Code (Backend bắt buộc)
+        if (!formData.code.trim()) {
+          toast.error("Department Code is required")
+          setLoading(false)
+          return
         }
 
-        // 3. Nếu thành công (không bị lỗi ở trên) thì làm mới dữ liệu và đóng modal
+        await organizationService.createDepartment({
+          name: formData.name,
+          departmentCode: formData.code,
+          description: formData.description,
+          managerId: formData.managerId ? parseInt(formData.managerId) : null
+        })
+
+        toast.success("Department created successfully")
+
+        // Refresh data & Đóng modal
         onSubmit()
         onOpenChange(false)
-
-      } catch (error: any) {
-        // 4. Bắt lỗi từ API trả về
-        toast.error(error.message || "Failed to create")
-      } finally {
-        // 5. Luôn tắt loading dù thành công hay thất bại
-        setLoading(false)
       }
+
+    } catch (error: any) {
+      console.error(error)
+      toast.error(error.message || "Failed to create")
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -160,6 +162,7 @@ export function AddDepartmentModal({ open, onOpenChange, onSubmit, parentId, par
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-4">
+
             {/* Input Name */}
             <div className="space-y-2">
               <Label htmlFor="name">
@@ -176,6 +179,7 @@ export function AddDepartmentModal({ open, onOpenChange, onSubmit, parentId, par
               {errors.name && <p className="text-red-500 text-xs">{errors.name}</p>}
             </div>
 
+            {/* Input Code (Chỉ hiện khi tạo Department) */}
             {!isTeam && (
               <div className="space-y-2">
                 <Label htmlFor="code">
@@ -186,7 +190,7 @@ export function AddDepartmentModal({ open, onOpenChange, onSubmit, parentId, par
                   placeholder="e.g. HR, IT, SALE"
                   value={formData.code}
                   onChange={(e) => handleChange("code", e.target.value)}
-                  className="uppercase" // Code thường viết hoa
+                  className="uppercase"
                   disabled={loading}
                 />
               </div>
@@ -206,7 +210,7 @@ export function AddDepartmentModal({ open, onOpenChange, onSubmit, parentId, par
               />
             </div>
 
-            {/* Manager/Team Lead Select */}
+            {/* Manager Select */}
             <div className="space-y-2">
               <Label htmlFor="manager">
                 {isTeam ? "Team Lead" : "Department Manager"}

@@ -106,22 +106,22 @@ const DepartmentCard = ({
       <div className="w-72 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
         <div className="p-4">
           <div className="flex justify-between items-start mb-2">
-            
+
             {/* --- PHẦN SỬA GIAO DIỆN HIỂN THỊ THÔNG TIN --- */}
             <div className="flex flex-col gap-1.5 flex-1 mr-2">
               {/* Tên phòng ban */}
               <h3 className="font-bold text-gray-900 text-base leading-tight">{dept.name}</h3>
-              
+
               {/* Người quản lý (Hiển thị đẹp hơn) */}
               {dept.manager && dept.manager !== "Chưa có quản lý" && dept.manager !== "Manager" && (
                 <div className="flex items-center gap-1.5">
-                   <div className="bg-blue-50 p-1 rounded-full">
-                      <User className="h-3 w-3 text-blue-600" />
-                   </div>
-                   <span className="text-sm font-medium text-gray-700">{dept.manager}</span>
-                   <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full border border-blue-100">
-                     Lead
-                   </span>
+                  <div className="bg-blue-50 p-1 rounded-full">
+                    <User className="h-3 w-3 text-blue-600" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-700">{dept.manager}</span>
+                  <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full border border-blue-100">
+                    Lead
+                  </span>
                 </div>
               )}
 
@@ -375,16 +375,16 @@ export function OrganizationStructure() {
 
       // 2. Map Departments to Nodes (Level 1)
       const deptNodes: Department[] = deptData.map((d: any) => ({
-      id: `dept-${d.departmentID}`,
-      name: d.departmentName,
-      code: d.departmentCode,
-      // SỬA: Lấy trường managerName từ API trả về (khớp với DTO trong C#)
-      manager: d.managerName || "Chưa có quản lý", 
-      managerId: "", // DTO hiện tại chưa trả về ID quản lý, tạm để trống
-      description: "Department Manager",
-      employees: [],
-      subdepartments: [],
-    }))
+        id: `dept-${d.departmentID}`,
+        name: d.departmentName,
+        code: d.departmentCode,
+        // SỬA: Lấy trường managerName từ API trả về (khớp với DTO trong C#)
+        manager: d.managerName || "Chưa có quản lý",
+        managerId: "", // DTO hiện tại chưa trả về ID quản lý, tạm để trống
+        description: "Department Manager",
+        employees: [],
+        subdepartments: [],
+      }))
 
       // 3. Map Teams to Nodes (Level 2) and attach to Departments
       console.log("DEBUG: teamData from API:", teamData)
@@ -524,41 +524,22 @@ export function OrganizationStructure() {
 
   const executeDeleteDepartment = async (idString: string) => {
     try {
-      // 1. Kiểm tra xem đang xóa Department hay Team dựa vào ID prefix
       if (idString.startsWith("dept-")) {
-        // Xử lý xóa Department
         const id = parseInt(idString.replace("dept-", ""))
-        if (isNaN(id)) throw new Error("Invalid Department ID")
 
+        // Gọi API
         await organizationService.deleteDepartment(id)
+
         toast.success("Department deleted successfully")
+        await fetchData() // Load lại
 
-      } else if (idString.startsWith("team-")) {
-        // Xử lý xóa Team (Sub-team)
-        const id = parseInt(idString.replace("team-", ""))
-        if (isNaN(id)) throw new Error("Invalid Team ID")
-
-        // Gọi API xóa team
-        await organizationService.deleteTeam(id)
-
-        // --- SỬA Ở ĐÂY: Thêm thông báo thành công và BỎ dòng return ---
-        toast.success("Team deleted successfully")
+        setDeleteModalOpen(false)
+        setDeptToDelete(null)
       } else {
-        toast.error("Cannot delete Root or invalid node")
-        return
+        toast.info("Deleting Team is currently disabled.")
       }
-
-      // 2. Load lại dữ liệu mới nhất từ Server (Quan trọng: phải chạy xuống tới đây)
-      await fetchData()
-
-      // 3. Đóng modal
-      setDeleteModalOpen(false)
-      setDeptToDelete(null)
-
     } catch (error: any) {
-      console.error("Delete failed:", error)
-      // Hiện lỗi từ Backend (VD: Conflict - còn nhân viên)
-      toast.error(error.message || "Failed to delete. Ensure team/department is empty.")
+      toast.error(error.message || "Failed to delete.")
     }
   }
 

@@ -40,5 +40,25 @@ namespace HRM.Api.Controllers
             var result = await _service.GetAllEmployeesAsync();
             return Ok(result);
         }
+
+        [HttpPost("adddepartment")]
+        public async Task<IActionResult> AddDepartment([FromBody] CreateDepartmentDto request)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            var result = await _service.AddDepartmentAsync(request);
+            
+            if (result.Success) return StatusCode(201, new { success = true, message = result.Message });
+            return BadRequest(new { success = false, message = result.Message });
+        }
+
+        // API XÓA
+        [HttpDelete("deletedepartment/{id}")]
+        public async Task<IActionResult> DeleteDepartment(int id)
+        {
+            var result = await _service.DeleteDepartmentAsync(id);
+            if (result.Success) return Ok(new { success = true, message = result.Message });
+            if (result.Message == "Department not found.") return NotFound(new { success = false, message = result.Message });
+            return StatusCode(500, new { success = false, message = result.Message });
+        }
     }
 }
