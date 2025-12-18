@@ -84,6 +84,7 @@ namespace HRM.Api.Services
             }
             catch (Exception ex)
             {
+                var msg = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
                 return (false, $"Internal Error: {ex.Message}");
             }
         }

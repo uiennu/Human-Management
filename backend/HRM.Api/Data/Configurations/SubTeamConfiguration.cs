@@ -18,9 +18,9 @@ namespace HRM.Api.Data.Configurations
                 .HasMaxLength(500);
 
             builder.HasOne(st => st.Department)
-                .WithMany()
+                .WithMany(d => d.SubTeams)
                 .HasForeignKey(st => st.DepartmentID)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Cascade);
 
             builder.HasOne(st => st.TeamLead)
                 .WithMany()

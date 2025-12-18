@@ -127,8 +127,41 @@ namespace HRM.Api.Repositories
 
         public async Task DeleteDepartmentAsync(Department department)
         {
+            // BƯỚC 1: Gỡ Manager ra khỏi phòng ban trước (Cắt đứt quan hệ Manager)
+            // Điều này cực kỳ quan trọng để tránh lỗi vòng lặp khóa ngoại
+            department.ManagerID = null;
+            _context.Departments.Update(department);
+            await _context.SaveChangesAsync(); // <--- Lưu lần 1
+
+            // BƯỚC 2: Gỡ tất cả nhân viên ra khỏi phòng ban (Set DepartmentID = null)
+            var employees = await _context.Employees
+                .Where(e => e.DepartmentID == department.DepartmentID)
+                .ToListAsync();
+
+            if (employees.Any())
+            {
+                foreach (var emp in employees)
+                {
+                    emp.DepartmentID = null;
+                }
+                _context.Employees.UpdateRange(employees);
+                await _context.SaveChangesAsync(); // <--- Lưu lần 2
+            }
+
+            // BƯỚC 3: Xóa các Team con (SubTeams)
+            var subTeams = await _context.SubTeams
+                .Where(st => st.DepartmentID == department.DepartmentID)
+                .ToListAsync();
+
+            if (subTeams.Any())
+            {
+                _context.SubTeams.RemoveRange(subTeams);
+                await _context.SaveChangesAsync(); // <--- Lưu lần 3
+            }
+
+            // BƯỚC 4: Cuối cùng mới xóa cái vỏ Phòng ban
             _context.Departments.Remove(department);
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(); // <--- Lưu lần cuối (Chốt đơn)
         }
 
         public async Task<SubTeam?> GetSubTeamByIdAsync(int id)
