@@ -1,5 +1,4 @@
 using HRM.Api.DTOs;
-using HRM.Api.DTOs.Organization;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 

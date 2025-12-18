@@ -2,7 +2,6 @@ using HRM.Api.DTOs;
 using HRM.Api.Repositories;
 using HRM.Api.Models;
 using System;
-using HRM.Api.Repositories;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;

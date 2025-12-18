@@ -11,10 +11,12 @@ namespace HRM.Api.Controllers
     public class OrganizationController : ControllerBase
     {
         private readonly IOrganizationService _service;
+        private readonly ITeamService _teamService;
 
-        public OrganizationController(IOrganizationService service)
+        public OrganizationController(IOrganizationService service, ITeamService teamService)
         {
             _service = service;
+            _teamService = teamService;
         }
 
         // Endpoint: GET /api/organization/departments

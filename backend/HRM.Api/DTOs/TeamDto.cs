@@ -53,12 +53,12 @@ namespace HRM.Api.DTOs
     public class TeamDto
     {
         public int SubTeamID { get; set; }
-        public string TeamName { get; set; }
-        public string Description { get; set; }
+        public string TeamName { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
         public int DepartmentID { get; set; }
         
         public int? TeamLeadID { get; set; }
-        public string TeamLeadName { get; set; }
+        public string TeamLeadName { get; set; } = string.Empty;
         
         // Service sẽ tự ghép danh sách này vào
         public List<TeamMemberDto> Members { get; set; } = new List<TeamMemberDto>();
