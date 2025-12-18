@@ -8,10 +8,11 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Download, FileText, Eye, ChevronLeft, ChevronRight } from "lucide-react"
 import { useAuth } from "@/lib/hooks/use-auth"
 
-// Định nghĩa kiểu dữ liệu trả về từ API
+// --- ĐỊNH NGHĨA KIỂU DỮ LIỆU ---
+
 interface Employee {
-  employeeId: string // Tên trường đúng từ API
-  fullName: string   // Tên trường đúng từ API
+  employeeId: string 
+  fullName: string   
   position: string
   hireDate: string
   status: "Active" | "On Leave" | "Terminated"
@@ -20,9 +21,43 @@ interface Employee {
 
 const CONTRACT_STATUSES = ["Active", "On Leave", "Terminated"]
 
+// Enum Role khớp với Database
+enum UserRole {
+  Admin = "Admin",
+  HRManager = "HR Manager",
+  HREmployee = "HR Employee",
+  BODAssistant = "BOD Assistant",
+  
+  ITManager = "IT Manager",
+  SalesManager = "Sales Manager",
+  FinanceManager = "Finance Manager",
+  
+  ITEmployee = "IT Employee",
+  SalesEmployee = "Sales Employee",
+  FinanceEmployee = "Finance Employee"
+}
+
+// 1. Nhóm được lọc Department (Xem chéo các phòng ban khác)
+const DEPT_FILTER_ROLES = [
+  UserRole.Admin,
+  UserRole.HRManager,
+  UserRole.HREmployee,
+  UserRole.BODAssistant
+];
+
+// 2. Nhóm được lọc Team (Bao gồm nhóm trên + Các Manager chuyên môn)
+const TEAM_FILTER_ROLES = [
+  ...DEPT_FILTER_ROLES, 
+  UserRole.ITManager,
+  UserRole.SalesManager,
+  UserRole.FinanceManager
+];
+
 export function EmployeeProfileReport() {
   // --- STATE ---
   const [department, setDepartment] = useState("All under me")
+  const [subTeam, setSubTeam] = useState("All Teams") // State cho Team
+
   const [employeeSearch, setEmployeeSearch] = useState("")
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>(["Active"])
   const [dateFrom, setDateFrom] = useState("")
@@ -42,14 +77,26 @@ export function EmployeeProfileReport() {
     terminated: 0
   })
 
+  // Danh sách Options cho Dropdown
   const [departmentOptions, setDepartmentOptions] = useState<string[]>(["All under me"])
+  const [subTeamOptions, setSubTeamOptions] = useState<string[]>(["All Teams"])
   
-  const { token } = useAuth()
+  const { token, user } = useAuth() // Lấy cả user để check role
   const itemsPerPage = 5
 
-  // 1. Lấy danh sách phòng ban khi trang load
+  const realUserRole = user?.role || user?.['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || user?.['Role'];
+
+  // 2. Debug xem nó đang là gì (Bật F12 Console lên xem)
+
+  // --- LOGIC PHÂN QUYỀN ---
+  const canFilterDepartment = realUserRole && DEPT_FILTER_ROLES.includes(realUserRole as UserRole);
+  const canFilterTeam = realUserRole && TEAM_FILTER_ROLES.includes(realUserRole as UserRole);
+
+  // 1. Fetch danh sách Department (Chỉ nếu có quyền)
   useEffect(() => {
     const fetchDepartments = async () => {
+      if (!canFilterDepartment) return; // Không có quyền thì thôi
+
       try {
         const response = await fetch('http://localhost:5204/api/reports/departments', {
           method: 'GET',
@@ -69,12 +116,37 @@ export function EmployeeProfileReport() {
     };
 
     if (token) fetchDepartments();
-  }, [token]);
+  }, [token, canFilterDepartment]);
 
-  // 2. Tự động gọi API khi chuyển trang (Next/Prev)
+  // 2. Fetch danh sách SubTeams (Chỉ nếu có quyền)
+  useEffect(() => {
+    const fetchSubTeams = async () => {
+      if (!canFilterTeam) return; // Không có quyền thì thôi
+
+      try {
+        const response = await fetch('http://localhost:5204/api/reports/subteams', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setSubTeamOptions(["All Teams", ...data]);
+        }
+      } catch (error) {
+        console.error("Failed to load subteams", error);
+      }
+    };
+
+    if (token) fetchSubTeams();
+  }, [token, canFilterTeam]);
+
+  // 3. Tự động gọi API khi chuyển trang
   useEffect(() => {
     if (reportGenerated) {
-      // Gọi hàm fetch nhưng giữ nguyên trang hiện tại
       fetchReportData(currentPage);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -84,11 +156,12 @@ export function EmployeeProfileReport() {
   const fetchReportData = async (pageToFetch: number) => {
     const payload = {
       department: department,
+      subTeam: subTeam, // Gửi thêm SubTeam
       searchTerm: employeeSearch,
       hireDateFrom: dateFrom || null,
       hireDateTo: dateTo || null,
       selectedStatuses: selectedStatuses,
-      page: pageToFetch, // Dùng số trang được truyền vào
+      page: pageToFetch,
       pageSize: itemsPerPage 
     };
 
@@ -106,10 +179,7 @@ export function EmployeeProfileReport() {
 
       const data = await response.json();
 
-      // Cập nhật dữ liệu bảng
       setFilteredEmployees(data.data.items);
-      
-      // Cập nhật thông tin phân trang & thống kê
       setTotalPages(data.data.totalPages);
       setTotalRecords(data.data.totalItems);
 
@@ -125,15 +195,16 @@ export function EmployeeProfileReport() {
     }
   }
 
-  // --- HÀM XỬ LÝ KHI BẤM NÚT "GENERATE REPORT" ---
+  // --- HANDLERS ---
   const handleSearchClick = () => {
     setReportGenerated(true);
-    setCurrentPage(1); // Reset về trang 1
-    fetchReportData(1); // Gọi API trang 1 ngay lập tức
+    setCurrentPage(1); 
+    fetchReportData(1); 
   }
 
   const handleClearFilters = () => {
     setDepartment("All under me")
+    setSubTeam("All Teams")
     setEmployeeSearch("")
     setSelectedStatuses(["Active"])
     setDateFrom("")
@@ -171,7 +242,6 @@ export function EmployeeProfileReport() {
           <div className="flex flex-col md:flex-row items-start justify-between gap-6">
             <div>
               <p className="text-sm text-muted-foreground">Total Employees</p>
-              {/* Hiển thị tổng số bản ghi từ Database */}
               <p className="text-4xl font-bold text-foreground mt-1">{totalRecords}</p>
             </div>
             <div className="flex flex-col md:flex-row items-center gap-6 w-full md:w-auto">
@@ -209,6 +279,7 @@ export function EmployeeProfileReport() {
               <p className="text-xs text-muted-foreground mb-2">Active Filters:</p>
               <div className="flex gap-2 flex-wrap md:justify-end">
                 <Badge variant="secondary" className="bg-gray-100">{department}</Badge>
+                {subTeam !== "All Teams" && <Badge variant="secondary" className="bg-blue-100">{subTeam}</Badge>}
                 {selectedStatuses.map((status) => (
                   <Badge key={status} className={`${
                         status === "Active" ? "bg-green-100 text-green-700" :
@@ -229,15 +300,39 @@ export function EmployeeProfileReport() {
         <CardHeader><h3 className="font-semibold">Filters</h3></CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-            <div>
-              <label className="text-xs font-medium text-foreground">Department</label>
-              <select value={department} onChange={(e) => setDepartment(e.target.value)}
-                className="w-full mt-2 px-3 py-2 text-sm border border-border rounded-md bg-background text-foreground">
-                {departmentOptions.map((dept) => (
-                  <option key={dept} value={dept}>{dept}</option>
-                ))}
-              </select>
-            </div>
+            
+            {/* 1. DEPARTMENT FILTER (Ẩn/Hiện theo Role) */}
+            {canFilterDepartment ? (
+              <div>
+                <label className="text-xs font-medium text-foreground">Department</label>
+                <select value={department} onChange={(e) => setDepartment(e.target.value)}
+                  className="w-full mt-2 px-3 py-2 text-sm border border-border rounded-md bg-background text-foreground">
+                  {departmentOptions.map((dept) => (
+                    <option key={dept} value={dept}>{dept}</option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              // Nếu không có quyền lọc Department, hiện Readonly
+              <div>
+                 <label className="text-xs font-medium text-foreground">Department</label>
+                 <Input value="All under me" disabled className="mt-2 bg-gray-100 text-gray-500 cursor-not-allowed" />
+              </div>
+            )}
+
+            {/* 2. TEAM FILTER (Ẩn/Hiện theo Role) */}
+            {canFilterTeam && (
+               <div>
+                <label className="text-xs font-medium text-foreground">Team</label>
+                <select value={subTeam} onChange={(e) => setSubTeam(e.target.value)}
+                  className="w-full mt-2 px-3 py-2 text-sm border border-border rounded-md bg-background text-foreground">
+                  {subTeamOptions.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div>
               <label className="text-xs font-medium text-foreground">Employee</label>
               <div className="mt-2 relative">
@@ -245,6 +340,7 @@ export function EmployeeProfileReport() {
                   onChange={(e) => setEmployeeSearch(e.target.value)} className="text-sm" />
               </div>
             </div>
+            
             <div className="min-w-0">
               <label className="text-xs font-medium text-foreground">Hire Date Range</label>
               <div className="flex gap-2 mt-2">
@@ -254,6 +350,7 @@ export function EmployeeProfileReport() {
                   className="w-full min-w-0 px-2 py-2 text-sm border border-border rounded-md bg-background text-foreground" />
               </div>
             </div>
+            
             <div className="min-w-0">
               <label className="text-xs font-medium text-foreground">Contract Status</label>
               <div className="flex gap-2 mt-2 flex-wrap">
@@ -274,9 +371,9 @@ export function EmployeeProfileReport() {
               </div>
             </div>
           </div>
+          
           <div className="flex gap-3 pt-2">
             <Button variant="outline" onClick={handleClearFilters} className="text-sm bg-transparent">Clear Filters</Button>
-            {/* GỌI HÀM handleSearchClick */}
             <Button onClick={handleSearchClick} className="bg-blue-600 hover:bg-blue-700 text-sm">Generate Report</Button>
           </div>
         </CardContent>
@@ -302,7 +399,6 @@ export function EmployeeProfileReport() {
                       </tr>
                     </thead>
                     <tbody>
-                      {/* MAP TRỰC TIẾP, KHÔNG DÙNG SLICE */}
                       {filteredEmployees.map((emp) => (
                         <tr key={emp.employeeId} className="border-b border-border hover:bg-muted/50">
                           <td className="py-4 px-4 text-foreground">{emp.fullName}</td>

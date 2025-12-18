@@ -62,4 +62,12 @@ public class ReportsController : ControllerBase
         var departments = await _reportService.GetDepartmentListAsync();
         return Ok(departments);
     }
+
+    [HttpGet("subteams")]
+    public async Task<IActionResult> GetSubTeams()
+    {
+        // Gọi service lấy danh sách team
+        var teams = await _reportService.GetSubTeamListAsync();
+        return Ok(teams);
+    }
 }

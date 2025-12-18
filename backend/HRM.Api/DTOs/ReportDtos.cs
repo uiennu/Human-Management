@@ -8,6 +8,7 @@ namespace HRM.Api.DTOs.Reports
     public class EmployeeReportRequestDto
     {
         public string Department { get; set; } = "All under me"; // "All under me", "Engineering", ...
+        public string SubTeam { get; set; }
         public string SearchTerm { get; set; } // Name or ID
         public DateTime? HireDateFrom { get; set; }
         public DateTime? HireDateTo { get; set; }

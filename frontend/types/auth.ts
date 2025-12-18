@@ -23,6 +23,7 @@ export interface AuthContextType {
   email: string | null
   isAuthenticated: boolean
   isLoading: boolean
+  user: { role: string; [key: string]: any } | null;
   setAuth: (data: AuthData) => void
   logout: () => void
   hasRole: (role: string) => boolean

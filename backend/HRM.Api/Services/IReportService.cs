@@ -5,6 +5,7 @@ public interface IReportService
     Task<EmployeeReportResponseDto> GenerateEmployeeProfileReportAsync(EmployeeReportRequestDto request, int currentUserId);
     Task<byte[]> ExportReportAsync(EmployeeReportRequestDto request, int currentUserId, string format); // Excel/PDF
     Task<List<string>> GetDepartmentListAsync();
+    Task<List<string>> GetSubTeamListAsync();
     
 }
 
@@ -61,5 +62,10 @@ public class ReportService : IReportService
     public async Task<List<string>> GetDepartmentListAsync()
     {
         return await _repository.GetDepartmentNamesAsync();
+    }
+
+    public async Task<List<string>> GetSubTeamListAsync()
+    {
+        return await _repository.GetSubTeamNamesAsync();
     }
 }
