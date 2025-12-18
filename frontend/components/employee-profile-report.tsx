@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Download, FileText, Eye, ChevronLeft, ChevronRight } from "lucide-react"
+import { useAuth } from "@/lib/hooks/use-auth"
 
 interface Employee {
   id: string
@@ -95,39 +96,64 @@ export function EmployeeProfileReport() {
   const [reportGenerated, setReportGenerated] = useState(false)
   const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([])
   const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(0)
+  const [summaryStats, setSummaryStats] = useState({
+    total: 0,
+    active: 0,
+    onLeave: 0,
+    terminated: 0
+  })
+  const { token } = useAuth();
   const itemsPerPage = 5
 
-  const handleGenerateReport = () => {
-    let filtered = MOCK_EMPLOYEES
+  const handleGenerateReport = async () => {
+    // Chuẩn bị payload gửi lên API
+    const payload = {
+      department: department,
+      searchTerm: employeeSearch,
+      hireDateFrom: dateFrom || null,
+      hireDateTo: dateTo || null,
+      selectedStatuses: selectedStatuses,
+      page: currentPage,
+      pageSize: 5 // Hoặc itemsPerPage
+    };
 
-    if (department !== "All under me") {
-      filtered = filtered.filter((emp) => emp.department === department)
+    
+
+    try {
+      // Gọi API (Thay URL bằng port thực tế của backend bạn, ví dụ localhost:5000)
+      const response = await fetch('http://localhost:5204/api/reports/employees', { 
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` // Nếu có token thì bỏ comment dòng này
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) throw new Error("API Call Failed");
+
+      const data = await response.json();
+
+      // Cập nhật dữ liệu vào bảng
+      setFilteredEmployees(data.data.items);
+      
+      // 1. SỬA LỖI 1: Cập nhật số trang từ Server
+      setTotalPages(data.data.totalPages);
+
+      // 2. SỬA LỖI 2: Cập nhật số liệu thống kê cho biểu đồ
+      // (Thay thế cho dòng updateChart(data.summary) bị lỗi)
+      setSummaryStats({
+        total: data.summary.totalEmployees,
+        active: data.summary.activeCount,
+        onLeave: data.summary.onLeaveCount,
+        terminated: data.summary.terminatedCount
+      });
+
+      setReportGenerated(true);
+    } catch (error) {
+      console.error("Failed to fetch report", error);
     }
-
-    if (employeeSearch) {
-      filtered = filtered.filter(
-        (emp) =>
-          emp.name.toLowerCase().includes(employeeSearch.toLowerCase()) ||
-          emp.id.toLowerCase().includes(employeeSearch.toLowerCase()),
-      )
-    }
-
-    if (selectedStatuses.length > 0) {
-      filtered = filtered.filter((emp) => selectedStatuses.includes(emp.status))
-    }
-
-    if (dateFrom || dateTo) {
-      filtered = filtered.filter((emp) => {
-        const empDate = new Date(emp.hireDate.split("/").reverse().join("-"))
-        if (dateFrom && empDate < new Date(dateFrom)) return false
-        if (dateTo && empDate > new Date(dateTo)) return false
-        return true
-      })
-    }
-
-    setFilteredEmployees(filtered)
-    setReportGenerated(true)
-    setCurrentPage(1)
   }
 
   const handleClearFilters = () => {
@@ -148,16 +174,14 @@ export function EmployeeProfileReport() {
     alert(`Report exported as ${format.toUpperCase()} successfully!`)
   }
 
-  const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage)
   const startIndex = (currentPage - 1) * itemsPerPage
   const paginatedEmployees = filteredEmployees.slice(startIndex, startIndex + itemsPerPage)
 
-  const totalActive = MOCK_EMPLOYEES.filter((e) => e.status === "Active").length
-  const totalOnLeave = MOCK_EMPLOYEES.filter((e) => e.status === "On Leave").length
-  const totalTerminated = MOCK_EMPLOYEES.filter((e) => e.status === "Terminated").length
-  const activePercentage = Math.round((totalActive / MOCK_EMPLOYEES.length) * 100)
-  const onLeavePercentage = Math.round((totalOnLeave / MOCK_EMPLOYEES.length) * 100)
-  const terminatedPercentage = Math.round((totalTerminated / MOCK_EMPLOYEES.length) * 100)
+  const totalForChart = summaryStats.total > 0 ? summaryStats.total : 1; 
+
+  const activePercentage = Math.round((summaryStats.active / totalForChart) * 100);
+  const onLeavePercentage = Math.round((summaryStats.onLeave / totalForChart) * 100);
+  const terminatedPercentage = Math.round((summaryStats.terminated / totalForChart) * 100);
 
   return (
     <div className="space-y-6">
@@ -398,12 +422,14 @@ export function EmployeeProfileReport() {
                       </tr>
                     </thead>
                     <tbody>
-                      {paginatedEmployees.map((emp) => (
-                        <tr key={emp.id} className="border-b border-border hover:bg-muted/50">
-                          <td className="py-4 px-4 text-foreground">{emp.name}</td>
-                          <td className="py-4 px-4 text-foreground">{emp.id}</td>
+                      {paginatedEmployees.map((emp: any) => (
+                        <tr key={emp.employeeId} className="border-b border-border hover:bg-muted/50">
+                          <td className="py-4 px-4 text-foreground">{emp.fullName}</td>
+                          <td className="py-4 px-4 text-foreground">{emp.employeeId}</td>
                           <td className="py-4 px-4 text-foreground">{emp.position}</td>
-                          <td className="py-4 px-4 text-foreground">{emp.hireDate}</td>
+                          <td className="py-4 px-4 text-foreground">
+                              {new Date(emp.hireDate).toLocaleDateString('en-US')}
+                          </td>
                           <td className="py-4 px-4">
                             <Badge
                               variant="outline"

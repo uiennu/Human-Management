@@ -89,7 +89,10 @@ builder.Services.AddScoped<IOrganizationRepository, OrganizationRepository>();
 builder.Services.AddScoped<IOrganizationService, OrganizationService>();
 
 builder.Services.AddScoped<ITeamRepository, TeamRepository>(); 
-builder.Services.AddScoped<ITeamService, TeamService>();       
+builder.Services.AddScoped<ITeamService, TeamService>();
+
+builder.Services.AddScoped<IReportRepository, ReportRepository>();
+builder.Services.AddScoped<IReportService, ReportService>();
 
 var app = builder.Build();
 
