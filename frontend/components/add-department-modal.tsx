@@ -47,33 +47,38 @@ export function AddDepartmentModal({ open, onOpenChange, onSubmit, parentId, par
 
       const fetchEmployees = async () => {
         try {
-          const employees = await organizationService.getAllEmployees()
+          const employees = await organizationService.getAllEmployees();
 
-          let eligibleManagers = employees
+          let eligibleManagers = employees;
 
           // Nếu đang thêm Team vào Department, lọc nhân viên thuộc Department đó
           if (isTeam && parentId && parentName) {
-            eligibleManagers = employees.filter(e => e.departmentName === parentName)
+            eligibleManagers = employees.filter(e => e.departmentName === parentName);
           }
 
-          // --- SỬA Ở ĐÂY: Lọc trùng lặp ID trước khi map ---
-          // Dùng Map để đảm bảo mỗi employeeID chỉ xuất hiện 1 lần
+          // Nếu đang thêm Department, lọc nhân viên chưa thuộc bất kỳ Department nào
+          if (!isTeam) {
+            eligibleManagers = employees.filter(e => !e.departmentName);
+          }
+
+          // Lọc trùng lặp ID trước khi map
           const uniqueManagers = Array.from(
             new Map(eligibleManagers.map(item => [item.employeeID, item])).values()
           );
 
           setManagers(uniqueManagers.map(e => ({
             id: e.employeeID,
-            name: `${e.firstName} ${e.lastName}`
-          })))
-
+            name: e.name
+          })));
         } catch (error) {
-          console.error("Failed to fetch employees", error)
+          console.error("Failed to fetch employees", error);
+          setManagers([]);
         }
       }
-      fetchEmployees()
+
+      fetchEmployees();
     }
-  }, [open, isTeam, parentId, parentName])
+  }, [open, isTeam, parentId, parentName]);
 
   // 3. Hàm kiểm tra hợp lệ
   const validateForm = () => {

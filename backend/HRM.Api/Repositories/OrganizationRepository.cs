@@ -67,8 +67,15 @@ namespace HRM.Api.Repositories
         public async Task<IEnumerable<EmployeeSimpleDto>> GetAllEmployeesAsync()
         {
              const string sql = @"
-                SELECT EmployeeID, CONCAT(FirstName, ' ', LastName) as Name, 'Staff' as Position 
-                FROM Employees WHERE IsActive = 1";
+                SELECT 
+                    e.EmployeeID, 
+                    CONCAT(e.FirstName, ' ', e.LastName) as Name, 
+                    'Staff' as Position,
+                    e.AvatarUrl as Avatar,
+                    d.DepartmentName
+                FROM Employees e
+                LEFT JOIN Departments d ON e.DepartmentID = d.DepartmentID
+                WHERE e.IsActive = 1";
              
              using var conn = CreateConnection();
              return await conn.QueryAsync<EmployeeSimpleDto>(sql);

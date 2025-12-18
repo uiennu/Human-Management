@@ -31,11 +31,11 @@ export interface TeamMemberDto {
 
 export interface EmployeeDto {
     employeeID: number
-    firstName: string
-    lastName: string
-    email: string
-    departmentName: string
+    name: string
+    email?: string
+    departmentName: string | null
     position?: string
+    avatar?: string
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5204/api'
