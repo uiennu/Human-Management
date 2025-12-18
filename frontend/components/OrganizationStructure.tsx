@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { Plus, Edit2, Trash2, Users, Eye, X, ChevronDown, ChevronUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
 
 // --- IMPORT CÁC MODAL ---
 import { AddDepartmentModal } from "@/components/add-department-modal"
@@ -497,19 +498,44 @@ export function OrganizationStructure() {
     setDeleteModalOpen(true) // Mở modal
   }
 
-  // HÀM MỚI NÀY SẼ CHỊU TRÁCH NHIỆM XÓA THỰC TẾ SAU KHI XÁC NHẬN
-  const executeDeleteDepartment = (id: string) => {
-    const deleteRecursive = (depts: Department[]): Department[] =>
-      depts
-        .filter((dept) => dept.id !== id)
-        .map((dept) => ({
-          ...dept,
-          subdepartments: dept.subdepartments ? deleteRecursive(dept.subdepartments) : [],
-        }))
-    setDepartments(deleteRecursive(departments))
-    // Cần đóng modal và reset state sau khi xóa xong
-    setDeleteModalOpen(false)
-    setDeptToDelete(null)
+  const executeDeleteDepartment = async (idString: string) => {
+    try {
+      // 1. Kiểm tra xem đang xóa Department hay Team dựa vào ID prefix
+      if (idString.startsWith("dept-")) {
+        // Xử lý xóa Department
+        const id = parseInt(idString.replace("dept-", ""))
+        if (isNaN(id)) throw new Error("Invalid Department ID")
+
+        await organizationService.deleteDepartment(id)
+        toast.success("Department deleted successfully")
+
+      } else if (idString.startsWith("team-")) {
+        // Xử lý xóa Team (Sub-team)
+        const id = parseInt(idString.replace("team-", ""))
+        if (isNaN(id)) throw new Error("Invalid Team ID")
+
+        // Gọi API xóa team
+        await organizationService.deleteTeam(id)
+
+        // --- SỬA Ở ĐÂY: Thêm thông báo thành công và BỎ dòng return ---
+        toast.success("Team deleted successfully")
+      } else {
+        toast.error("Cannot delete Root or invalid node")
+        return
+      }
+
+      // 2. Load lại dữ liệu mới nhất từ Server (Quan trọng: phải chạy xuống tới đây)
+      await fetchData()
+
+      // 3. Đóng modal
+      setDeleteModalOpen(false)
+      setDeptToDelete(null)
+
+    } catch (error: any) {
+      console.error("Delete failed:", error)
+      // Hiện lỗi từ Backend (VD: Conflict - còn nhân viên)
+      toast.error(error.message || "Failed to delete. Ensure team/department is empty.")
+    }
   }
 
   const handleDeleteEmployee = (deptId: string, empId: string) => {

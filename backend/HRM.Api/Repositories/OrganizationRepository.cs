@@ -33,7 +33,8 @@ namespace HRM.Api.Repositories
             var assignedIds = await _context.SubTeamMembers.Select(x => x.EmployeeID).ToListAsync();
             var unassigned = await _context.Employees
                 .Where(e => !assignedIds.Contains(e.EmployeeID) && e.IsActive)
-                .Select(e => new EmployeeSimpleDto {
+                .Select(e => new EmployeeSimpleDto
+                {
                     Id = e.EmployeeID.ToString(),
                     Name = $"{e.FirstName} {e.LastName}",
                     Position = "Employee",
@@ -71,6 +72,79 @@ namespace HRM.Api.Repositories
                 Departments = deptDtos,
                 UnassignedEmployees = unassigned
             };
+        }
+
+        public async Task<bool> DepartmentNameExistsAsync(string name)
+        {
+            return await _context.Departments.AnyAsync(d => d.DepartmentName == name);
+        }
+
+        public async Task<bool> DepartmentCodeExistsAsync(string code)
+        {
+            return await _context.Departments.AnyAsync(d => d.DepartmentCode == code);
+        }
+
+        public async Task<Department> AddDepartmentAsync(Department department)
+        {
+            // 1. Lưu phòng ban trước để có ID
+            _context.Departments.Add(department);
+            await _context.SaveChangesAsync();
+
+            // 2. --- THÊM ĐOẠN NÀY ---
+            // Nếu phòng ban có Manager, tự động chuyển nhân viên đó về phòng ban này
+            if (department.ManagerID.HasValue)
+            {
+                var employee = await _context.Employees.FindAsync(department.ManagerID.Value);
+                if (employee != null)
+                {
+                    // Cập nhật DepartmentID cho nhân viên
+                    employee.DepartmentID = department.DepartmentID;
+                    _context.Employees.Update(employee);
+
+                    // Lưu thay đổi lần 2
+                    await _context.SaveChangesAsync();
+                }
+            }
+            // ------------------------
+
+            return department;
+        }
+
+        public async Task<Department?> GetDepartmentByIdAsync(int id)
+        {
+            return await _context.Departments.FirstOrDefaultAsync(d => d.DepartmentID == id);
+        }
+
+        public async Task<bool> HasEmployeesOrTeamsAsync(int departmentId)
+        {
+            // Kiểm tra xem có nhân viên nào thuộc phòng ban này không
+            bool hasEmployees = await _context.Employees.AnyAsync(e => e.DepartmentID == departmentId);
+            // Kiểm tra xem có subteam nào thuộc phòng ban này không
+            bool hasTeams = await _context.SubTeams.AnyAsync(st => st.DepartmentID == departmentId);
+
+            return hasEmployees || hasTeams;
+        }
+
+        public async Task DeleteDepartmentAsync(Department department)
+        {
+            _context.Departments.Remove(department);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<SubTeam?> GetSubTeamByIdAsync(int id)
+        {
+            return await _context.SubTeams.FindAsync(id);
+        }
+
+        public async Task<bool> SubTeamHasMembersAsync(int subTeamId)
+        {
+            return await _context.SubTeamMembers.AnyAsync(stm => stm.SubTeamID == subTeamId);
+        }
+
+        public async Task DeleteSubTeamAsync(SubTeam subTeam)
+        {
+            _context.SubTeams.Remove(subTeam);
+            await _context.SaveChangesAsync();
         }
     }
 }

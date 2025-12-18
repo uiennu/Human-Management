@@ -45,38 +45,28 @@ export function AddDepartmentModal({ open, onOpenChange, onSubmit, parentId, par
       setFormData({ name: "", code: "", description: "", managerId: "" })
       setErrors({ name: "" })
 
-      // Load employees for Team Lead selection
       const fetchEmployees = async () => {
         try {
           const employees = await organizationService.getAllEmployees()
 
           let eligibleManagers = employees
 
-          // If adding a team to a department, filter employees belonging to that department
-          if (isTeam && parentId) {
-            const deptIdStr = parentId.replace("dept-", "")
-            // API employees logic: employees have 'departmentName'. 
-            // Ideally we should have departmentID in EmployeeDto but let's check.
-            // Looking at OrganizationService.ts, EmployeeDto has:
-            // employeeID, firstName, lastName, email, departmentName, position.
-            // It does NOT have departmentID explicitly in common list?
-            // Let's check organization-service.ts again.
-            // EmployeeDto has: departmentName. 
-            // But TeamMemberDto has departmentID.
-
-            // If we really want to filter by ID, we need departmentID in EmployeeDto.
-            // However, for now, we can rely on the backend validation or try to filter by name?
-            // Or better: update EmployeeDto to include DepartmentID.
-            // But I cannot easily update backend DTO and all mappings right now without risk.
-
-            // Let's filter by matching departmentName if possible? 
-            // "parentName" prop has the Department Name!
-            if (parentName) {
-              eligibleManagers = employees.filter(e => e.departmentName === parentName)
-            }
+          // Nếu đang thêm Team vào Department, lọc nhân viên thuộc Department đó
+          if (isTeam && parentId && parentName) {
+            eligibleManagers = employees.filter(e => e.departmentName === parentName)
           }
 
-          setManagers(eligibleManagers.map(e => ({ id: e.employeeID, name: `${e.firstName} ${e.lastName}` })))
+          // --- SỬA Ở ĐÂY: Lọc trùng lặp ID trước khi map ---
+          // Dùng Map để đảm bảo mỗi employeeID chỉ xuất hiện 1 lần
+          const uniqueManagers = Array.from(
+            new Map(eligibleManagers.map(item => [item.employeeID, item])).values()
+          );
+
+          setManagers(uniqueManagers.map(e => ({
+            id: e.employeeID,
+            name: `${e.firstName} ${e.lastName}`
+          })))
+
         } catch (error) {
           console.error("Failed to fetch employees", error)
         }
@@ -102,23 +92,18 @@ export function AddDepartmentModal({ open, onOpenChange, onSubmit, parentId, par
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    // 1. Validate các trường chung (như Name)
     if (validateForm()) {
       try {
         setLoading(true)
+
+        // TRƯỜNG HỢP 1: TẠO TEAM (SUB-DEPARTMENT)
         if (isTeam && parentId) {
-          // Create SubTeam
-          // parentId comes as "dept-123", we need "123"
-          // Or if it's already numeric string, just parse.
-          // In OrganizationStructure, we mapped id as "dept-{id}".
           const deptId = parseInt(parentId.replace("dept-", ""))
 
           if (isNaN(deptId)) {
-            // Maybe it's a team? "team-456". 
-            // Currently backend only supports adding team to DEPARTMENT.
-            // If user clicked "Add Team" on a Team, that's "Add SubTeam" (Level 2).
-            // Let's assume for now we only support Level 1 (Dept) -> Level 2 (Team).
             toast.error("Invalid Department ID for creating a team.")
-            return
+            return // Thoát hàm, finally sẽ chạy để tắt loading
           }
 
           await organizationService.createTeam(deptId, {
@@ -126,17 +111,36 @@ export function AddDepartmentModal({ open, onOpenChange, onSubmit, parentId, par
             description: formData.description,
             teamLeadId: formData.managerId ? parseInt(formData.managerId) : null
           })
+
           toast.success("Team created successfully")
-        } else {
-          toast.info("Creating top-level departments is not yet supported via API.")
-          return
+        }
+        // TRƯỜNG HỢP 2: TẠO DEPARTMENT (PHÒNG BAN CẤP CAO)
+        else {
+          // Validate riêng cho Department: Bắt buộc phải có Code
+          if (!formData.code.trim()) {
+            toast.error("Department Code is required")
+            return // Thoát hàm, finally sẽ chạy để tắt loading
+          }
+
+          await organizationService.createDepartment({
+            name: formData.name,
+            departmentCode: formData.code,
+            description: formData.description,
+            managerId: formData.managerId ? parseInt(formData.managerId) : null
+          })
+
+          toast.success("Department created successfully")
         }
 
-        onSubmit() // Refreshes parent data
+        // 3. Nếu thành công (không bị lỗi ở trên) thì làm mới dữ liệu và đóng modal
+        onSubmit()
         onOpenChange(false)
+
       } catch (error: any) {
+        // 4. Bắt lỗi từ API trả về
         toast.error(error.message || "Failed to create")
       } finally {
+        // 5. Luôn tắt loading dù thành công hay thất bại
         setLoading(false)
       }
     }
@@ -171,6 +175,22 @@ export function AddDepartmentModal({ open, onOpenChange, onSubmit, parentId, par
               />
               {errors.name && <p className="text-red-500 text-xs">{errors.name}</p>}
             </div>
+
+            {!isTeam && (
+              <div className="space-y-2">
+                <Label htmlFor="code">
+                  Department Code <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="code"
+                  placeholder="e.g. HR, IT, SALE"
+                  value={formData.code}
+                  onChange={(e) => handleChange("code", e.target.value)}
+                  className="uppercase" // Code thường viết hoa
+                  disabled={loading}
+                />
+              </div>
+            )}
 
             {/* Description */}
             <div className="space-y-2">

@@ -88,6 +88,8 @@ builder.Services.AddCors(options =>
 builder.Services.AddScoped<IOrganizationRepository, OrganizationRepository>();
 builder.Services.AddScoped<IOrganizationService, OrganizationService>();
 
+builder.Services.AddScoped<ITeamRepository, TeamRepository>(); 
+builder.Services.AddScoped<ITeamService, TeamService>();       
 
 var app = builder.Build();
 

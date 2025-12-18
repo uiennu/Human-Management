@@ -40,4 +40,12 @@ namespace HRM.Api.DTOs.Organization
         public string Position { get; set; }
         public string Avatar { get; set; }
     }
+
+    public class CreateDepartmentDto
+    {
+        public string Name { get; set; } 
+        public string DepartmentCode { get; set; } 
+        public string? Description { get; set; } 
+        public int? ManagerId { get; set; } 
+    }
 }
