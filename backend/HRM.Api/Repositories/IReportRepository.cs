@@ -13,7 +13,7 @@ public interface IReportRepository
         int currentManagerId);
 
       Task<List<string>> GetDepartmentNamesAsync();
-      Task<List<string>> GetSubTeamNamesAsync();
+      Task<List<string>> GetSubTeamNamesAsync(string departmentName, int managerId);
 }
 
 // Repositories/ReportRepository.cs
@@ -186,11 +186,34 @@ public class ReportRepository : IReportRepository
                              .ToListAsync();
     }
 
-    public async Task<List<string>> GetSubTeamNamesAsync()
+    public async Task<List<string>> GetSubTeamNamesAsync(string departmentName, int managerId)
     {
-        return await _context.SubTeams
-                            .Select(t => t.TeamName)
-                            .Distinct()
-                            .ToListAsync();
+        var query = _context.SubTeams.AsQueryable();
+
+        // LOGIC THÔNG MINH:
+        // Trường hợp 1: Frontend gửi tên phòng ban cụ thể (VD: "IT Development") -> Lọc theo tên đó.
+        if (!string.IsNullOrEmpty(departmentName) && departmentName != "All under me")
+        {
+            query = query.Where(t => t.Department.DepartmentName == departmentName);
+        }
+        // Trường hợp 2: Frontend gửi "All under me" (hoặc rỗng) -> Tự tìm phòng của ông Manager này.
+        else 
+        {
+            // Tìm phòng ban mà ông này đang làm Manager (hoặc đang thuộc về)
+            var managerDeptId = await _context.Employees
+                .Where(e => e.EmployeeID == managerId)
+                .Select(e => e.DepartmentID)
+                .FirstOrDefaultAsync();
+
+            if (managerDeptId.HasValue)
+            {
+                query = query.Where(t => t.DepartmentID == managerDeptId.Value);
+            }
+        }
+
+        return await query
+            .Select(t => t.TeamName)
+            .Distinct()
+            .ToListAsync();
     }
 }

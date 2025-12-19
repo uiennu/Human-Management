@@ -121,10 +121,22 @@ export function EmployeeProfileReport() {
   // 2. Fetch danh sách SubTeams (Chỉ nếu có quyền)
   useEffect(() => {
     const fetchSubTeams = async () => {
-      if (!canFilterTeam) return; // Không có quyền thì thôi
+      // Nếu không có quyền lọc Team thì thôi (Ví dụ nhân viên thường)
+      if (!canFilterTeam) return; 
 
       try {
-        const response = await fetch('http://localhost:5204/api/reports/subteams', {
+        const url = new URL('http://localhost:5204/api/reports/subteams');
+        
+        // --- ĐOẠN QUAN TRỌNG NHẤT ---
+        // Chỉ gửi ?department=... nếu Sếp chọn một phòng cụ thể.
+        // Nếu là "All under me" (Charlie), ta KHÔNG GỬI GÌ CẢ.
+        // => Backend sẽ nhận null và tự tìm phòng của Charlie.
+        if (department && department !== "All under me") {
+            url.searchParams.append('department', department);
+        }
+        // -----------------------------
+
+        const response = await fetch(url.toString(), {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -135,6 +147,9 @@ export function EmployeeProfileReport() {
         if (response.ok) {
           const data = await response.json();
           setSubTeamOptions(["All Teams", ...data]);
+          
+          // Reset về "All Teams" để tránh trường hợp đang chọn team của phòng cũ
+          setSubTeam("All Teams"); 
         }
       } catch (error) {
         console.error("Failed to load subteams", error);
@@ -142,7 +157,9 @@ export function EmployeeProfileReport() {
     };
 
     if (token) fetchSubTeams();
-  }, [token, canFilterTeam]);
+    
+    // Khi 'department' thay đổi -> Gọi lại hàm này
+  }, [token, canFilterTeam, department]);
 
   // 3. Tự động gọi API khi chuyển trang
   useEffect(() => {
