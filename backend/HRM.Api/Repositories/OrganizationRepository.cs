@@ -278,7 +278,29 @@ namespace HRM.Api.Repositories
 
         public async Task UpdateDepartmentAsync(int id, UpdateDepartmentDto department, int userId)
         {
-            const string sql = @"
+            using var conn = CreateConnection();
+
+            // 1. LẤY DỮ LIỆU CŨ
+            var oldSql = "SELECT * FROM Departments WHERE DepartmentID = @Id";
+            var oldDept = await conn.QuerySingleOrDefaultAsync<UpdateDepartmentDto>(oldSql, new { Id = id });
+
+            if (oldDept == null) return;
+
+            // 2. MERGE DỮ LIỆU (QUAN TRỌNG: Check ManagerID > 0)
+            
+            var newName = !string.IsNullOrEmpty(department.DepartmentName) ? department.DepartmentName : oldDept.DepartmentName;
+            var newCode = !string.IsNullOrEmpty(department.DepartmentCode) ? department.DepartmentCode : oldDept.DepartmentCode;
+            var newDesc = !string.IsNullOrEmpty(department.Description) ? department.Description : oldDept.Description;
+
+            // --- SỬA LOGIC MANAGER TẠI ĐÂY ---
+            // Nếu Frontend gửi lên NULL hoặc số 0 (do chọn --None--) -> Thì giữ nguyên người cũ (oldDept.ManagerID)
+            // Chỉ cập nhật khi có chọn người mới thực sự (ID > 0)
+            var newManagerId = (department.ManagerID.HasValue && department.ManagerID.Value > 0) 
+                            ? department.ManagerID 
+                            : oldDept.ManagerID;
+
+            // 3. UPDATE
+            const string updateSql = @"
                 UPDATE Departments 
                 SET DepartmentName = @DepartmentName,
                     DepartmentCode = @DepartmentCode,
@@ -286,14 +308,11 @@ namespace HRM.Api.Repositories
                     ManagerID = @ManagerID
                 WHERE DepartmentID = @Id";
 
-            using var conn = CreateConnection();
-            // Dapper sẽ tự map các property trong 'department' vào @Param, 
-            // riêng @Id ta truyền thêm vào qua anonymous object
-            await conn.ExecuteAsync(sql, new { 
-                department.DepartmentName, 
-                department.DepartmentCode, 
-                department.Description, 
-                department.ManagerID, 
+            await conn.ExecuteAsync(updateSql, new { 
+                DepartmentName = newName,
+                DepartmentCode = newCode,
+                Description = newDesc,
+                ManagerID = newManagerId,
                 Id = id 
             });
         }

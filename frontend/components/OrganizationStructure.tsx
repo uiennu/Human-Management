@@ -389,7 +389,7 @@ export function OrganizationStructure() {
         code: d.departmentCode,
         manager: d.managerName || "Chưa có quản lý",
         managerId: "",
-        description: "Department Manager",
+        description: d.Description || d.description||"",
         employees: [],
         subdepartments: [],
       }))
