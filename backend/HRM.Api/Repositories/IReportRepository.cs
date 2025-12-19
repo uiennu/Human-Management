@@ -107,7 +107,7 @@ public class ReportRepository : IReportRepository
         })
         .Select(x => new EmployeeReportItemDto
         {
-            EmployeeId = "EMP" + x.EmployeeID.ToString("D3"),
+            EmployeeId = x.EmployeeID.ToString(),
             FullName = x.FullName,
             Department = x.DepartmentName,
             HireDate = x.HireDate,
