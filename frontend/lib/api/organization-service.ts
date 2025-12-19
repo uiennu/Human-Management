@@ -115,6 +115,19 @@ export const organizationService = {
         return res.json()
     },
 
+    async createTeam(departmentId: number, data: { teamName: string; description: string; teamLeadId?: number }) {
+        const res = await fetch(`${API_URL}/organization/addteam/${departmentId}`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data),
+        })
+        if (!res.ok) {
+            const error = await res.json()
+            throw new Error(error.message || 'Failed to create team')
+        }
+        return res.json()
+    },
+
     async deleteTeam(id: number) {
         const res = await fetch(`${API_URL}/organization/deleteteam/${id}`, {
             method: 'DELETE',
