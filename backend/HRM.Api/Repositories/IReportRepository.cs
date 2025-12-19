@@ -33,40 +33,51 @@ public class ReportRepository : IReportRepository
     {
         var today = DateTime.Today;
 
-        // 1. Bắt đầu từ bảng Employees (Include Department để tránh lỗi Null)
+        // --- BƯỚC 1: LẤY THÔNG TIN NGƯỜI DÙNG ĐỂ CHECK QUYỀN ---
+        var currentUser = _context.Employees
+            .Include(e => e.EmployeeRoles).ThenInclude(er => er.Role)
+            .FirstOrDefault(e => e.EmployeeID == currentManagerId);
+
+        // Kiểm tra xem người này có phải là Admin không
+        bool isAdmin = currentUser != null && currentUser.EmployeeRoles.Any(er => er.Role.RoleName == "Admin"||er.Role.RoleName == "HR Employee"||er.Role.RoleName == "HR Manager"||er.Role.RoleName == "BOD Assistant");
+
+        // --- BƯỚC 2: KHỞI TẠO QUERY ---
         var query = _context.Employees.Include(e => e.Department).AsQueryable();
 
         // =================================================================
-        // PHẦN LỌC DỮ LIỆU (FILTER) - PHẢI LÀM TRƯỚC KHI SELECT (PROJECTION)
+        // PHẦN LỌC DỮ LIỆU (FILTER)
         // =================================================================
 
-        // 2. Logic Filter "Department"
+        // 3. Logic Filter "Department"
         if (filter.Department == "All under me" || string.IsNullOrEmpty(filter.Department))
         {
-            // Để trống để lấy hết nhân viên (như yêu cầu trước của bạn)
-            // Nếu muốn lọc theo Manager thì bỏ comment đoạn dưới:
-            //query = query.Where(e => e.ManagerID == currentManagerId || e.Department.ManagerID == currentManagerId);
+            // LOGIC MỚI SỬA:
+            // Nếu KHÔNG PHẢI ADMIN (tức là Manager các phòng ban), bắt buộc lọc theo DepartmentID của họ
+            if (!isAdmin && currentUser?.DepartmentID != null)
+            {
+                query = query.Where(e => e.DepartmentID == currentUser.DepartmentID);
+            }
+            // Nếu là Admin thì kệ, không lọc gì cả => Lấy hết toàn công ty
         }
         else
         {
-            // Sửa: Dùng ToLower() và Trim() để so sánh chính xác
+            // Nếu chọn phòng cụ thể (Admin chọn xem phòng khác)
             var filterDept = filter.Department.Trim().ToLower();
             query = query.Where(e => e.Department.DepartmentName.ToLower() == filterDept);
         }
 
-        // 3. Logic Filter "SubTeam" (SỬA: ĐƯA LÊN TRÊN NÀY)
+        // 4. Logic Filter "SubTeam"
         if (!string.IsNullOrEmpty(filter.SubTeam) && filter.SubTeam != "All Teams")
         {
             var targetTeam = filter.SubTeam.Trim().ToLower();
             
-            // Logic: Tìm nhân viên có tồn tại trong bảng SubTeamMembers khớp với tên Team
             query = query.Where(e => _context.SubTeamMembers.Any(stm => 
                 stm.EmployeeID == e.EmployeeID && 
                 stm.SubTeam.TeamName.ToLower() == targetTeam
             ));
         }
 
-        // 4. Logic Search (Name or ID)
+        // 5. Logic Search (Name or ID)
         if (!string.IsNullOrEmpty(filter.SearchTerm))
         {
             string search = filter.SearchTerm.ToLower().Trim();
@@ -74,7 +85,7 @@ public class ReportRepository : IReportRepository
                                     e.EmployeeID.ToString().Contains(search));
         }
 
-        // 5. Logic Hire Date
+        // 6. Logic Hire Date
         if (filter.HireDateFrom.HasValue)
             query = query.Where(e => e.HireDate >= filter.HireDateFrom.Value);
         
@@ -82,19 +93,18 @@ public class ReportRepository : IReportRepository
             query = query.Where(e => e.HireDate <= filter.HireDateTo.Value);
 
         // =================================================================
-        // PHẦN MAPPING DỮ LIỆU (PROJECTION) - LÀM SAU CÙNG
+        // PHẦN MAPPING DỮ LIỆU (PROJECTION)
         // =================================================================
         
         var projectedQuery = query.Select(e => new 
         {
             e.EmployeeID,
             FullName = e.FirstName + " " + e.LastName,
-            // Sửa: Check Null cho Department
             DepartmentName = e.Department != null ? e.Department.DepartmentName : "N/A",
             e.HireDate,
             e.IsActive,
             e.AvatarUrl,
-            // Logic check OnLeave
+            // Check OnLeave
             IsOnLeave = _context.LeaveRequests.Any(lr => 
                 lr.EmployeeID == e.EmployeeID && 
                 lr.Status == "Approved" && 
@@ -107,6 +117,7 @@ public class ReportRepository : IReportRepository
         })
         .Select(x => new EmployeeReportItemDto
         {
+            // Đã bỏ chữ EMP00, chỉ lấy số ID thuần túy
             EmployeeId = x.EmployeeID.ToString(),
             FullName = x.FullName,
             Department = x.DepartmentName,
@@ -116,7 +127,7 @@ public class ReportRepository : IReportRepository
             Status = !x.IsActive ? "Terminated" : (x.IsOnLeave ? "On Leave" : "Active")
         });
 
-        // 6. Filter by Calculated Status (Status được tính toán sau khi Select nên để ở đây là đúng)
+        // 7. Filter by Status (Làm cuối cùng vì Status là trường tính toán)
         if (filter.SelectedStatuses != null && filter.SelectedStatuses.Any())
         {
             projectedQuery = projectedQuery.Where(x => filter.SelectedStatuses.Contains(x.Status));
