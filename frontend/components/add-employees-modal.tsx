@@ -42,9 +42,10 @@ export function AddEmployeesModal({ open, onOpenChange, department }: AddEmploye
           setLoading(true)
           const allEmployees = await organizationService.getAllEmployees()
 
-          // Filter: only employees in the parent department
+          // Filter: employees in parent department OR not in any department
           const filtered = allEmployees.filter(e =>
-            e.departmentName === department.parentDepartmentName
+            e.departmentName === department.parentDepartmentName ||
+            !e.departmentName  // Also include unassigned employees
           )
 
           setEmployees(filtered.map(e => ({

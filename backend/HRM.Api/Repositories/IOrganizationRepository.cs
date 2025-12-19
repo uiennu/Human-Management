@@ -22,6 +22,14 @@ namespace HRM.Api.Repositories
         Task DeleteDepartmentAsync(Department department);
         Task<SubTeam?> GetSubTeamByIdAsync(int id);
         Task<bool> SubTeamHasMembersAsync(int subTeamId);
+        Task UpdateTeamAsync(SubTeam team);
+        Task DeleteTeamLogsAsync(int teamId);
         Task DeleteSubTeamAsync(SubTeam subTeam);
+        
+        // New methods for safe team deletion
+        Task<List<SubTeamMember>> GetTeamMembersAsync(int teamId);
+        Task<bool> IsEmployeeInAnyTeamAsync(int employeeId);
+        Task UpdateEmployeeDepartmentAsync(int employeeId, int? departmentId);
+        Task RemoveAllTeamMembersAsync(int teamId);
     }
 }

@@ -220,9 +220,59 @@ namespace HRM.Api.Repositories
             return await _context.SubTeamMembers.AnyAsync(stm => stm.SubTeamID == subTeamId);
         }
 
+        public async Task UpdateTeamAsync(SubTeam team)
+        {
+            // Use direct SQL to avoid EF tracking issues
+            const string sql = "UPDATE SubTeams SET TeamLeadID = NULL WHERE SubTeamID = @SubTeamID";
+            using var conn = CreateConnection();
+            await conn.ExecuteAsync(sql, new { SubTeamID = team.SubTeamID });
+        }
+
+        public async Task DeleteTeamLogsAsync(int teamId)
+        {
+            const string sql = "DELETE FROM OrganizationStructureLogs WHERE SubTeamID = @SubTeamID";
+            using var conn = CreateConnection();
+            await conn.ExecuteAsync(sql, new { SubTeamID = teamId });
+        }
+
         public async Task DeleteSubTeamAsync(SubTeam subTeam)
         {
             _context.SubTeams.Remove(subTeam);
+            await _context.SaveChangesAsync();
+        }
+
+        // New methods for safe team deletion
+        public async Task<List<SubTeamMember>> GetTeamMembersAsync(int teamId)
+        {
+            return await _context.SubTeamMembers
+                .Where(stm => stm.SubTeamID == teamId)
+                .ToListAsync();
+        }
+
+        public async Task<bool> IsEmployeeInAnyTeamAsync(int employeeId)
+        {
+            return await _context.SubTeamMembers
+                .AnyAsync(stm => stm.EmployeeID == employeeId);
+        }
+
+        public async Task UpdateEmployeeDepartmentAsync(int employeeId, int? departmentId)
+        {
+            var employee = await _context.Employees.FindAsync(employeeId);
+            if (employee != null)
+            {
+                employee.DepartmentID = departmentId;
+                _context.Employees.Update(employee);
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        public async Task RemoveAllTeamMembersAsync(int teamId)
+        {
+            var members = await _context.SubTeamMembers
+                .Where(stm => stm.SubTeamID == teamId)
+                .ToListAsync();
+            
+            _context.SubTeamMembers.RemoveRange(members);
             await _context.SaveChangesAsync();
         }
     }

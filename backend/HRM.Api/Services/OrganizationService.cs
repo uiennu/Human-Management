@@ -132,16 +132,38 @@ namespace HRM.Api.Services
                 return (false, "Team not found.", null);
             }
 
-            // Logic check member could be added here if not handled by Repo
-            bool hasMembers = await _repository.SubTeamHasMembersAsync(id);
-            if (hasMembers)
-            {
-                 return (false, "Conflict: Team currently has members.", null);
-            }
-
             try
             {
+                // 1. Get all members BEFORE deleting (to know who to update)
+                var members = await _repository.GetTeamMembersAsync(id);
+                var employeeIds = members.Select(m => m.EmployeeID).ToList();
+                
+                // 2. Delete OrganizationStructureLogs for this team (FK constraint)
+                await _repository.DeleteTeamLogsAsync(id);
+                
+                // 3. Clear TeamLeadID to avoid FK constraint issues
+                if (team.TeamLeadID.HasValue)
+                {
+                    team.TeamLeadID = null;
+                    await _repository.UpdateTeamAsync(team);
+                }
+                
+                // 4. Delete the team (CASCADE will auto-delete SubTeamMembers)
                 await _repository.DeleteSubTeamAsync(team);
+                
+                // 5. Now update each employee's department if they're not in any other team
+                foreach (var employeeId in employeeIds)
+                {
+                    bool stillInATeam = await _repository.IsEmployeeInAnyTeamAsync(employeeId);
+                    
+                    if (!stillInATeam)
+                    {
+                        // Employee is no longer in any team, so clear their department
+                        await _repository.UpdateEmployeeDepartmentAsync(employeeId, null);
+                    }
+                    // If still in a team, keep their DepartmentID as is
+                }
+                
                 return (true, "Team deleted successfully", id);
             }
             catch (Exception ex)
