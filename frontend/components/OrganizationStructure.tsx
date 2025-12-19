@@ -26,6 +26,8 @@ interface Department {
   description: string
   employees: Employee[]
   subdepartments?: Department[]
+  departmentID?: number // For Teams: parent department ID
+  parentDepartmentName?: string // For Teams: parent department name
 }
 
 interface Employee {
@@ -399,6 +401,8 @@ export function OrganizationStructure() {
             manager: team.teamLeadName || "Team Lead",
             managerId: team.teamLeadID?.toString() || "",
             description: team.description,
+            departmentID: team.departmentID,
+            parentDepartmentName: parentDept.name,
             // Map Members to UI Employees
             employees: team.members.map(m => ({
               id: m.employeeID.toString(),

@@ -1,16 +1,18 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { organizationService } from "@/lib/api/organization-service"
 
 interface Department {
   id: string
   name: string
+  parentDepartmentName?: string
 }
 
 interface Employee {
@@ -29,13 +31,38 @@ interface AddEmployeesModalProps {
 export function AddEmployeesModal({ open, onOpenChange, department }: AddEmployeesModalProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedManager, setSelectedManager] = useState("")
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const [loading, setLoading] = useState(false)
 
-  // Mock unassigned employees
-  const [employees, setEmployees] = useState<Employee[]>([
-    { id: "emp-101", name: "Liam Johnson", position: "Software Engineer" },
-    { id: "emp-102", name: "Noah Williams", position: "Product Designer" },
-    { id: "emp-103", name: "James Brown", position: "QA Tester" },
-  ])
+  // Fetch employees when modal opens
+  useEffect(() => {
+    if (open && department.parentDepartmentName) {
+      const fetchEmployees = async () => {
+        try {
+          setLoading(true)
+          const allEmployees = await organizationService.getAllEmployees()
+
+          // Filter: only employees in the parent department
+          const filtered = allEmployees.filter(e =>
+            e.departmentName === department.parentDepartmentName
+          )
+
+          setEmployees(filtered.map(e => ({
+            id: e.employeeID.toString(),
+            name: e.name,
+            position: e.position || 'Staff',
+            selected: false
+          })))
+        } catch (error) {
+          console.error("Failed to fetch employees", error)
+          setEmployees([])
+        } finally {
+          setLoading(false)
+        }
+      }
+      fetchEmployees()
+    }
+  }, [open, department.parentDepartmentName])
 
   const filteredEmployees = employees.filter(
     (emp) =>
@@ -66,7 +93,9 @@ export function AddEmployeesModal({ open, onOpenChange, department }: AddEmploye
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="search">Unassigned Employees</Label>
+            <Label htmlFor="search">
+              Employees in {department.parentDepartmentName || "Department"}
+            </Label>
             <Input
               id="search"
               placeholder="Filter by name, ID, or position..."
