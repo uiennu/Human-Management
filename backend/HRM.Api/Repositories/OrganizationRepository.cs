@@ -275,5 +275,39 @@ namespace HRM.Api.Repositories
             _context.SubTeamMembers.RemoveRange(members);
             await _context.SaveChangesAsync();
         }
+
+        public async Task UpdateDepartmentAsync(int id, UpdateDepartmentDto department, int userId)
+        {
+            const string sql = @"
+                UPDATE Departments 
+                SET DepartmentName = @DepartmentName,
+                    DepartmentCode = @DepartmentCode,
+                    Description = @Description,
+                    ManagerID = @ManagerID
+                WHERE DepartmentID = @Id";
+
+            using var conn = CreateConnection();
+            // Dapper sẽ tự map các property trong 'department' vào @Param, 
+            // riêng @Id ta truyền thêm vào qua anonymous object
+            await conn.ExecuteAsync(sql, new { 
+                department.DepartmentName, 
+                department.DepartmentCode, 
+                department.Description, 
+                department.ManagerID, 
+                Id = id 
+            });
+        }
+
+        public async Task AddLogAsync(OrganizationLogDto log)
+        {
+            const string sql = @"
+                INSERT INTO OrganizationStructureLogs 
+                (EventType, TargetEntity, TargetID, EventData, PerformedBy, PerformedAt)
+                VALUES 
+                (@EventType, @TargetEntity, @TargetID, @EventData, @PerformedBy, @PerformedAt)";
+
+            using var conn = CreateConnection();
+            await conn.ExecuteAsync(sql, log);
+        }
     }
 }

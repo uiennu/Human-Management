@@ -31,5 +31,7 @@ namespace HRM.Api.Repositories
         Task<bool> IsEmployeeInAnyTeamAsync(int employeeId);
         Task UpdateEmployeeDepartmentAsync(int employeeId, int? departmentId);
         Task RemoveAllTeamMembersAsync(int teamId);
+        Task UpdateDepartmentAsync(int id, UpdateDepartmentDto department, int userId);
+        Task AddLogAsync(OrganizationLogDto log);
     }
 }

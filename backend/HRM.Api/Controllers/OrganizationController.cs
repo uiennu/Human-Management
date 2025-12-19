@@ -126,5 +126,15 @@ namespace HRM.Api.Controllers
              
              return BadRequest(new { success = false, message = addResult.Message });
         }
+
+        [HttpPut("departments/{id}")]
+        public async Task<IActionResult> UpdateDepartment(int id, [FromBody] UpdateDepartmentDto request)
+        {
+            if (request == null)
+                return BadRequest("Invalid data");
+            int userId = 1;
+            await _service.UpdateDepartmentAsync(id, request, userId);
+            return Ok(new { message = "Update successful" });
+        }
     }
 }
