@@ -1,5 +1,6 @@
 using HRM.Api.DTOs;
 using HRM.Api.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -61,6 +62,7 @@ namespace HRM.Api.Controllers
             }
         }
 
+        [Authorize(Roles = "Admin,HR Manager,HR Employee")]
         [HttpPost("adddepartment")]
         public async Task<IActionResult> AddDepartment([FromBody] CreateDepartmentDto request)
         {
@@ -74,6 +76,7 @@ namespace HRM.Api.Controllers
             return StatusCode(500, new { success = false, message = result.Message });
         }
 
+        [Authorize(Roles = "Admin,HR Manager,HR Employee")]
         [HttpDelete("deletedepartment/{id}")]
         public async Task<IActionResult> DeleteDepartment(int id)
         {
@@ -84,6 +87,7 @@ namespace HRM.Api.Controllers
             return StatusCode(500, new { success = false, message = result.Message });
         }
 
+        [Authorize(Roles = "Admin,HR Manager,HR Employee")]
         [HttpDelete("deleteteam/{id}")]
         public async Task<IActionResult> DeleteTeam(int id)
         {
@@ -94,6 +98,7 @@ namespace HRM.Api.Controllers
             return StatusCode(500, new { success = false, message = result.Message });
         }
 
+        [Authorize(Roles = "Admin,HR Manager,HR Employee")]
         [HttpPost("addteam/{departmentId}")]
         public async Task<IActionResult> AddTeam(int departmentId, [FromBody] CreateSubTeamDto request)
         {
@@ -107,6 +112,7 @@ namespace HRM.Api.Controllers
         }
 
        // Move employee endpoint (Simulated using Remove + Add)
+       [Authorize(Roles = "Admin,HR Manager,HR Employee")]
         [HttpPost("move-employee")]
         public async Task<IActionResult> MoveEmployee([FromBody] MoveEmployeeDto request)
         {

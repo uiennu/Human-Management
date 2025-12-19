@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import { Plus, Edit2, Trash2, Users, Eye, X, ChevronDown, ChevronUp, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
+import { useAuth } from "@/lib/hooks/use-auth"
 
 // --- IMPORT CÁC MODAL ---
 import { AddDepartmentModal } from "@/components/add-department-modal"
@@ -87,6 +88,10 @@ const DepartmentCard = ({
   onDrop
 }: DepartmentCardProps) => {
   const [isEmployeesOpen, setIsEmployeesOpen] = useState(false)
+  const { hasAnyRole } = useAuth()
+
+  // Check if user can manage organization
+  const canManageOrganization = hasAnyRole(['Admin', 'HR Manager', 'HR Employee'])
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -126,8 +131,7 @@ const DepartmentCard = ({
               )}
             </div>
 
-            {/* --- NÚT SỬA / XÓA (Ẩn nếu là Root hoặc ReadOnly) --- */}
-            {!isRoot && !readOnly && (
+            {!isRoot && canManageOrganization && (
               <div className="flex gap-1 shrink-0">
                 <button
                   onClick={() => onEditClick(dept, level)}
@@ -203,8 +207,7 @@ const DepartmentCard = ({
           </div>
         )}
 
-        {/* NÚT THÊM TEAM / NHÂN VIÊN (Ẩn nếu ReadOnly) */}
-        {!isRoot && !readOnly && (
+        {!isRoot && canManageOrganization && (
           <div className="border-t border-gray-100 p-2 bg-gray-50/50">
             {level === 1 ? (
               <button
@@ -343,6 +346,9 @@ const TreeNode = ({
 };
 
 export function OrganizationStructure() {
+  const { hasAnyRole } = useAuth()
+  const canManageOrganization = hasAnyRole(['Admin', 'HR Manager', 'HR Employee'])
+
   // --- STATE QUẢN LÝ DỮ LIỆU ---
   const [departments, setDepartments] = useState<Department[]>([])
   const [loading, setLoading] = useState(true)
@@ -653,7 +659,7 @@ export function OrganizationStructure() {
             <button onClick={handleResetZoom} className="p-2 hover:bg-gray-100 text-gray-600 border-l border-gray-200" style={{ cursor: cursorPointerFinal }}><Eye className="h-4 w-4" /></button>
           </div>
 
-          {!isReadOnly && (
+          {canManageOrganization && (
             <Button
               onClick={() => { setParentDeptForAdd(null); setAddDeptModalOpen(true); }}
               className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
