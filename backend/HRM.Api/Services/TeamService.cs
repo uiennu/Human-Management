@@ -105,6 +105,18 @@ namespace HRM.Api.Services
                 // Remove employee from team
                 await _teamRepository.RemoveTeamMemberAsync(teamMember);
 
+                // Log the action to OrganizationStructureLogs
+                var employeeName = $"{employee.FirstName} {employee.LastName}";
+                var teamName = team.TeamName;
+                await _teamRepository.LogRemoveEmployeeActionAsync(
+                    employeeId, 
+                    teamId, 
+                    team.DepartmentID, 
+                    employeeName, 
+                    teamName, 
+                    employeeId // TODO: Replace with current logged-in user ID from HttpContext
+                );
+
                 var data = new RemoveEmployeeDataDto
                 {
                     EmployeeId = employeeId,
@@ -260,6 +272,17 @@ namespace HRM.Api.Services
             };
 
             var createdTeam = await _teamRepository.AddSubTeamAsync(subTeam);
+
+            // 4. Automatically add Team Lead to SubTeamMembers (if provided)
+            if (dto.TeamLeadId.HasValue)
+            {
+                var teamLeadMember = new SubTeamMember
+                {
+                    SubTeamID = createdTeam.SubTeamID,
+                    EmployeeID = dto.TeamLeadId.Value
+                };
+                await _teamRepository.AddTeamMemberAsync(teamLeadMember);
+            }
 
             return (true, "Team created successfully", createdTeam.SubTeamID);
         }

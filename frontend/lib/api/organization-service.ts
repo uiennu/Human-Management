@@ -1,4 +1,3 @@
-
 export interface DepartmentDto {
     departmentID: number
     departmentName: string
@@ -115,6 +114,31 @@ export const organizationService = {
         return res.json()
     },
 
+    async createTeam(departmentId: number, data: { teamName: string; description: string; teamLeadId?: number }) {
+        const res = await fetch(`${API_URL}/organization/addteam/${departmentId}`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data),
+        })
+        if (!res.ok) {
+            const error = await res.json()
+            throw new Error(error.message || 'Failed to create team')
+        }
+        return res.json()
+    },
+
+    async removeEmployeeFromTeam(teamId: number, employeeId: number) {
+        const res = await fetch(`${API_URL}/organization/teams/${teamId}/employees/${employeeId}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders(),
+        })
+        if (!res.ok) {
+            const error = await res.json()
+            throw new Error(error.message || 'Failed to remove employee from team')
+        }
+        return res.json()
+    },
+
     async deleteTeam(id: number) {
         const res = await fetch(`${API_URL}/organization/deleteteam/${id}`, {
             method: 'DELETE',
@@ -123,6 +147,19 @@ export const organizationService = {
         if (!res.ok) {
             const error = await res.json()
             throw new Error(error.message || 'Failed to delete team')
+        }
+        return res.json()
+    },
+
+    updateDepartment: async (id: number, data: any) => {
+        const res = await fetch(`${API_URL}/organization/departments/${id}`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data),
+        })
+        if (!res.ok) {
+            const error = await res.json()
+            throw new Error(error.message || 'Failed to update department')
         }
         return res.json()
     },

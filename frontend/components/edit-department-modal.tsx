@@ -3,48 +3,55 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { organizationService } from "@/lib/api/organization-service"
 
 interface Department {
-  id: string
-  name: string
-  code: string
-  manager: string
-  managerId: string
+  id: string; 
+  name: string; 
+  code: string; 
+  manager: string; 
+  managerId: string; 
   description: string
 }
 
+interface Employee {
+  employeeID: number; 
+  name: string; 
+  position?: string // Có dấu ? để tránh lỗi type
+}
+
 interface EditDepartmentModalProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  department: Department
+  open: boolean; 
+  onOpenChange: (open: boolean) => void; department: Department; 
   onSubmit: (dept: Department) => void
 }
 
 export function EditDepartmentModal({ open, onOpenChange, department, onSubmit }: EditDepartmentModalProps) {
   const [formData, setFormData] = useState(department)
+  const [employees, setEmployees] = useState<Employee[]>([])
+
+  useEffect(() => { setFormData(department) }, [department])
 
   useEffect(() => {
-    setFormData(department)
-  }, [department])
-
-  // Mock managers list
-  const managers = [
-    { id: "mgr-001", name: "David Lee" },
-    { id: "mgr-002", name: "Emily Carter" },
-    { id: "mgr-003", name: "Michael Brown" },
-    { id: "mgr-004", name: "Sarah Johnson" },
-  ]
+    const fetchEmployees = async () => {
+      if (open) {
+        try {
+          const data = await organizationService.getAllEmployees();
+          setEmployees(data);
+        } catch (e) { console.error(e) }
+      }
+    };
+    fetchEmployees();
+  }, [open]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (formData.name && formData.code && formData.managerId) {
-      onSubmit(formData)
-    }
+    if (formData.name && formData.code) onSubmit(formData)
   }
 
   return (
@@ -52,64 +59,48 @@ export function EditDepartmentModal({ open, onOpenChange, department, onSubmit }
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Edit Department</DialogTitle>
+          <DialogDescription>Update department details.</DialogDescription>
         </DialogHeader>
-
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* ... Phần Input Name và Code giữ nguyên ... */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-name">Department Name *</Label>
-              <Input
-                id="edit-name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-code">Department Code *</Label>
-              <Input
-                id="edit-code"
-                value={formData.code}
-                disabled
-                className="bg-gray-100 text-gray-500 cursor-not-allowed"
-                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-              />
-            </div>
+             <div className="space-y-2">
+               <Label>Name</Label>
+               <Input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+             </div>
+             <div className="space-y-2">
+               <Label>Code</Label>
+               <Input value={formData.code} disabled className="bg-gray-100" />
+             </div>
+          </div>
+          
+          <div className="space-y-2">
+             <Label>Description</Label>
+             <Textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="edit-description">Description</Label>
-            <Textarea
-              id="edit-description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="resize-none"
-              rows={3}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="edit-manager">Department Manager *</Label>
+            <Label>Manager</Label>
             <Select
-              value={formData.managerId}
-              onValueChange={(value) => setFormData({ ...formData, managerId: value })}
+              // Fix lỗi crash: dùng "unassigned" nếu rỗng
+              value={formData.managerId ? formData.managerId.toString() : "unassigned"}
+              onValueChange={(value) => {
+                const realId = value === "unassigned" ? "" : value;
+                const emp = employees.find(e => e.employeeID.toString() === realId);
+                setFormData({ ...formData, managerId: realId, manager: emp ? emp.name : "" })
+              }}
             >
-              <SelectTrigger id="edit-manager">
-                <SelectValue />
-              </SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Select manager" /></SelectTrigger>
               <SelectContent>
-                {managers.map((manager) => (
-                  <SelectItem key={manager.id} value={manager.id}>
-                    {manager.name}
-                  </SelectItem>
+                <SelectItem value="unassigned">-- None --</SelectItem>
+                {employees.map(e => (
+                  <SelectItem key={e.employeeID} value={e.employeeID.toString()}>{e.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-
           <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button type="submit">Save</Button>
           </div>
         </form>

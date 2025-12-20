@@ -64,10 +64,22 @@ public class ReportsController : ControllerBase
     }
 
     [HttpGet("subteams")]
-    public async Task<IActionResult> GetSubTeams()
+    public async Task<IActionResult> GetSubTeams([FromQuery] string? department) // <--- NHỚ DẤU ?
     {
-        // Gọi service lấy danh sách team
-        var teams = await _reportService.GetSubTeamListAsync();
+        // 1. Lấy ID người dùng (Logic tìm ID bất tử)
+        var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
+                    ?? User.FindFirst("id")?.Value 
+                    ?? User.FindFirst("sub")?.Value
+                    ?? User.FindFirst("EmployeeID")?.Value;
+
+        if (string.IsNullOrEmpty(userIdStr) || !int.TryParse(userIdStr, out int userId))
+        {
+            return Unauthorized("User ID not found in token");
+        }
+
+        // 2. Gọi Service (Nếu department null, Service sẽ tự tìm phòng của userId)
+        var teams = await _reportService.GetSubTeamListAsync(department, userId);
+        
         return Ok(teams);
     }
 }

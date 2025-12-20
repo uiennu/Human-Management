@@ -275,5 +275,58 @@ namespace HRM.Api.Repositories
             _context.SubTeamMembers.RemoveRange(members);
             await _context.SaveChangesAsync();
         }
+
+        public async Task UpdateDepartmentAsync(int id, UpdateDepartmentDto department, int userId)
+        {
+            using var conn = CreateConnection();
+
+            // 1. LẤY DỮ LIỆU CŨ
+            var oldSql = "SELECT * FROM Departments WHERE DepartmentID = @Id";
+            var oldDept = await conn.QuerySingleOrDefaultAsync<UpdateDepartmentDto>(oldSql, new { Id = id });
+
+            if (oldDept == null) return;
+
+            // 2. MERGE DỮ LIỆU (QUAN TRỌNG: Check ManagerID > 0)
+            
+            var newName = !string.IsNullOrEmpty(department.DepartmentName) ? department.DepartmentName : oldDept.DepartmentName;
+            var newCode = !string.IsNullOrEmpty(department.DepartmentCode) ? department.DepartmentCode : oldDept.DepartmentCode;
+            var newDesc = !string.IsNullOrEmpty(department.Description) ? department.Description : oldDept.Description;
+
+            // --- SỬA LOGIC MANAGER TẠI ĐÂY ---
+            // Nếu Frontend gửi lên NULL hoặc số 0 (do chọn --None--) -> Thì giữ nguyên người cũ (oldDept.ManagerID)
+            // Chỉ cập nhật khi có chọn người mới thực sự (ID > 0)
+            var newManagerId = (department.ManagerID.HasValue && department.ManagerID.Value > 0) 
+                            ? department.ManagerID 
+                            : oldDept.ManagerID;
+
+            // 3. UPDATE
+            const string updateSql = @"
+                UPDATE Departments 
+                SET DepartmentName = @DepartmentName,
+                    DepartmentCode = @DepartmentCode,
+                    Description = @Description,
+                    ManagerID = @ManagerID
+                WHERE DepartmentID = @Id";
+
+            await conn.ExecuteAsync(updateSql, new { 
+                DepartmentName = newName,
+                DepartmentCode = newCode,
+                Description = newDesc,
+                ManagerID = newManagerId,
+                Id = id 
+            });
+        }
+
+        public async Task AddLogAsync(OrganizationLogDto log)
+        {
+            const string sql = @"
+                INSERT INTO OrganizationStructureLogs 
+                (EventType, TargetEntity, TargetID, EventData, PerformedBy, PerformedAt)
+                VALUES 
+                (@EventType, @TargetEntity, @TargetID, @EventData, @PerformedBy, @PerformedAt)";
+
+            using var conn = CreateConnection();
+            await conn.ExecuteAsync(sql, log);
+        }
     }
 }
