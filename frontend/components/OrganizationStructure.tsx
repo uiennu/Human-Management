@@ -388,9 +388,19 @@ export function OrganizationStructure() {
         id: `dept-${d.departmentID}`,
         name: d.departmentName,
         code: d.departmentCode,
+        
+        // --- SỬA DÒNG NÀY: Lấy Manager Name từ API ---
         manager: d.managerName || "Chưa có quản lý",
-        managerId: "",
+        
+        // --- SỬA DÒNG NÀY: Lấy ID từ API (để Modal biết ai là Manager) ---
+        // Cũ là: managerId: "", 
+        managerId: d.ManagerId || d.managerId || d.ManagerID || "", 
+
+        // --- SỬA DÒNG NÀY: Lấy Description từ API ---
+        // Cũ là: description: d.description || "",
+        // Thêm d.Description viết hoa để chắc chắn bắt được dữ liệu từ Dapper
         description: d.Description || d.description || "",
+        
         employees: [],
         subdepartments: [],
       }))
@@ -484,7 +494,9 @@ export function OrganizationStructure() {
           DepartmentName: updated.name,
           DepartmentCode: updated.code,
           Description: updated.description,
-          ManagerID: updated.managerId ? parseInt(updated.managerId) : null
+          ManagerID: (updated.managerId && updated.managerId !== "") 
+                     ? parseInt(updated.managerId) 
+                     : null
         };
 
         // 3. Gọi API

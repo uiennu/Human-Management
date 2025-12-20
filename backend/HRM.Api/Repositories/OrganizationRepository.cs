@@ -29,8 +29,13 @@ namespace HRM.Api.Repositories
         public async Task<IEnumerable<DepartmentDto>> GetDepartmentsAsync()
         {
             const string sql = @"
-                SELECT d.DepartmentID, d.DepartmentName, d.DepartmentCode,
-                       CONCAT(e.FirstName, ' ', e.LastName) AS ManagerName
+                SELECT 
+                    d.DepartmentID, 
+                    d.DepartmentName, 
+                    d.DepartmentCode,
+                    d.Description,  -- <--- THÊM DÒNG NÀY
+                    d.ManagerID,    -- <--- THÊM DÒNG NÀY
+                    CONCAT(e.FirstName, ' ', e.LastName) AS ManagerName
                 FROM Departments d
                 LEFT JOIN Employees e ON d.ManagerID = e.EmployeeID";
 
@@ -286,18 +291,19 @@ namespace HRM.Api.Repositories
 
             if (oldDept == null) return;
 
-            // 2. MERGE DỮ LIỆU (QUAN TRỌNG: Check ManagerID > 0)
+            // 2. XỬ LÝ DỮ LIỆU (SỬA ĐOẠN NÀY)
             
-            var newName = !string.IsNullOrEmpty(department.DepartmentName) ? department.DepartmentName : oldDept.DepartmentName;
-            var newCode = !string.IsNullOrEmpty(department.DepartmentCode) ? department.DepartmentCode : oldDept.DepartmentCode;
-            var newDesc = !string.IsNullOrEmpty(department.Description) ? department.Description : oldDept.Description;
+            // Tên và Code: Nếu chuỗi rỗng/null thì giữ cái cũ, ngược lại lấy cái mới
+            var newName = !string.IsNullOrWhiteSpace(department.DepartmentName) ? department.DepartmentName : oldDept.DepartmentName;
+            var newCode = !string.IsNullOrWhiteSpace(department.DepartmentCode) ? department.DepartmentCode : oldDept.DepartmentCode;
+            var newDesc = department.Description ?? oldDept.Description;
 
-            // --- SỬA LOGIC MANAGER TẠI ĐÂY ---
-            // Nếu Frontend gửi lên NULL hoặc số 0 (do chọn --None--) -> Thì giữ nguyên người cũ (oldDept.ManagerID)
-            // Chỉ cập nhật khi có chọn người mới thực sự (ID > 0)
-            var newManagerId = (department.ManagerID.HasValue && department.ManagerID.Value > 0) 
-                            ? department.ManagerID 
-                            : oldDept.ManagerID;
+            // LOGIC CŨ (SAI): var newManagerId = (department.ManagerID.HasValue && department.ManagerID.Value > 0) ? ... : ...;
+            
+            // LOGIC MỚI (ĐÚNG): Luôn lấy giá trị từ Frontend gửi lên (kể cả NULL)
+            // Frontend gửi NULL tức là muốn gỡ Manager -> Database lưu NULL
+            // Frontend gửi ID tức là muốn đổi Manager -> Database lưu ID
+            var newManagerId = department.ManagerID; 
 
             // 3. UPDATE
             const string updateSql = @"
@@ -312,7 +318,7 @@ namespace HRM.Api.Repositories
                 DepartmentName = newName,
                 DepartmentCode = newCode,
                 Description = newDesc,
-                ManagerID = newManagerId,
+                ManagerID = newManagerId, // Truyền trực tiếp giá trị (int? hoặc null)
                 Id = id 
             });
         }

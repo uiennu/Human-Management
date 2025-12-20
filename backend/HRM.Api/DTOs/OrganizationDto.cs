@@ -1,4 +1,4 @@
-
+using System.ComponentModel.DataAnnotations;
 using System.Collections.Generic;
 
 namespace HRM.Api.DTOs
@@ -12,6 +12,7 @@ namespace HRM.Api.DTOs
     public class DepartmentDto
     {
         public int DepartmentID { get; set; }
+        [Required(ErrorMessage = "Department name is required.")]
         public string DepartmentName { get; set; } = string.Empty;
         public string? DepartmentCode { get; set; }
         public string? Description { get; set; }
