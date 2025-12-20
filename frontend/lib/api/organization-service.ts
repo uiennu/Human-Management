@@ -1,4 +1,3 @@
-import axios from "axios";
 export interface DepartmentDto {
     departmentID: number
     departmentName: string
@@ -153,7 +152,15 @@ export const organizationService = {
     },
 
     updateDepartment: async (id: number, data: any) => {
-    // data ở đây sẽ bao gồm: name, code, description, managerId
-    await axios.put(`${API_URL}/organization/departments/${id}`, data);
-  },
+        const res = await fetch(`${API_URL}/organization/departments/${id}`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data),
+        })
+        if (!res.ok) {
+            const error = await res.json()
+            throw new Error(error.message || 'Failed to update department')
+        }
+        return res.json()
+    },
 }

@@ -13,6 +13,8 @@ interface Department {
   id: string
   name: string
   parentDepartmentName?: string
+  employees?: { id: string; name: string; position: string }[]
+  managerId?: string
 }
 
 interface Employee {
@@ -42,11 +44,27 @@ export function AddEmployeesModal({ open, onOpenChange, department }: AddEmploye
           setLoading(true)
           const allEmployees = await organizationService.getAllEmployees()
 
-          // Filter: employees in parent department OR not in any department
-          const filtered = allEmployees.filter(e =>
-            e.departmentName === department.parentDepartmentName ||
-            !e.departmentName  // Also include unassigned employees
-          )
+          // Get list of employee IDs already in this team
+          const existingMemberIds = department.employees?.map(e => e.id) || []
+
+          // Get team lead ID (if exists)
+          const teamLeadId = department.managerId
+
+          // Filter: employees in parent department AND not already in team AND not team lead
+          const filtered = allEmployees.filter(e => {
+            const empId = e.employeeID.toString()
+
+            // Must be in same department
+            const inSameDepartment = e.departmentName === department.parentDepartmentName || !e.departmentName
+
+            // Not already a member
+            const notAlreadyMember = !existingMemberIds.includes(empId)
+
+            // Not the team lead
+            const notTeamLead = empId !== teamLeadId
+
+            return inSameDepartment && notAlreadyMember && notTeamLead
+          })
 
           setEmployees(filtered.map(e => ({
             id: e.employeeID.toString(),
@@ -63,7 +81,7 @@ export function AddEmployeesModal({ open, onOpenChange, department }: AddEmploye
       }
       fetchEmployees()
     }
-  }, [open, department.parentDepartmentName])
+  }, [open, department.parentDepartmentName, department.employees, department.managerId])
 
   const filteredEmployees = employees.filter(
     (emp) =>

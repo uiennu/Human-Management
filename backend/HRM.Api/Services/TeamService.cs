@@ -273,6 +273,17 @@ namespace HRM.Api.Services
 
             var createdTeam = await _teamRepository.AddSubTeamAsync(subTeam);
 
+            // 4. Automatically add Team Lead to SubTeamMembers (if provided)
+            if (dto.TeamLeadId.HasValue)
+            {
+                var teamLeadMember = new SubTeamMember
+                {
+                    SubTeamID = createdTeam.SubTeamID,
+                    EmployeeID = dto.TeamLeadId.Value
+                };
+                await _teamRepository.AddTeamMemberAsync(teamLeadMember);
+            }
+
             return (true, "Team created successfully", createdTeam.SubTeamID);
         }
     }

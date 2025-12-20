@@ -408,12 +408,15 @@ export function OrganizationStructure() {
             description: team.description,
             departmentID: team.departmentID,
             parentDepartmentName: parentDept.name,
-            employees: team.members.map(m => ({
-              id: m.employeeID.toString(),
-              name: `${m.firstName} ${m.lastName}`,
-              position: m.position || "Member",
-              avatar: undefined
-            })),
+            // Filter out team lead from employees list (to avoid duplication)
+            employees: team.members
+              .filter(m => m.employeeID !== team.teamLeadID)
+              .map(m => ({
+                id: m.employeeID.toString(),
+                name: `${m.firstName} ${m.lastName}`,
+                position: m.position || "Member",
+                avatar: undefined
+              })),
             subdepartments: []
           }
           parentDept.subdepartments?.push(teamNode)
