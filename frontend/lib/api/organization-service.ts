@@ -128,6 +128,18 @@ export const organizationService = {
         return res.json()
     },
 
+    async removeEmployeeFromTeam(teamId: number, employeeId: number) {
+        const res = await fetch(`${API_URL}/organization/teams/${teamId}/employees/${employeeId}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders(),
+        })
+        if (!res.ok) {
+            const error = await res.json()
+            throw new Error(error.message || 'Failed to remove employee from team')
+        }
+        return res.json()
+    },
+
     async deleteTeam(id: number) {
         const res = await fetch(`${API_URL}/organization/deleteteam/${id}`, {
             method: 'DELETE',

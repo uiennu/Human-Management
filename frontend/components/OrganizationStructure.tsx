@@ -15,6 +15,7 @@ import { EditDepartmentModal } from "@/components/edit-department-modal"
 import { EditTeamModal } from "@/components/edit-team-modal"
 import { AddEmployeesModal } from "@/components/add-employees-modal"
 import { MoveEmployeeModal } from "@/components/move-employee-modal"
+import { RemoveEmployeeModal } from "@/components/remove-employee-modal"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { organizationService } from "@/lib/api/organization-service"
 
@@ -471,6 +472,10 @@ export function OrganizationStructure() {
   const [sourceDept, setSourceDept] = useState<Department | null>(null)
   const [targetDept, setTargetDept] = useState<Department | null>(null)
 
+  // Remove Employee Modal State
+  const [removeEmployeeModalOpen, setRemoveEmployeeModalOpen] = useState(false)
+  const [employeeToRemove, setEmployeeToRemove] = useState<{ emp: Employee; dept: Department } | null>(null)
+
   // Lưu cha hiện tại để biết đang add con vào đâu
   const [parentDeptForAdd, setParentDeptForAdd] = useState<Department | null>(null)
 
@@ -575,20 +580,53 @@ export function OrganizationStructure() {
   }
 
   const handleDeleteEmployee = (deptId: string, empId: string) => {
-    const updateRecursive = (depts: Department[]): Department[] =>
-      depts.map((dept) => {
+    // Find the employee and department
+    const findEmployee = (depts: Department[]): { emp: Employee; dept: Department } | null => {
+      for (const dept of depts) {
         if (dept.id === deptId) {
-          return {
-            ...dept,
-            employees: dept.employees.filter((e) => e.id !== empId),
-          }
+          const emp = dept.employees.find(e => e.id === empId)
+          if (emp) return { emp, dept }
         }
-        return {
-          ...dept,
-          subdepartments: dept.subdepartments ? updateRecursive(dept.subdepartments) : [],
+        if (dept.subdepartments) {
+          const result = findEmployee(dept.subdepartments)
+          if (result) return result
         }
-      })
-    setDepartments(updateRecursive(departments))
+      }
+      return null
+    }
+
+    const result = findEmployee(departments)
+    if (result) {
+      setEmployeeToRemove(result)
+      setRemoveEmployeeModalOpen(true)
+    }
+  }
+
+  const executeRemoveEmployee = async () => {
+    if (!employeeToRemove) return
+
+    try {
+      const teamId = parseInt(employeeToRemove.dept.id.replace("team-", ""))
+      const employeeId = parseInt(employeeToRemove.emp.id)
+
+      if (isNaN(teamId) || isNaN(employeeId)) {
+        toast.error("Invalid team or employee ID")
+        return
+      }
+
+      await organizationService.removeEmployeeFromTeam(teamId, employeeId)
+      toast.success("Employee removed from team successfully")
+
+      // Refresh data from server
+      await fetchData()
+
+      // Close modal and reset state
+      setRemoveEmployeeModalOpen(false)
+      setEmployeeToRemove(null)
+    } catch (error: any) {
+      console.error("Remove employee failed:", error)
+      toast.error(error.message || "Failed to remove employee from team")
+    }
   }
 
   // --- DRAG AND DROP HANDLERS ---
@@ -904,6 +942,18 @@ export function OrganizationStructure() {
             sourceTeamName={sourceDept.name}
             targetTeamName={targetDept.name}
             onConfirm={confirmMoveEmployee}
+          />
+        )
+      }
+
+      {
+        employeeToRemove && (
+          <RemoveEmployeeModal
+            open={removeEmployeeModalOpen}
+            onOpenChange={setRemoveEmployeeModalOpen}
+            employeeName={employeeToRemove.emp.name}
+            teamName={employeeToRemove.dept.name}
+            onConfirm={executeRemoveEmployee}
           />
         )
       }

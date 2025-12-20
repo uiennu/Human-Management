@@ -105,6 +105,18 @@ namespace HRM.Api.Services
                 // Remove employee from team
                 await _teamRepository.RemoveTeamMemberAsync(teamMember);
 
+                // Log the action to OrganizationStructureLogs
+                var employeeName = $"{employee.FirstName} {employee.LastName}";
+                var teamName = team.TeamName;
+                await _teamRepository.LogRemoveEmployeeActionAsync(
+                    employeeId, 
+                    teamId, 
+                    team.DepartmentID, 
+                    employeeName, 
+                    teamName, 
+                    employeeId // TODO: Replace with current logged-in user ID from HttpContext
+                );
+
                 var data = new RemoveEmployeeDataDto
                 {
                     EmployeeId = employeeId,

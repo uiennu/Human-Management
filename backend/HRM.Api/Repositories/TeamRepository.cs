@@ -121,5 +121,25 @@ namespace HRM.Api.Repositories
             _context.SubTeamMembers.Remove(teamMember);
             await _context.SaveChangesAsync();
         }
+
+        public async Task LogRemoveEmployeeActionAsync(int employeeId, int teamId, int departmentId, string employeeName, string teamName, int performedBy)
+        {
+            var sql = @"
+                INSERT INTO OrganizationStructureLogs 
+                (ActionType, Description, EmployeeID, SubTeamID, DepartmentID, OldSubTeamID, NewSubTeamID, PerformedBy, PerformedAt) 
+                VALUES 
+                (@ActionType, @Description, @EmployeeID, @SubTeamID, @DepartmentID, @OldSubTeamID, NULL, @PerformedBy, @PerformedAt)";
+
+            await _context.Database.ExecuteSqlRawAsync(sql,
+                new MySqlConnector.MySqlParameter("@ActionType", "RemoveEmployeeFromTeam"),
+                new MySqlConnector.MySqlParameter("@Description", $"Removed {employeeName} from team {teamName}"),
+                new MySqlConnector.MySqlParameter("@EmployeeID", employeeId),
+                new MySqlConnector.MySqlParameter("@SubTeamID", teamId),
+                new MySqlConnector.MySqlParameter("@DepartmentID", departmentId),
+                new MySqlConnector.MySqlParameter("@OldSubTeamID", teamId),
+                new MySqlConnector.MySqlParameter("@PerformedBy", performedBy),
+                new MySqlConnector.MySqlParameter("@PerformedAt", DateTime.Now)
+            );
+        }
     }
 }

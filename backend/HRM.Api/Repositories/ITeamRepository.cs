@@ -68,5 +68,10 @@ namespace HRM.Api.Repositories
         /// Add a new sub-team
         /// </summary>
         Task<SubTeam> AddSubTeamAsync(SubTeam subTeam);
+
+        /// <summary>
+        /// Log employee removal action to OrganizationStructureLogs
+        /// </summary>
+        Task LogRemoveEmployeeActionAsync(int employeeId, int teamId, int departmentId, string employeeName, string teamName, int performedBy);
     }
 }

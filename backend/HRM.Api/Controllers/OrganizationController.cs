@@ -111,6 +111,25 @@ namespace HRM.Api.Controllers
             return StatusCode(500, new { success = false, message = result.Message });
         }
 
+        [Authorize(Roles = "Admin,HR Manager,HR Employee")]
+        [HttpDelete("teams/{teamId}/employees/{employeeId}")]
+        public async Task<IActionResult> RemoveEmployeeFromTeam(int teamId, int employeeId)
+        {
+            var result = await _teamService.RemoveEmployeeFromTeamAsync(teamId, employeeId);
+            
+            if (result.Success)
+            {
+                return Ok(new { success = true, message = result.Message, data = result.Data });
+            }
+            
+            if (result.Message.Contains("not found"))
+            {
+                return NotFound(new { success = false, message = result.Message });
+            }
+            
+            return StatusCode(500, new { success = false, message = result.Message });
+        }
+
        // Move employee endpoint (Simulated using Remove + Add)
        [Authorize(Roles = "Admin,HR Manager,HR Employee")]
         [HttpPost("move-employee")]
