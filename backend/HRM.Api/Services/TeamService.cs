@@ -276,12 +276,21 @@ namespace HRM.Api.Services
             // 4. Automatically add Team Lead to SubTeamMembers (if provided)
             if (dto.TeamLeadId.HasValue)
             {
-                var teamLeadMember = new SubTeamMember
+                try
                 {
-                    SubTeamID = createdTeam.SubTeamID,
-                    EmployeeID = dto.TeamLeadId.Value
-                };
-                await _teamRepository.AddTeamMemberAsync(teamLeadMember);
+                    var teamLeadMember = new SubTeamMember
+                    {
+                        SubTeamID = createdTeam.SubTeamID,
+                        EmployeeID = dto.TeamLeadId.Value
+                    };
+                    await _teamRepository.AddTeamMemberAsync(teamLeadMember);
+                }
+                catch (Exception ex)
+                {
+                    // Log but don't fail team creation if team lead is already in another team
+                    Console.WriteLine($"Warning: Could not add team lead to members: {ex.Message}");
+                    // Team creation still succeeds
+                }
             }
 
             return (true, "Team created successfully", createdTeam.SubTeamID);

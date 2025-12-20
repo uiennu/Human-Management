@@ -95,12 +95,46 @@ export function AddEmployeesModal({ open, onOpenChange, department }: AddEmploye
 
   const selectedCount = employees.filter((e) => e.selected).length
 
-  const handleSubmit = () => {
-    // In real app, save to database
-    console.log(`Added ${selectedCount} employees to ${department.name}`)
-    setEmployees(employees.map((e) => ({ ...e, selected: false })))
-    setSearchTerm("")
-    onOpenChange(false)
+  const handleSubmit = async () => {
+    try {
+      const selectedEmployees = employees.filter(e => e.selected)
+
+      if (selectedEmployees.length === 0) {
+        return
+      }
+
+      // Extract team ID from department.id (format: "team-123")
+      const teamId = parseInt(department.id.replace("team-", ""))
+
+      if (isNaN(teamId)) {
+        console.error("Invalid team ID:", department.id)
+        return
+      }
+
+      // Import toast and teamApi
+      const { toast } = await import("sonner")
+      const { teamApi } = await import("@/lib/api/team")
+
+      // Add each selected employee to the team
+      for (const emp of selectedEmployees) {
+        const employeeId = parseInt(emp.id)
+        await teamApi.addEmployeeToTeam(teamId, employeeId)
+      }
+
+      toast.success(`Added ${selectedCount} employee(s) to ${department.name}`)
+
+      // Reset selection and close modal
+      setEmployees(employees.map((e) => ({ ...e, selected: false })))
+      setSearchTerm("")
+      onOpenChange(false)
+
+      // Refresh the page to show updated data
+      window.location.reload()
+    } catch (error: any) {
+      console.error("Failed to add employees:", error)
+      const { toast } = await import("sonner")
+      toast.error(error.message || "Failed to add employees to team")
+    }
   }
 
   return (

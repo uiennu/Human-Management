@@ -130,8 +130,21 @@ namespace HRM.Api.Controllers
             return StatusCode(500, new { success = false, message = result.Message });
         }
 
-       // Move employee endpoint (Simulated using Remove + Add)
-       [Authorize(Roles = "Admin,HR Manager,HR Employee")]
+        [Authorize(Roles = "Admin,HR Manager,HR Employee")]
+        [HttpPost("teams/{teamId}/add-employee")]
+        public async Task<IActionResult> AddEmployeeToTeam(int teamId, [FromBody] AddEmployeeToTeamDto request)
+        {
+            if (request == null || request.EmployeeId <= 0)
+                return BadRequest(new { success = false, message = "Invalid employee ID" });
+
+            var result = await _teamService.AddEmployeeToTeamAsync(teamId, request.EmployeeId);
+            
+            if (result.Success)
+                return Ok(new { success = true, message = result.Message, employeeId = result.EmployeeId });
+            
+            return BadRequest(new { success = false, message = result.Message });
+        }
+
         [HttpPost("move-employee")]
         public async Task<IActionResult> MoveEmployee([FromBody] MoveEmployeeDto request)
         {
