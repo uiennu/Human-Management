@@ -22,20 +22,27 @@ interface Department {
 interface Employee {
   employeeID: number; 
   name: string; 
-  position?: string // Có dấu ? để tránh lỗi type
+  position?: string 
 }
 
 interface EditDepartmentModalProps {
   open: boolean; 
-  onOpenChange: (open: boolean) => void; department: Department; 
+  onOpenChange: (open: boolean) => void; 
+  department: Department; 
   onSubmit: (dept: Department) => void
 }
 
 export function EditDepartmentModal({ open, onOpenChange, department, onSubmit }: EditDepartmentModalProps) {
   const [formData, setFormData] = useState(department)
   const [employees, setEmployees] = useState<Employee[]>([])
+  
+  // State lưu lỗi validation
+  const [nameError, setNameError] = useState("")
 
-  useEffect(() => { setFormData(department) }, [department])
+  useEffect(() => { 
+      setFormData(department);
+      setNameError(""); // Reset lỗi khi mở modal
+  }, [department, open])
 
   useEffect(() => {
     const fetchEmployees = async () => {
@@ -51,7 +58,15 @@ export function EditDepartmentModal({ open, onOpenChange, department, onSubmit }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (formData.name && formData.code) onSubmit(formData)
+    
+    // YÊU CẦU: Validate tên không được để trống
+    if (!formData.name || formData.name.trim() === "") {
+        setNameError("Department Name không được để trống!"); // Set nội dung lỗi
+        return;
+    }
+
+    // Nếu hợp lệ thì submit
+    onSubmit(formData)
   }
 
   return (
@@ -62,12 +77,24 @@ export function EditDepartmentModal({ open, onOpenChange, department, onSubmit }
           <DialogDescription>Update department details.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* ... Phần Input Name và Code giữ nguyên ... */}
+          
           <div className="grid grid-cols-2 gap-4">
              <div className="space-y-2">
-               <Label>Name</Label>
-               <Input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+               <Label>Name <span className="text-red-500">*</span></Label>
+               <Input 
+                 value={formData.name} 
+                 // Nếu có lỗi thì viền đỏ
+                 className={nameError ? "border-red-500 focus-visible:ring-red-500" : ""}
+                 onChange={e => {
+                     setFormData({...formData, name: e.target.value});
+                     // Khi người dùng gõ lại, xóa lỗi đi
+                     if(e.target.value.trim() !== "") setNameError("");
+                 }} 
+               />
+               {/* Hiển thị dòng thông báo lỗi */}
+               {nameError && <p className="text-xs text-red-500 font-medium">{nameError}</p>}
              </div>
+
              <div className="space-y-2">
                <Label>Code</Label>
                <Input value={formData.code} disabled className="bg-gray-100" />
@@ -82,7 +109,7 @@ export function EditDepartmentModal({ open, onOpenChange, department, onSubmit }
           <div className="space-y-2">
             <Label>Manager</Label>
             <Select
-              // Fix lỗi crash: dùng "unassigned" nếu rỗng
+              // Nếu managerId rỗng thì hiện unassigned (None)
               value={formData.managerId ? formData.managerId.toString() : "unassigned"}
               onValueChange={(value) => {
                 const realId = value === "unassigned" ? "" : value;
