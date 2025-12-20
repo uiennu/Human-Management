@@ -102,6 +102,8 @@ builder.Services.AddScoped<ITeamService, TeamService>();
 builder.Services.AddScoped<IReportRepository, ReportRepository>();
 builder.Services.AddScoped<IReportService, ReportService>();
 
+builder.Services.AddScoped<IEventReplayService, EventReplayService>();
+
 var app = builder.Build();
 
 // ⬇⬇⬇ THÊM ĐOẠN NÀY NGAY Ở ĐÂY

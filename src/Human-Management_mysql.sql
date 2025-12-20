@@ -346,11 +346,12 @@ CREATE TABLE EmployeeEvents (
     AggregateID INT NOT NULL, 
     EventType VARCHAR(100) NOT NULL, 
     EventData JSON NOT NULL, 
-    Version INT NOT NULL, 
+    SequenceNumber INT NOT NULL DEFAULT 0,
+    EventVersion INT NOT NULL DEFAULT 1,
     CreatedBy INT NULL, 
     CreatedAt DATETIME DEFAULT NOW(),
-    UNIQUE KEY UQ_Employee_Version (AggregateID, Version),
-    INDEX IX_AggregateID (AggregateID)
+    INDEX IX_AggregateID (AggregateID),
+    INDEX IX_EmployeeEvents_AggregateID_SequenceNumber (AggregateID, SequenceNumber)
 );
 
 
@@ -615,7 +616,7 @@ INSERT INTO RedemptionRequests (EmployeeID, PointsToRedeem, CashValue, Conversio
 (4, 5, 5, 1.0, 'Processing');
 
 -- 21. EmployeeEvents (Tự động lấy tất cả Employee mới và cũ)
-INSERT INTO EmployeeEvents (AggregateID, EventType, EventData, Version, CreatedBy, CreatedAt)
+INSERT INTO EmployeeEvents (AggregateID, EventType, EventData, SequenceNumber, EventVersion, CreatedBy, CreatedAt)
 SELECT
     e.EmployeeID,
     'EmployeeImported',
@@ -643,6 +644,7 @@ SELECT
         'CurrentPoints', e.CurrentPoints,
         'AvatarUrl', e.AvatarUrl
     ),
+    1,
     1,
     1,
     NOW()

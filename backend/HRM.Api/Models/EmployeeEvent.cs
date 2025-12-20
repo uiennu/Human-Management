@@ -18,7 +18,12 @@ namespace HRM.Api.Models
         [Required] 
         public string EventData { get; set; } = string.Empty;
 
-        public int Version { get; set; }
+        // SequenceNumber: Số thứ tự event của aggregate này (tăng dần theo thời gian)
+        public int SequenceNumber { get; set; }
+
+        // EventVersion: Schema version để xử lý migration/versioning của event structure
+        // VD: EventVersion = 1 (cấu trúc cũ), EventVersion = 2 (cấu trúc mới)
+        public int EventVersion { get; set; } = 1;
 
         public int? CreatedBy { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;

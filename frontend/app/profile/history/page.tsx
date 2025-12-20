@@ -2,18 +2,43 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, History, User, Calendar, FileText, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, History, User, Calendar, FileText, Eye, EyeOff, RotateCcw, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5204';
 
 interface EmployeeEvent {
+  eventID: number;
   eventName: string;
   data: string; // JSON string
   time: string;
-  version: number;
+  sequenceNumber: number;
+  eventVersion: number;
+}
+
+interface ReplayResult {
+  success: boolean;
+  message: string;
+  employee: {
+    employeeId: number;
+    fullName: string;
+    email: string;
+    phone: string;
+    address: string;
+    personalEmail: string;
+    bankAccount: string;
+    taxId: string;
+    avatarUrl: string;
+    hireDate: string;
+    emergencyContacts: Array<{
+      name: string;
+      phone: string;
+      relation: string;
+    }>;
+  };
 }
 
 export default function ProfileHistoryPage() {
@@ -21,6 +46,9 @@ export default function ProfileHistoryPage() {
   const [events, setEvents] = useState<EmployeeEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [employeeId, setEmployeeId] = useState<number | null>(null);
+  const [replayResult, setReplayResult] = useState<ReplayResult | null>(null);
+  const [replayLoading, setReplayLoading] = useState(false);
+  const [replayingSequence, setReplayingSequence] = useState<number | null>(null);
   // State for toggling sensitive fields (key: event index + field)
   const [showSensitive, setShowSensitive] = useState<{[k:string]: boolean}>({});
   const toggleSensitive = (key: string) => setShowSensitive(s => ({...s, [key]: !s[key]}));
@@ -69,6 +97,47 @@ export default function ProfileHistoryPage() {
       console.error('Error fetching history:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleReplay = async (upToSequence?: number) => {
+    if (!employeeId) return;
+    
+    setReplayLoading(true);
+    setReplayingSequence(upToSequence || null);
+    setReplayResult(null);
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+
+      const url = upToSequence 
+        ? `${API_BASE_URL}/api/employees/me/${employeeId}/replay?upToSequence=${upToSequence}`
+        : `${API_BASE_URL}/api/employees/me/${employeeId}/replay`;
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) throw new Error('Failed to replay events');
+
+      const result = await response.json();
+      setReplayResult(result);
+    } catch (error) {
+      console.error('Error replaying events:', error);
+      setReplayResult({
+        success: false,
+        message: 'Failed to replay events',
+        employee: null as any,
+      });
+    } finally {
+      setReplayLoading(false);
     }
   };
 
@@ -370,14 +439,103 @@ export default function ProfileHistoryPage() {
                             <Calendar className="h-4 w-4" />
                             <span>{formatDate(event.time)}</span>
                             <span className="text-gray-400">•</span>
-                            <span>Version {event.version}</span>
+                            <span>Sequence #{event.sequenceNumber}</span>
+                            <span className="text-gray-400">•</span>
+                            <span className="text-xs bg-gray-200 px-2 py-0.5 rounded">v{event.eventVersion}</span>
                           </div>
                         </div>
                       </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleReplay(event.sequenceNumber)}
+                        disabled={replayLoading}
+                        className="gap-2"
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                        Replay to here
+                      </Button>
                     </div>
                   </CardHeader>
                   <CardContent className="pt-4">
                     {renderEventData(event.eventName, eventData, index)}
+                    
+                    {/* Replay Result Display - Right below this event */}
+                    {replayResult && replayingSequence === event.sequenceNumber && (
+                      <div className="mt-4 border-t pt-4">
+                        <div className={`rounded-lg p-4 ${replayResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                          <div className="flex items-center gap-2 mb-3">
+                            {replayResult.success ? (
+                              <>
+                                <CheckCircle className="h-5 w-5 text-green-600" />
+                                <span className="font-semibold text-green-800">Replay Successful</span>
+                              </>
+                            ) : (
+                              <>
+                                <History className="h-5 w-5 text-red-600" />
+                                <span className="font-semibold text-red-800">Replay Failed</span>
+                              </>
+                            )}
+                          </div>
+                          
+                          {replayResult.success ? (
+                            <div className="space-y-3">
+                              <p className="text-sm text-green-700">{replayResult.message}</p>
+                              
+                              <div className="bg-white rounded p-3 space-y-2 text-sm">
+                                <h4 className="font-semibold text-gray-900 mb-2">Reconstructed State:</h4>
+                                
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <span className="font-medium text-gray-600">ID:</span>
+                                    <span className="ml-2">{replayResult.employee.employeeId}</span>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium text-gray-600">Name:</span>
+                                    <span className="ml-2">{replayResult.employee.fullName}</span>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium text-gray-600">Email:</span>
+                                    <span className="ml-2">{replayResult.employee.email}</span>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium text-gray-600">Phone:</span>
+                                    <span className="ml-2">{replayResult.employee.phone}</span>
+                                  </div>
+                                  <div className="col-span-2">
+                                    <span className="font-medium text-gray-600">Address:</span>
+                                    <span className="ml-2">{replayResult.employee.address}</span>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium text-gray-600">Personal Email:</span>
+                                    <span className="ml-2">{replayResult.employee.personalEmail || 'N/A'}</span>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium text-gray-600">Hire Date:</span>
+                                    <span className="ml-2">{replayResult.employee.hireDate ? new Date(replayResult.employee.hireDate).toLocaleDateString() : 'N/A'}</span>
+                                  </div>
+                                </div>
+
+                                {replayResult.employee.emergencyContacts && replayResult.employee.emergencyContacts.length > 0 && (
+                                  <div className="mt-3 pt-2 border-t">
+                                    <span className="font-semibold text-gray-900 block mb-1 text-xs">Emergency Contacts:</span>
+                                    <div className="space-y-1">
+                                      {replayResult.employee.emergencyContacts.map((contact, idx) => (
+                                        <div key={idx} className="text-xs">
+                                          {contact.name} - {contact.relation} - {contact.phone}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-red-800">{replayResult.message}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               );

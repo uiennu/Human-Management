@@ -45,7 +45,8 @@ namespace HRM.Api.Services
                     EventType = eventType, // VD: "EmployeeCreated"
                     // Serialize toàn bộ object Employee thành JSON
                     EventData = JsonSerializer.Serialize(entity), 
-                    Version = 1, // Tạo mới thì luôn là version 1
+                    SequenceNumber = 1, // Tạo mới thì luôn là sequence 1
+                    EventVersion = 1, // Default schema version
                     CreatedBy = performedBy,
                     CreatedAt = DateTime.Now
                 };
@@ -90,20 +91,21 @@ namespace HRM.Api.Services
                 {
                     changes.Add("UpdatedAt", DateTime.Now);
 
-                    // Tính version tiếp theo
+                    // Tính SequenceNumber tiếp theo
                     var lastEvent = await _context.EmployeeEvents
                         .Where(e => e.AggregateID == entity.EmployeeID)
-                        .OrderByDescending(e => e.Version)
+                        .OrderByDescending(e => e.SequenceNumber)
                         .FirstOrDefaultAsync();
                     
-                    int nextVersion = (lastEvent?.Version ?? 0) + 1;
+                    int nextSequence = (lastEvent?.SequenceNumber ?? 0) + 1;
 
                     var newEvent = new EmployeeEvent
                     {
                         AggregateID = entity.EmployeeID,
                         EventType = eventType,
                         EventData = JsonSerializer.Serialize(changes),
-                        Version = nextVersion,
+                        SequenceNumber = nextSequence,
+                        EventVersion = 1, // Default schema version
                         CreatedBy = performedBy,
                         CreatedAt = DateTime.Now
                     };

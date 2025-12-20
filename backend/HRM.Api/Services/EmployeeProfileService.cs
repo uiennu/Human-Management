@@ -209,10 +209,10 @@ namespace HRM.Api.Services
             {
                 var lastEvent = await _context.EmployeeEvents
                     .Where(e => e.AggregateID == employeeId)
-                    .OrderByDescending(e => e.Version)
+                    .OrderByDescending(e => e.SequenceNumber)
                     .FirstOrDefaultAsync();
                 
-                int nextVersion = (lastEvent?.Version ?? 0) + 1;
+                int nextSequence = (lastEvent?.SequenceNumber ?? 0) + 1;
                 var performedBy = _currentUserService.GetCurrentEmployeeId();
 
                 var emergencyContactEvent = new EmployeeEvent
@@ -225,7 +225,8 @@ namespace HRM.Api.Services
                         New = newContacts,
                         UpdatedAt = DateTime.Now
                     }),
-                    Version = nextVersion,
+                    SequenceNumber = nextSequence,
+                    EventVersion = 1,
                     CreatedBy = performedBy,
                     CreatedAt = DateTime.Now
                 };
@@ -389,10 +390,10 @@ namespace HRM.Api.Services
             {
                 var lastEvent = await _context.EmployeeEvents
                     .Where(e => e.AggregateID == employeeId)
-                    .OrderByDescending(e => e.Version)
+                    .OrderByDescending(e => e.SequenceNumber)
                     .FirstOrDefaultAsync();
                 
-                int nextVersion = (lastEvent?.Version ?? 0) + 1;
+                int nextSequence = (lastEvent?.SequenceNumber ?? 0) + 1;
 
                 var sensitiveChanges = new Dictionary<string, object>();
                 foreach (var change in pendingChanges)
@@ -414,7 +415,8 @@ namespace HRM.Api.Services
                         RequestedAt = DateTime.Now,
                         Status = "Pending"
                     }),
-                    Version = nextVersion,
+                    SequenceNumber = nextSequence,
+                    EventVersion = 1,
                     CreatedBy = employeeId,
                     CreatedAt = DateTime.Now
                 };

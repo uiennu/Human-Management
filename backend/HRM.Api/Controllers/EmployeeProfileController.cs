@@ -16,16 +16,20 @@ namespace HRM.Api.Controllers
         private readonly ICurrentUserService _currentUserService;
         private readonly ILogger<EmployeeProfileController> _logger;
         private readonly AppDbContext _context;
+        private readonly IEventReplayService _replayService;
+        
         public EmployeeProfileController(
             IEmployeeProfileService service,
             ICurrentUserService currentUserService,
             ILogger<EmployeeProfileController> logger,
-            AppDbContext context)
+            AppDbContext context,
+            IEventReplayService replayService)
         {
             _service = service;
             _currentUserService = currentUserService;
             _logger = logger;
             _context = context;
+            _replayService = replayService;
         }
 
         /// <summary>
@@ -160,17 +164,69 @@ namespace HRM.Api.Controllers
             // Query trực tiếp từ bảng EventStore
             var history = await _context.EmployeeEvents
                 .Where(e => e.AggregateID == id)
-                .OrderByDescending(e => e.Version) // Mới nhất xếp trên
+                .OrderByDescending(e => e.SequenceNumber) // Mới nhất xếp trên
                 .Select(e => new
                 {
+                    EventID = e.EventID,
                     EventName = e.EventType,
                     Data = e.EventData, // Frontend sẽ parse JSON này để hiển thị chi tiết
                     Time = e.CreatedAt,
-                    Version = e.Version
+                    SequenceNumber = e.SequenceNumber,
+                    EventVersion = e.EventVersion
                 })
                 .ToListAsync();
 
             return Ok(history);
+        }
+
+        /// <summary>
+        /// Replay events to reconstruct employee state
+        /// </summary>
+        [HttpPost("{id}/replay")]
+        public async Task<IActionResult> ReplayEvents(int id, [FromQuery] int? upToSequence = null)
+        {
+            try
+            {
+                _logger.LogInformation($"Replaying events for employee {id} up to sequence {upToSequence?.ToString() ?? "latest"}");
+                
+                var result = await _replayService.ReplayEventsAsync(id, upToSequence);
+                
+                if (!result.Success)
+                {
+                    return BadRequest(new { message = result.Message });
+                }
+
+                // Return reconstructed state
+                return Ok(new
+                {
+                    success = true,
+                    message = result.Message,
+                    employee = new
+                    {
+                        employeeId = result.ReconstructedEmployee.EmployeeID,
+                        fullName = $"{result.ReconstructedEmployee.FirstName} {result.ReconstructedEmployee.LastName}",
+                        email = result.ReconstructedEmployee.Email,
+                        phone = result.ReconstructedEmployee.Phone,
+                        address = result.ReconstructedEmployee.Address,
+                        personalEmail = result.ReconstructedEmployee.PersonalEmail,
+                        bankAccount = result.ReconstructedEmployee.BankAccountNumber,
+                        taxId = result.ReconstructedEmployee.TaxID,
+                        avatarUrl = result.ReconstructedEmployee.AvatarUrl,
+                        hireDate = result.ReconstructedEmployee.HireDate,
+                        emergencyContacts = result.ReconstructedEmployee.EmergencyContacts?.Select(c => new
+                        {
+                            name = c.Name,
+                            phone = c.Phone,
+                            relation = c.Relation
+                        }).ToList()
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error replaying events for employee {id}");
+                return StatusCode(500, new { message = "An error occurred while replaying events" });
+            }
         }
 
         [HttpPost("avatar")]

@@ -111,7 +111,7 @@ export default function EditProfilePage() {
       // @ts-ignore
       const contacts = profileData.basicInfo?.emergencyContacts || profileData.basicInfo?.emergencyContact;
       if (Array.isArray(contacts) && contacts.length > 0) setEmergencyContacts(contacts);
-      else if (contacts && !Array.isArray(contacts) && contacts.name) setEmergencyContacts([contacts]);
+      else if (contacts && !Array.isArray(contacts) && (contacts as any).name) setEmergencyContacts([contacts]);
       else setEmergencyContacts([{ name: '', relation: '', phone: '' }]);
 
       if (profileData.sensitiveInfo?.bankAccount) {
@@ -273,7 +273,6 @@ export default function EditProfilePage() {
           phoneNumber: formData.phoneNumber,
           address: finalAddress,
           personalEmail: formData.personalEmail,
-          emergencyContact: { name: '', phone: '', relation: '' }, 
           // @ts-ignore
           emergencyContacts: emergencyContacts 
       });

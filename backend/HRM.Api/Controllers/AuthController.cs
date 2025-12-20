@@ -86,7 +86,8 @@ namespace HRM.Api.Controllers
                     EmployeeID = e.AggregateID,
                     EventType = e.EventType,
                     EventData = e.EventData,
-                    Version = e.Version,
+                    SequenceNumber = e.SequenceNumber,
+                    EventVersion = e.EventVersion,
                     CreatedBy = e.CreatedBy,
                     CreatedAt = e.CreatedAt
                 })
