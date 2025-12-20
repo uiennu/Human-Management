@@ -187,12 +187,73 @@ namespace HRM.Api.Services
             await _repository.AddLogAsync(logEntry);
         }
 
-        public async Task UpdateDepartmentAsync(int id, UpdateDepartmentDto department,int userId)
+        public async Task UpdateDepartmentAsync(int id, UpdateDepartmentDto request, int userId)
         {
-            // (Optional) Bạn có thể thêm validate logic ở đây 
-            // Ví dụ: Kiểm tra tên phòng ban có bị trùng không
-            await _repository.UpdateDepartmentAsync(id, department,userId);
-            await LogActionAsync("UpdateDepartment", "Department", id, department, userId);
+            // 1. LẤY DỮ LIỆU CŨ (Hiện có trong DB)
+            var oldDept = await _repository.GetDepartmentByIdAsync(id);
+            
+            // Nếu không tìm thấy phòng ban thì thôi, hoặc throw exception tùy bạn
+            if (oldDept == null) return; 
+
+            // 2. TÍNH TOÁN SỰ THAY ĐỔI (DIFF LOGIC)
+            var changes = new List<object>();
+
+            // --- So sánh Tên Phòng Ban ---
+            // Logic giống Repository: Chỉ update nếu chuỗi không rỗng
+            if (!string.IsNullOrWhiteSpace(request.DepartmentName) && request.DepartmentName != oldDept.DepartmentName)
+            {
+                changes.Add(new 
+                { 
+                    Field = "DepartmentName", 
+                    OldValue = oldDept.DepartmentName, 
+                    NewValue = request.DepartmentName 
+                });
+            }
+
+            // --- So sánh Mã Phòng Ban ---
+            if (!string.IsNullOrWhiteSpace(request.DepartmentCode) && request.DepartmentCode != oldDept.DepartmentCode)
+            {
+                changes.Add(new 
+                { 
+                    Field = "DepartmentCode", 
+                    OldValue = oldDept.DepartmentCode, 
+                    NewValue = request.DepartmentCode 
+                });
+            }
+
+            // --- So sánh Description ---
+            // Description cho phép null hoặc rỗng để cập nhật
+            if (request.Description != null && request.Description != oldDept.Description)
+            {
+                changes.Add(new 
+                { 
+                    Field = "Description", 
+                    OldValue = oldDept.Description, 
+                    NewValue = request.Description 
+                });
+            }
+
+            // --- So sánh ManagerID (QUAN TRỌNG) ---
+            // ManagerID có thể là null (khi chọn None)
+            if (request.ManagerID != oldDept.ManagerID)
+            {
+                changes.Add(new 
+                { 
+                    Field = "ManagerID", 
+                    OldValue = oldDept.ManagerID, 
+                    NewValue = request.ManagerID 
+                });
+            }
+
+            // 3. GỌI REPO ĐỂ UPDATE VÀO DB
+            await _repository.UpdateDepartmentAsync(id, request, userId);
+
+            // 4. LƯU LOG (Chỉ lưu nếu có thay đổi thực sự)
+            if (changes.Count > 0)
+            {
+                // LogActionAsync sẽ serialize cái list 'changes' thành JSON
+                await LogActionAsync("UpdateDepartment", "Department", id, changes, userId);
+            }
         }
     }
 }
