@@ -114,23 +114,14 @@ CREATE TABLE SubTeamMembers (
 
 CREATE TABLE OrganizationStructureLogs (
     LogID INT PRIMARY KEY AUTO_INCREMENT,
-    ActionType VARCHAR(50) NOT NULL,  
-    Description VARCHAR(1000),
-    EmployeeID INT NULL,     
-    DepartmentID INT NULL,    
-    SubTeamID INT NULL,       
-    OldManagerID INT NULL,
-    NewManagerID INT NULL,
-    OldDepartmentID INT NULL,
-    NewDepartmentID INT NULL,
-    OldSubTeamID INT NULL,
-    NewSubTeamID INT NULL,
-    PerformedBy INT NOT NULL,     
+    EventType VARCHAR(100) NOT NULL,    -- VD: CreateSubTeam, AssignManager, TransferEmployee
+    TargetEntity VARCHAR(50) NOT NULL,  -- VD: Department, SubTeam, Employee
+    TargetID INT NOT NULL,              -- ID của đối tượng bị tác động
+    EventData JSON NOT NULL,            -- Chi tiết thay đổi (JSON)
+    PerformedBy INT NOT NULL,           -- Người thực hiện (Thường là Admin hoặc HR)
     PerformedAt DATETIME NOT NULL DEFAULT NOW(),
-    CONSTRAINT FK_Log_Employee FOREIGN KEY (EmployeeID) REFERENCES Employees(EmployeeID),
-    CONSTRAINT FK_Log_Department FOREIGN KEY (DepartmentID) REFERENCES Departments(DepartmentID),
-    CONSTRAINT FK_Log_SubTeam FOREIGN KEY (SubTeamID) REFERENCES SubTeams(SubTeamID),
-    CONSTRAINT FK_Log_Performer FOREIGN KEY (PerformedBy) REFERENCES Employees(EmployeeID)
+    
+    CONSTRAINT FK_OrgLog_Performer FOREIGN KEY (PerformedBy) REFERENCES Employees(EmployeeID)
 );
 
 -- =================================================================
@@ -346,12 +337,11 @@ CREATE TABLE EmployeeEvents (
     AggregateID INT NOT NULL, 
     EventType VARCHAR(100) NOT NULL, 
     EventData JSON NOT NULL, 
-    SequenceNumber INT NOT NULL DEFAULT 0,
-    EventVersion INT NOT NULL DEFAULT 1,
+    Version INT NOT NULL, 
     CreatedBy INT NULL, 
     CreatedAt DATETIME DEFAULT NOW(),
-    INDEX IX_AggregateID (AggregateID),
-    INDEX IX_EmployeeEvents_AggregateID_SequenceNumber (AggregateID, SequenceNumber)
+    UNIQUE KEY UQ_Employee_Version (AggregateID, Version),
+    INDEX IX_AggregateID (AggregateID)
 );
 
 
@@ -616,7 +606,7 @@ INSERT INTO RedemptionRequests (EmployeeID, PointsToRedeem, CashValue, Conversio
 (4, 5, 5, 1.0, 'Processing');
 
 -- 21. EmployeeEvents (Tự động lấy tất cả Employee mới và cũ)
-INSERT INTO EmployeeEvents (AggregateID, EventType, EventData, SequenceNumber, EventVersion, CreatedBy, CreatedAt)
+INSERT INTO EmployeeEvents (AggregateID, EventType, EventData, Version, CreatedBy, CreatedAt)
 SELECT
     e.EmployeeID,
     'EmployeeImported',
@@ -644,7 +634,6 @@ SELECT
         'CurrentPoints', e.CurrentPoints,
         'AvatarUrl', e.AvatarUrl
     ),
-    1,
     1,
     1,
     NOW()
@@ -708,13 +697,106 @@ INSERT INTO SubTeamMembers (SubTeamID, EmployeeID) VALUES
 -- ==============================================
 -- 7. LOG HOẠT ĐỘNG ORGANIZATION
 -- ==============================================
-INSERT INTO OrganizationStructureLogs (ActionType, Description, SubTeamID, DepartmentID, PerformedBy, PerformedAt) VALUES
-('CreateSubTeam', 'Created Backend Core team for IT', 1, 3, 1, NOW()),
-('CreateSubTeam', 'Created Frontend UI team for IT', 2, 3, 1, NOW()),
-('CreateSubTeam', 'Created Talent Acquisition team for HR', 3, 2, 1, NOW()),
-('CreateSubTeam', 'Created C&B team for HR', 4, 2, 1, NOW()),
-('CreateSubTeam', 'Created Sales Force team', 5, 4, 1, NOW()),
-('CreateSubTeam', 'Created Finance Audit team', 6, 5, 1, NOW()),
-('CreateSubTeam', 'Created Strategic Board team', 7, 1, 1, NOW()),
+INSERT INTO OrganizationStructureLogs (EventType, TargetEntity, TargetID, EventData, PerformedBy, PerformedAt) VALUES
+-- Bổ nhiệm Frank (ID 6) làm Manager phòng Sales (DeptID 4)
+('ChangeDeptManager', 'Department', 4, JSON_OBJECT(
+    'OldManagerID', NULL,
+    'NewManagerID', 6,
+    'NewManagerName', 'Frank Do',
+    'Description', 'Appointed Frank as Sales Manager'
+), 1, DATE_SUB(NOW(), INTERVAL 10 DAY)),
 
-('AddMemberToTeam', 'Initial setup for teams', 1, 3, 1, NOW());
+-- Bổ nhiệm Grace (ID 7) làm Manager phòng Finance (DeptID 5)
+('ChangeDeptManager', 'Department', 5, JSON_OBJECT(
+    'OldManagerID', NULL,
+    'NewManagerID', 7,
+    'NewManagerName', 'Grace Hoang',
+    'Description', 'Appointed Grace as Finance Manager'
+), 1, DATE_SUB(NOW(), INTERVAL 10 DAY));
+
+
+-- --- GIAI ĐOẠN 2: THÀNH LẬP CÁC TEAM MỚI (Admin tạo SubTeam 5, 6, 7) ---
+INSERT INTO OrganizationStructureLogs (EventType, TargetEntity, TargetID, EventData, PerformedBy, PerformedAt) VALUES
+-- Tạo Sales Force Team (ID 5)
+('CreateSubTeam', 'SubTeam', 5, JSON_OBJECT(
+    'TeamName', 'Sales Force',
+    'DepartmentID', 4,
+    'DepartmentCode', 'SALE',
+    'LeadID', 6
+), 1, DATE_SUB(NOW(), INTERVAL 5 DAY)),
+
+-- Tạo Finance Audit Team (ID 6)
+('CreateSubTeam', 'SubTeam', 6, JSON_OBJECT(
+    'TeamName', 'Finance Audit',
+    'DepartmentID', 5,
+    'DepartmentCode', 'FIN',
+    'LeadID', 7
+), 1, DATE_SUB(NOW(), INTERVAL 5 DAY)),
+
+-- Tạo Strategic Board Team (ID 7)
+('CreateSubTeam', 'SubTeam', 7, JSON_OBJECT(
+    'TeamName', 'Strategic Board',
+    'DepartmentID', 1,
+    'DepartmentCode', 'BOD',
+    'LeadID', 1
+), 1, DATE_SUB(NOW(), INTERVAL 5 DAY));
+
+
+-- --- GIAI ĐOẠN 3: PHÂN BỔ NHÂN SỰ VÀO TEAM (HR Bob thực hiện điều chuyển) ---
+INSERT INTO OrganizationStructureLogs (EventType, TargetEntity, TargetID, EventData, PerformedBy, PerformedAt) VALUES
+-- Thêm Harry (ID 8) vào Frontend UI (SubTeam 2)
+('AssignToSubTeam', 'Employee', 8, JSON_OBJECT(
+    'SubTeamID', 2,
+    'SubTeamName', 'Frontend UI',
+    'Role', 'Member',
+    'ManagerID', 1
+), 2, DATE_SUB(NOW(), INTERVAL 3 DAY)),
+
+-- Thêm Ivy (ID 9) vào C&B Team (SubTeam 4)
+('AssignToSubTeam', 'Employee', 9, JSON_OBJECT(
+    'SubTeamID', 4,
+    'SubTeamName', 'C&B Team',
+    'Role', 'Member',
+    'ManagerID', 2
+), 2, DATE_SUB(NOW(), INTERVAL 3 DAY)),
+
+-- Thêm Jack (ID 10) vào C&B Team (SubTeam 4)
+('AssignToSubTeam', 'Employee', 10, JSON_OBJECT(
+    'SubTeamID', 4,
+    'SubTeamName', 'C&B Team',
+    'Role', 'Member',
+    'ManagerID', 2
+), 2, DATE_SUB(NOW(), INTERVAL 3 DAY)),
+
+-- Thêm Liam (ID 11) vào Sales Force (SubTeam 5)
+('AssignToSubTeam', 'Employee', 11, JSON_OBJECT(
+    'SubTeamID', 5,
+    'SubTeamName', 'Sales Force',
+    'Role', 'Member',
+    'ManagerID', 6
+), 2, DATE_SUB(NOW(), INTERVAL 2 DAY)),
+
+-- Thêm Mia (ID 12) vào Finance Audit (SubTeam 6)
+('AssignToSubTeam', 'Employee', 12, JSON_OBJECT(
+    'SubTeamID', 6,
+    'SubTeamName', 'Finance Audit',
+    'Role', 'Member',
+    'ManagerID', 7
+), 2, DATE_SUB(NOW(), INTERVAL 2 DAY)),
+
+-- Thêm Kevin (ID 13) vào Strategic Board (SubTeam 7)
+('AssignToSubTeam', 'Employee', 13, JSON_OBJECT(
+    'SubTeamID', 7,
+    'SubTeamName', 'Strategic Board',
+    'Role', 'Assistant',
+    'ManagerID', 1
+), 1, DATE_SUB(NOW(), INTERVAL 1 DAY)), -- Alice tự thêm trợ lý cho mình
+
+-- Thêm Laura (ID 14) vào Strategic Board (SubTeam 7)
+('AssignToSubTeam', 'Employee', 14, JSON_OBJECT(
+    'SubTeamID', 7,
+    'SubTeamName', 'Strategic Board',
+    'Role', 'Assistant',
+    'ManagerID', 1
+), 1, NOW());
+;
