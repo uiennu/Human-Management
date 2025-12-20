@@ -1,4 +1,4 @@
-
+import axios from "axios";
 export interface DepartmentDto {
     departmentID: number
     departmentName: string
@@ -151,4 +151,9 @@ export const organizationService = {
         }
         return res.json()
     },
+
+    updateDepartment: async (id: number, data: any) => {
+    // data ở đây sẽ bao gồm: name, code, description, managerId
+    await axios.put(`${API_URL}/organization/departments/${id}`, data);
+  },
 }

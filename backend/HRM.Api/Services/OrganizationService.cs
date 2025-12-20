@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Text.Json;
 
 namespace HRM.Api.Services
 {
@@ -170,6 +171,28 @@ namespace HRM.Api.Services
             {
                 return (false, $"Internal Error: {ex.Message}", null);
             }
+        }
+
+        private async Task LogActionAsync(string eventType, string entity, int targetId, object data, int userId)
+        {
+            var logEntry = new OrganizationLogDto
+            {
+                EventType = eventType,
+                TargetEntity = entity,
+                TargetID = targetId,
+                EventData = data != null ? JsonSerializer.Serialize(data) : "{}",
+                PerformedBy = userId,
+                PerformedAt = DateTime.Now
+            };
+            await _repository.AddLogAsync(logEntry);
+        }
+
+        public async Task UpdateDepartmentAsync(int id, UpdateDepartmentDto department,int userId)
+        {
+            // (Optional) Bạn có thể thêm validate logic ở đây 
+            // Ví dụ: Kiểm tra tên phòng ban có bị trùng không
+            await _repository.UpdateDepartmentAsync(id, department,userId);
+            await LogActionAsync("UpdateDepartment", "Department", id, department, userId);
         }
     }
 }

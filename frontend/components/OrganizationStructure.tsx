@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Plus, Edit2, Trash2, Users, Eye, X, ChevronDown, ChevronUp, User } from "lucide-react" // Đã thêm icon User
+import { Plus, Edit2, Trash2, Users, Eye, X, ChevronDown, ChevronUp, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { useAuth } from "@/lib/hooks/use-auth"
@@ -28,8 +28,8 @@ interface Department {
   description: string
   employees: Employee[]
   subdepartments?: Department[]
-  departmentID?: number // For Teams: parent department ID
-  parentDepartmentName?: string // For Teams: parent department name
+  departmentID?: number
+  parentDepartmentName?: string
 }
 
 interface Employee {
@@ -44,13 +44,13 @@ interface DepartmentCardProps {
   dept: Department
   isRoot?: boolean
   level?: number
+  readOnly?: boolean // <--- Thêm prop này để chặn sửa xóa
   onAddClick: (dept: Department, level: number) => void
   onEditClick: (dept: Department, level: number) => void
   onDeleteClick: (dept: Department) => void
   onAddEmployeeClick: (dept: Department) => void
   onDeleteEmployee: (deptId: string, empId: string) => void
   onDragStart: (e: React.DragEvent, employee: Employee, sourceDept: Department) => void
-
   onDrop: (e: React.DragEvent, targetDept: Department, level: number) => void
 }
 
@@ -58,6 +58,7 @@ interface TreeNodeProps {
   dept: Department
   isRoot?: boolean
   level?: number
+  readOnly?: boolean // <--- Thêm prop này để truyền xuống con
   onAddClick: (dept: Department, level: number) => void
   onEditClick: (dept: Department, level: number) => void
   onDeleteClick: (dept: Department) => void
@@ -74,11 +75,11 @@ const cursorGrabFinal = `url('/grab.png') 16 16, grab`
 const cursorGrabbingFinal = `url('/grabbing.png') 16 16, grabbing`
 const cursorPointerFinal = `url('/pointer.png') 10 0, pointer`
 
-
 const DepartmentCard = ({
   dept,
   isRoot,
   level = 0,
+  readOnly = false, // Mặc định cho phép sửa
   onAddClick,
   onEditClick,
   onDeleteClick,
@@ -93,15 +94,8 @@ const DepartmentCard = ({
   // Check if user can manage organization
   const canManageOrganization = hasAnyRole(['Admin', 'HR Manager', 'HR Employee'])
 
-  // Tooltip text
-  const getTooltip = () => {
-    if (level === 0) return "Add Department"
-    if (level === 1) return "Add Team"
-    return "Add Sub-team"
-  }
-
   const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault(); // Necessary to allow dropping
+    e.preventDefault();
     e.dataTransfer.dropEffect = "move";
   };
 
@@ -115,12 +109,10 @@ const DepartmentCard = ({
         <div className="p-4">
           <div className="flex justify-between items-start mb-2">
 
-            {/* --- PHẦN SỬA GIAO DIỆN HIỂN THỊ THÔNG TIN --- */}
+            {/* --- GIAO DIỆN HIỂN THỊ THÔNG TIN --- */}
             <div className="flex flex-col gap-1.5 flex-1 mr-2">
-              {/* Tên phòng ban */}
               <h3 className="font-bold text-gray-900 text-base leading-tight">{dept.name}</h3>
 
-              {/* Người quản lý (Hiển thị đẹp hơn) */}
               {dept.manager && dept.manager !== "Chưa có quản lý" && dept.manager !== "Manager" && (
                 <div className="flex items-center gap-1.5">
                   <div className="bg-blue-50 p-1 rounded-full">
@@ -133,14 +125,12 @@ const DepartmentCard = ({
                 </div>
               )}
 
-              {/* Mô tả (Chữ nhạt, nhỏ hơn) */}
               {dept.description && (
                 <p className="text-xs text-gray-400 line-clamp-2 mt-0.5" title={dept.description}>
                   {dept.description}
                 </p>
               )}
             </div>
-            {/* --- HẾT PHẦN SỬA --- */}
 
             {!isRoot && canManageOrganization && (
               <div className="flex gap-1 shrink-0">
@@ -162,7 +152,7 @@ const DepartmentCard = ({
             )}
           </div>
 
-          {/* TOGGLE BUTTON (SHOW) */}
+          {/* TOGGLE BUTTON (SHOW EMPLOYEES) */}
           {!isRoot && dept.employees.length > 0 && !isEmployeesOpen && (
             <div className="mt-3 pt-2 border-t border-gray-50">
               <button
@@ -177,16 +167,16 @@ const DepartmentCard = ({
           )}
         </div>
 
-        {/* RENDER EMPLOYEES INSIDE DEPARTMENT CARD (Vertical List) */}
+        {/* DANH SÁCH NHÂN VIÊN */}
         {!isRoot && isEmployeesOpen && dept.employees.length > 0 && (
           <div className="px-4 pb-4 space-y-3">
             {dept.employees.map((emp) => (
               <div
                 key={emp.id}
-                draggable
-                onDragStart={(e) => onDragStart(e, emp, dept)}
+                draggable={!readOnly} // Nếu readOnly thì không cho kéo thả
+                onDragStart={(e) => !readOnly && onDragStart(e, emp, dept)}
                 className="relative flex items-center gap-3 p-3 bg-gray-50 border border-gray-100 rounded-lg hover:bg-gray-100 transition-colors"
-                style={{ cursor: cursorGrabFinal }}
+                style={{ cursor: readOnly ? 'default' : cursorGrabFinal }}
               >
                 <Avatar className="h-8 w-8 bg-gray-200">
                   <AvatarFallback className="text-xs text-gray-600 font-medium">
@@ -197,13 +187,14 @@ const DepartmentCard = ({
                   <p className="text-sm font-medium text-gray-700">{emp.name}</p>
                   <p className="text-[10px] text-gray-400">{emp.position}</p>
                 </div>
-                <button onClick={() => onDeleteEmployee(dept.id, emp.id)} className="ml-auto p-1 text-gray-400 hover:text-red-500" style={{ cursor: cursorPointerFinal }}>
-                  <X className="h-3.5 w-3.5" />
-                </button>
+                {!readOnly && (
+                  <button onClick={() => onDeleteEmployee(dept.id, emp.id)} className="ml-auto p-1 text-gray-400 hover:text-red-500" style={{ cursor: cursorPointerFinal }}>
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
             ))}
 
-            {/* CLOSE BUTTON AT BOTTOM OF LIST */}
             <div className="flex justify-center pt-2">
               <button
                 onClick={() => setIsEmployeesOpen(false)}
@@ -249,6 +240,7 @@ const TreeNode = ({
   dept,
   isRoot = false,
   level = 0,
+  readOnly = false,
   onAddClick,
   onEditClick,
   onDeleteClick,
@@ -267,6 +259,7 @@ const TreeNode = ({
           dept={dept}
           isRoot={isRoot}
           level={level}
+          readOnly={readOnly}
           onAddClick={onAddClick}
           onEditClick={onEditClick}
           onDeleteClick={onDeleteClick}
@@ -289,6 +282,7 @@ const TreeNode = ({
                     dept={sub}
                     isRoot={false}
                     level={level + 1}
+                    readOnly={readOnly}
                     onAddClick={onAddClick}
                     onEditClick={onEditClick}
                     onDeleteClick={onDeleteClick}
@@ -313,6 +307,7 @@ const TreeNode = ({
         dept={dept}
         isRoot={isRoot}
         level={level}
+        readOnly={readOnly}
         onAddClick={onAddClick}
         onEditClick={onEditClick}
         onDeleteClick={onDeleteClick}
@@ -324,19 +319,16 @@ const TreeNode = ({
 
       {hasSubdepartments && (
         <div className="relative flex flex-col items-center w-full">
-          {/* Line connecting Parent (Card+Emp) to Teams */}
           <div className="w-px h-8 bg-gray-300"></div>
-
-          {/* Teams List */}
           <div className="flex flex-col gap-6 pl-8 border-l border-gray-300 ml-8">
             {dept.subdepartments!.map((sub) => (
               <div key={sub.id} className="relative">
-                {/* Horizontal line connecting to Child */}
                 <div className="absolute top-10 -left-8 w-8 h-px bg-gray-300"></div>
                 <TreeNode
                   dept={sub}
                   isRoot={false}
                   level={level + 1}
+                  readOnly={readOnly}
                   onAddClick={onAddClick}
                   onEditClick={onEditClick}
                   onDeleteClick={onDeleteClick}
@@ -361,6 +353,13 @@ export function OrganizationStructure() {
   // --- STATE QUẢN LÝ DỮ LIỆU ---
   const [departments, setDepartments] = useState<Department[]>([])
   const [loading, setLoading] = useState(true)
+
+  // --- GIẢ LẬP QUYỀN TRUY CẬP (ROLE) ---
+  // 5 = Admin, 3 = HR Manager, 4 = HR Employee, 10 = BOD Assistant
+  // Nếu bạn đổi số này thành 1 (IT Employee) -> Màn hình sẽ chuyển sang chế độ Chỉ Xem
+  const currentUserRoleId = 5;
+  const ALLOWED_ROLES = [3, 4, 5, 10];
+  const isReadOnly = !ALLOWED_ROLES.includes(currentUserRoleId);
 
   // --- FETCH DATA FROM API ---
   const fetchData = async () => {
@@ -389,20 +388,17 @@ export function OrganizationStructure() {
         id: `dept-${d.departmentID}`,
         name: d.departmentName,
         code: d.departmentCode,
-        // SỬA: Lấy trường managerName từ API trả về (khớp với DTO trong C#)
         manager: d.managerName || "Chưa có quản lý",
-        managerId: "", // DTO hiện tại chưa trả về ID quản lý, tạm để trống
-        description: "Department Manager",
+        managerId: "",
+        description: d.Description || d.description || "",
         employees: [],
         subdepartments: [],
       }))
 
       // 3. Map Teams to Nodes (Level 2) and attach to Departments
-      console.log("DEBUG: teamData from API:", teamData)
       teamData.forEach(team => {
         const parentDept = deptNodes.find(d => d.id === `dept-${team.departmentID}`)
         if (parentDept) {
-          console.log(`DEBUG: Mapping team ${team.teamName} to dept ${parentDept.name}`)
           const teamNode: Department = {
             id: `team-${team.subTeamID}`,
             name: team.teamName,
@@ -412,7 +408,6 @@ export function OrganizationStructure() {
             description: team.description,
             departmentID: team.departmentID,
             parentDepartmentName: parentDept.name,
-            // Map Members to UI Employees
             employees: team.members.map(m => ({
               id: m.employeeID.toString(),
               name: `${m.firstName} ${m.lastName}`,
@@ -422,27 +417,14 @@ export function OrganizationStructure() {
             subdepartments: []
           }
           parentDept.subdepartments?.push(teamNode)
-        } else {
-          console.warn(`DEBUG: Orphan team found ${team.teamName} for deptID ${team.departmentID}`)
         }
       })
 
-      // 4. Handle "Unassigned" Employees (Employees in Dept but not in Team) if needed
-      // Currently, the API structure for employees direct depency isn't fully clear without filtering
-      // For now, let's keep it simple: Attach dept, attach team.
-
-      // Attach mapped departments to Root
       rootNode.subdepartments = deptNodes
-
-      const hrDept = deptNodes.find(d => d.id === 'dept-2');
-      if (hrDept) {
-        console.log("DEBUG: Final HR Dept Children Count:", hrDept.subdepartments?.length);
-        console.log("DEBUG: Final HR Dept Children:", JSON.stringify(hrDept.subdepartments, null, 2));
-      }
-
       setDepartments([rootNode])
     } catch (error) {
       console.error("Failed to load organization structure", error)
+      toast.error("Failed to load data")
     } finally {
       setLoading(false)
     }
@@ -457,12 +439,10 @@ export function OrganizationStructure() {
   const [addDeptModalOpen, setAddDeptModalOpen] = useState(false)
   const [addTeamModalOpen, setAddTeamModalOpen] = useState(false)
   const [addSubTeamModalOpen, setAddSubTeamModalOpen] = useState(false)
-
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [editTeamModalOpen, setEditTeamModalOpen] = useState(false)
   const [addEmployeesModalOpen, setAddEmployeesModalOpen] = useState(false)
   const [selectedDept, setSelectedDept] = useState<Department | null>(null)
-
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [deptToDelete, setDeptToDelete] = useState<Department | null>(null)
 
@@ -480,106 +460,84 @@ export function OrganizationStructure() {
   const [parentDeptForAdd, setParentDeptForAdd] = useState<Department | null>(null)
 
   // --- HANDLER CHUNG ---
-  const handleAddEntity = (data: Omit<Department, "id" | "employees" | "subdepartments">) => {
-    const newEntity: Department = {
-      ...data,
-      id: Date.now().toString(),
-      employees: [],
-      subdepartments: [],
-    }
-
-    if (parentDeptForAdd) {
-      // Logic đệ quy tìm cha và thêm con vào subdepartments
-      const addRecursive = (depts: Department[]): Department[] => {
-        return depts.map((d) => {
-          if (d.id === parentDeptForAdd.id) {
-            return {
-              ...d,
-              subdepartments: [...(d.subdepartments || []), newEntity],
-            }
-          }
-          if (d.subdepartments && d.subdepartments.length > 0) {
-            return {
-              ...d,
-              subdepartments: addRecursive(d.subdepartments),
-            }
-          }
-          return d
-        })
-      }
-      setDepartments(addRecursive(departments))
-    } else {
-      setDepartments([...departments, newEntity])
-    }
-
-    // Đóng tất cả modal sau khi submit
+  const handleAddEntity = async (data: any) => {
+    // Logic giả lập, sau này bạn có thể gọi API Create ở đây
+    toast.info("Create feature coming soon with API integration")
     setAddDeptModalOpen(false)
     setAddTeamModalOpen(false)
     setAddSubTeamModalOpen(false)
     setParentDeptForAdd(null)
   }
 
-  // --- CÁC HÀM EDIT/DELETE ---
-  const handleEditDepartment = (updated: Omit<Department, "employees" | "subdepartments">) => {
-    const updateRecursive = (depts: Department[]): Department[] =>
-      depts.map((dept) =>
-        dept.id === updated.id
-          ? { ...dept, ...updated }
-          : { ...dept, subdepartments: dept.subdepartments ? updateRecursive(dept.subdepartments) : [] },
-      )
-    setDepartments(updateRecursive(departments))
-    setEditModalOpen(false)
-    setEditTeamModalOpen(false)
-    setSelectedDept(null)
+  // --- HÀM UPDATE DEPARTMENT ---
+  const handleEditDepartment = async (updated: Omit<Department, "employees" | "subdepartments">) => {
+    try {
+      if (updated.id.startsWith("dept-")) {
+        // 1. Lấy ID thật (số)
+        const realId = parseInt(updated.id.replace("dept-", ""));
+
+        // 2. Map dữ liệu sang DTO Backend
+        const payload = {
+          DepartmentName: updated.name,
+          DepartmentCode: updated.code,
+          Description: updated.description,
+          ManagerID: updated.managerId ? parseInt(updated.managerId) : null
+        };
+
+        // 3. Gọi API
+        await organizationService.updateDepartment(realId, payload);
+        toast.success("Department updated successfully");
+
+        // 4. Load lại dữ liệu
+        await fetchData();
+
+      } else if (updated.id.startsWith("team-")) {
+        // Logic cho Team nếu có API
+        toast.info("Update Team feature is coming soon");
+      }
+
+      setEditModalOpen(false);
+      setEditTeamModalOpen(false);
+      setSelectedDept(null);
+
+    } catch (error) {
+      console.error("Update failed:", error);
+      toast.error("Failed to update department");
+    }
   }
 
-  // HÀM NÀY SẼ ĐƯỢC ĐỔI TÊN THÀNH showDeleteConfirmation VÀ CHỈ DÙNG ĐỂ MỞ MODAL
+  // --- HÀM DELETE DEPARTMENT ---
   const showDeleteConfirmation = (dept: Department) => {
-    setDeptToDelete(dept) // Lưu thông tin phòng ban cần xóa
-    setDeleteModalOpen(true) // Mở modal
+    setDeptToDelete(dept)
+    setDeleteModalOpen(true)
   }
 
   const executeDeleteDepartment = async (idString: string) => {
     try {
-      // 1. Kiểm tra xem đang xóa Department hay Team dựa vào ID prefix
       if (idString.startsWith("dept-")) {
-        // Xử lý xóa Department
         const id = parseInt(idString.replace("dept-", ""))
-        if (isNaN(id)) throw new Error("Invalid Department ID")
-
         await organizationService.deleteDepartment(id)
         toast.success("Department deleted successfully")
-
       } else if (idString.startsWith("team-")) {
-        // Xử lý xóa Team (Sub-team)
         const id = parseInt(idString.replace("team-", ""))
-        if (isNaN(id)) throw new Error("Invalid Team ID")
-
-        // Gọi API xóa team
         await organizationService.deleteTeam(id)
-
-        // --- SỬA Ở ĐÂY: Thêm thông báo thành công và BỎ dòng return ---
         toast.success("Team deleted successfully")
       } else {
-        toast.error("Cannot delete Root or invalid node")
+        toast.error("Cannot delete Root")
         return
       }
-
-      // 2. Load lại dữ liệu mới nhất từ Server (Quan trọng: phải chạy xuống tới đây)
       await fetchData()
-
-      // 3. Đóng modal
       setDeleteModalOpen(false)
       setDeptToDelete(null)
-
     } catch (error: any) {
       console.error("Delete failed:", error)
-      // Hiện lỗi từ Backend (VD: Conflict - còn nhân viên)
-      toast.error(error.message || "Failed to delete. Ensure team/department is empty.")
+      toast.error(error.message || "Failed to delete.")
     }
   }
 
   const handleDeleteEmployee = (deptId: string, empId: string) => {
+    // Logic xóa nhân viên khỏi team (Cần API)
+    toast.info("Remove Employee feature coming soon")
     // Find the employee and department
     const findEmployee = (depts: Department[]): { emp: Employee; dept: Department } | null => {
       for (const dept of depts) {
@@ -633,7 +591,6 @@ export function OrganizationStructure() {
   const handleDragStart = (e: React.DragEvent, employee: Employee, source: Department) => {
     setDraggedEmployee(employee)
     setSourceDept(source)
-    // Set data transfer for compatibility
     e.dataTransfer.setData("text/plain", employee.id)
     e.dataTransfer.effectAllowed = "move"
   }
@@ -641,53 +598,18 @@ export function OrganizationStructure() {
   const handleDrop = (e: React.DragEvent, target: Department, targetLevel: number) => {
     e.preventDefault()
     if (!draggedEmployee || !sourceDept) return
-
-    // Prevent dropping on the same department
     if (sourceDept.id === target.id) return
-
-    // RESTRICTION: Employees can only be in Teams (Level >= 2)
-    // Level 0 = Root, Level 1 = Department, Level 2 = Team/Sub-team
     if (targetLevel < 2) {
-      // Optional: Show a toast or visual feedback that drop is invalid
       console.warn("Cannot drop employee into a Department. Must be a Team.")
       return
     }
-
     setTargetDept(target)
     setMoveModalOpen(true)
   }
 
   const confirmMoveEmployee = () => {
-    if (!draggedEmployee || !sourceDept || !targetDept) return
-
-    const updateRecursive = (depts: Department[]): Department[] => {
-      return depts.map((dept) => {
-        let newDept = { ...dept }
-
-        // Remove from source
-        if (dept.id === sourceDept.id) {
-          newDept.employees = dept.employees.filter(e => e.id !== draggedEmployee.id)
-        }
-
-        // Add to target
-        if (dept.id === targetDept.id) {
-          newDept.employees = [...dept.employees, draggedEmployee]
-        }
-
-        // Recurse
-        if (dept.subdepartments && dept.subdepartments.length > 0) {
-          newDept.subdepartments = updateRecursive(dept.subdepartments)
-        }
-
-        return newDept
-      })
-    }
-
-    setDepartments(updateRecursive(departments))
+    toast.info("Move Employee feature coming soon with API integration")
     setMoveModalOpen(false)
-    setDraggedEmployee(null)
-    setSourceDept(null)
-    setTargetDept(null)
   }
 
   // --- ZOOM & PAN STATE ---
@@ -700,77 +622,45 @@ export function OrganizationStructure() {
 
   const handleZoomIn = () => setZoom((prev) => Math.min(prev + 0.1, 2))
   const handleZoomOut = () => setZoom((prev) => Math.max(prev - 0.1, 0.5))
-  const handleResetZoom = () => {
-    setZoom(1)
-    setPan({ x: 0, y: 0 })
-  }
+  const handleResetZoom = () => { setZoom(1); setPan({ x: 0, y: 0 }) }
 
-  // Helper to constrain pan
   const clampPan = (newPan: { x: number; y: number }, currentZoom: number) => {
     const container = containerRef.current
     const content = contentRef.current
     if (!container || !content) return newPan
-
     const containerRect = container.getBoundingClientRect()
-    // We use offsetWidth/Height for the un-scaled dimensions
     const contentW = content.offsetWidth
     const contentH = content.offsetHeight
-
-    // Logic for transform-origin: top (center top)
-    // VisualLeft = pan.x + width*(1-zoom)/2
-    // VisualRight = pan.x + width*(1+zoom)/2
-    // VisualTop = pan.y
-    // VisualBottom = pan.y + height*zoom
-
-    // Constraints:
-    // 1. VisualRight > 50  => pan.x > 50 - width*(1+zoom)/2
-    // 2. VisualLeft < containerWidth - 50 => pan.x < containerWidth - 50 - width*(1-zoom)/2
-    // 3. VisualBottom > 50 => pan.y > 50 - height*zoom
-    // 4. VisualTop < containerHeight - 50 => pan.y < containerHeight - 50
-
     const minX = 50 - (contentW * (1 + currentZoom)) / 2
     const maxX = containerRect.width - 50 - (contentW * (1 - currentZoom)) / 2
-
     const minY = 50 - (contentH * currentZoom)
     const maxY = containerRect.height - 50
-
     return {
       x: Math.min(Math.max(newPan.x, minX), maxX),
       y: Math.min(Math.max(newPan.y, minY), maxY)
     }
   }
 
-  // --- PAN & ZOOM HANDLERS ---
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
-
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
       if (e.ctrlKey) {
-        // Zoom
         const delta = e.deltaY * -0.001
         setZoom((prev) => Math.min(Math.max(prev + delta, 0.5), 2))
       } else {
-        // Pan
         setPan((prev) => {
           const newPan = { x: prev.x - e.deltaX, y: prev.y - e.deltaY }
           return clampPan(newPan, zoom)
         })
       }
     }
-
     container.addEventListener("wheel", onWheel, { passive: false })
-
-    return () => {
-      container.removeEventListener("wheel", onWheel)
-    }
+    return () => { container.removeEventListener("wheel", onWheel) }
   }, [zoom])
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    // Allow panning with left click (if not on a button/node) or middle click
-    // We might want to restrict this if it conflicts with DnD.
-    // For now, let's assume background drag.
     if (e.button === 0 || e.button === 1) {
       setIsPanning(true)
       setLastMousePos({ x: e.clientX, y: e.clientY })
@@ -781,39 +671,25 @@ export function OrganizationStructure() {
     if (isPanning) {
       const deltaX = e.clientX - lastMousePos.x
       const deltaY = e.clientY - lastMousePos.y
-      setPan((prev) => {
-        const newPan = { x: prev.x + deltaX, y: prev.y + deltaY }
-        return clampPan(newPan, zoom)
-      })
+      setPan((prev) => clampPan({ x: prev.x + deltaX, y: prev.y + deltaY }, zoom))
       setLastMousePos({ x: e.clientX, y: e.clientY })
     }
   }
 
-  const handleMouseUp = () => {
-    setIsPanning(false)
-  }
+  const handleMouseUp = () => { setIsPanning(false) }
 
-  // --- ACTION HANDLERS FOR CHILD COMPONENTS ---
+  // --- ACTION HANDLERS ---
   const handleAddClick = (dept: Department, level: number) => {
     setParentDeptForAdd(dept)
-    if (level === 0) {
-      setAddDeptModalOpen(true)
-    } else if (level === 1) {
-      // Use AddDepartmentModal for adding teams to departments (level 1 parents)
-      // because AddDepartmentModal is the one integrated with the API
-      setAddDeptModalOpen(true)
-    } else {
-      setAddSubTeamModalOpen(true)
-    }
+    if (level === 0) setAddDeptModalOpen(true)
+    else if (level === 1) setAddDeptModalOpen(true)
+    else setAddSubTeamModalOpen(true)
   }
 
   const handleEditClick = (dept: Department, level: number = 0) => {
     setSelectedDept(dept)
-    if (level === 0 || level === 1) {
-      setEditModalOpen(true)
-    } else {
-      setEditTeamModalOpen(true)
-    }
+    if (level === 0 || level === 1) setEditModalOpen(true)
+    else setEditTeamModalOpen(true)
   }
 
   const handleAddEmployeeClick = (dept: Department) => {
@@ -831,16 +707,10 @@ export function OrganizationStructure() {
         <div className="flex gap-2">
           {/* ZOOM CONTROLS */}
           <div className="flex items-center bg-white border border-gray-200 rounded-md shadow-sm mr-2">
-            <button onClick={handleZoomOut} className="p-2 hover:bg-gray-100 text-gray-600 rounded-l-md" title="Zoom Out" style={{ cursor: cursorPointerFinal }}>
-              <ChevronDown className="h-4 w-4" />
-            </button>
+            <button onClick={handleZoomOut} className="p-2 hover:bg-gray-100 text-gray-600 rounded-l-md" style={{ cursor: cursorPointerFinal }}><ChevronDown className="h-4 w-4" /></button>
             <span className="px-2 text-sm font-medium text-gray-600 w-12 text-center">{Math.round(zoom * 100)}%</span>
-            <button onClick={handleZoomIn} className="p-2 hover:bg-gray-100 text-gray-600 rounded-r-md" title="Zoom In" style={{ cursor: cursorPointerFinal }}>
-              <ChevronUp className="h-4 w-4" />
-            </button>
-            <button onClick={handleResetZoom} className="p-2 hover:bg-gray-100 text-gray-600 border-l border-gray-200" title="Reset Zoom" style={{ cursor: cursorPointerFinal }}>
-              <Eye className="h-4 w-4" />
-            </button>
+            <button onClick={handleZoomIn} className="p-2 hover:bg-gray-100 text-gray-600 rounded-r-md" style={{ cursor: cursorPointerFinal }}><ChevronUp className="h-4 w-4" /></button>
+            <button onClick={handleResetZoom} className="p-2 hover:bg-gray-100 text-gray-600 border-l border-gray-200" style={{ cursor: cursorPointerFinal }}><Eye className="h-4 w-4" /></button>
           </div>
 
           {canManageOrganization && (
@@ -875,6 +745,7 @@ export function OrganizationStructure() {
               dept={departments[0]}
               isRoot={true}
               level={0}
+              readOnly={isReadOnly}
               onAddClick={handleAddClick}
               onEditClick={handleEditClick}
               onDeleteClick={showDeleteConfirmation}
@@ -887,51 +758,22 @@ export function OrganizationStructure() {
         </div>
       </div>
 
-      {/* RENDER CÁC MODAL */}
-      {/* RENDER CÁC MODAL */}
-      <AddDepartmentModal
-        open={addDeptModalOpen}
-        onOpenChange={setAddDeptModalOpen}
-        parentId={parentDeptForAdd?.id}
-        parentName={parentDeptForAdd?.name}
-        onSubmit={() => {
-          // Instead of local state recursion, refresh from API
-          fetchData()
-        }}
-      />
+      {/* RENDER MODALS */}
+      <AddDepartmentModal open={addDeptModalOpen} onOpenChange={setAddDeptModalOpen} parentId={parentDeptForAdd?.id} parentName={parentDeptForAdd?.name} onSubmit={() => fetchData()} />
+      <AddTeamModal open={addTeamModalOpen} onOpenChange={setAddTeamModalOpen} onSubmit={handleAddEntity} />
+      <AddSubTeamModal open={addSubTeamModalOpen} onOpenChange={setAddSubTeamModalOpen} onSubmit={handleAddEntity} />
 
-      <AddTeamModal
-        open={addTeamModalOpen}
-        onOpenChange={setAddTeamModalOpen}
-        onSubmit={handleAddEntity}
-      />
+      {deptToDelete && (
+        <DeleteDepartmentModal open={deleteModalOpen} onOpenChange={setDeleteModalOpen} departmentName={deptToDelete.name} onConfirm={() => executeDeleteDepartment(deptToDelete.id)} />
+      )}
 
-      <AddSubTeamModal
-        open={addSubTeamModalOpen}
-        onOpenChange={setAddSubTeamModalOpen}
-        onSubmit={handleAddEntity}
-      />
-
-      {
-        deptToDelete && (
-          <DeleteDepartmentModal
-            open={deleteModalOpen}
-            onOpenChange={setDeleteModalOpen}
-            departmentName={deptToDelete.name}
-            onConfirm={() => executeDeleteDepartment(deptToDelete.id)}
-          />
-        )
-      }
-
-      {
-        selectedDept && (
-          <>
-            <EditDepartmentModal open={editModalOpen} onOpenChange={setEditModalOpen} department={selectedDept} onSubmit={handleEditDepartment} />
-            <EditTeamModal open={editTeamModalOpen} onOpenChange={setEditTeamModalOpen} department={selectedDept} onSubmit={handleEditDepartment} />
-            <AddEmployeesModal open={addEmployeesModalOpen} onOpenChange={setAddEmployeesModalOpen} department={selectedDept} />
-          </>
-        )
-      }
+      {selectedDept && (
+        <>
+          <EditDepartmentModal open={editModalOpen} onOpenChange={setEditModalOpen} department={selectedDept} onSubmit={handleEditDepartment} />
+          <EditTeamModal open={editTeamModalOpen} onOpenChange={setEditTeamModalOpen} department={selectedDept} onSubmit={handleEditDepartment} />
+          <AddEmployeesModal open={addEmployeesModalOpen} onOpenChange={setAddEmployeesModalOpen} department={selectedDept} />
+        </>
+      )}
 
       {
         draggedEmployee && sourceDept && targetDept && (
@@ -957,6 +799,9 @@ export function OrganizationStructure() {
           />
         )
       }
+      {draggedEmployee && sourceDept && targetDept && (
+        <MoveEmployeeModal open={moveModalOpen} onOpenChange={setMoveModalOpen} employeeName={draggedEmployee.name} sourceTeamName={sourceDept.name} targetTeamName={targetDept.name} onConfirm={confirmMoveEmployee} />
+      )}
     </div>
   )
 }

@@ -15,5 +15,7 @@ namespace HRM.Api.Services
         Task<(bool Success, string Message, object? Data)> AddDepartmentAsync(CreateDepartmentDto dto);
         Task<(bool Success, string Message)> DeleteDepartmentAsync(int id);
         Task<(bool Success, string Message, int? TeamId)> DeleteTeamAsync(int id);
+        Task UpdateDepartmentAsync(int id, UpdateDepartmentDto department, int userId);
+        
     }
 }
