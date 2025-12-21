@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Plus, Edit2, Trash2, Users, Eye, X, ChevronDown, ChevronUp, User } from "lucide-react"
+import { Plus, Edit2, Trash2, Users, Eye, X, ChevronDown, ChevronUp, User, FileJson } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { useAuth } from "@/lib/hooks/use-auth"
@@ -388,19 +388,19 @@ export function OrganizationStructure() {
         id: `dept-${d.departmentID}`,
         name: d.departmentName,
         code: d.departmentCode,
-        
+
         // --- SỬA DÒNG NÀY: Lấy Manager Name từ API ---
         manager: d.managerName || "Chưa có quản lý",
-        
+
         // --- SỬA DÒNG NÀY: Lấy ID từ API (để Modal biết ai là Manager) ---
         // Cũ là: managerId: "", 
-        managerId: d.ManagerId || d.managerId || d.ManagerID || "", 
+        managerId: d.ManagerId || d.managerId || d.ManagerID || "",
 
         // --- SỬA DÒNG NÀY: Lấy Description từ API ---
         // Cũ là: description: d.description || "",
         // Thêm d.Description viết hoa để chắc chắn bắt được dữ liệu từ Dapper
         description: d.Description || d.description || "",
-        
+
         employees: [],
         subdepartments: [],
       }))
@@ -494,9 +494,9 @@ export function OrganizationStructure() {
           DepartmentName: updated.name,
           DepartmentCode: updated.code,
           Description: updated.description,
-          ManagerID: (updated.managerId && updated.managerId !== "") 
-                     ? parseInt(updated.managerId) 
-                     : null
+          ManagerID: (updated.managerId && updated.managerId !== "")
+            ? parseInt(updated.managerId)
+            : null
         };
 
         // 3. Gọi API
@@ -727,6 +727,17 @@ export function OrganizationStructure() {
             <button onClick={handleZoomIn} className="p-2 hover:bg-gray-100 text-gray-600 rounded-r-md" style={{ cursor: cursorPointerFinal }}><ChevronUp className="h-4 w-4" /></button>
             <button onClick={handleResetZoom} className="p-2 hover:bg-gray-100 text-gray-600 border-l border-gray-200" style={{ cursor: cursorPointerFinal }}><Eye className="h-4 w-4" /></button>
           </div>
+
+          {/* VIEW LOGS BUTTON */}
+          <Button
+            onClick={() => window.location.href = '/organization-logs'}
+            variant="outline"
+            className="shadow-sm"
+            style={{ cursor: cursorPointerFinal }}
+          >
+            <FileJson className="mr-2 h-4 w-4" />
+            View Logs
+          </Button>
 
           {canManageOrganization && (
             <Button

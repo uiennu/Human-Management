@@ -334,5 +334,25 @@ namespace HRM.Api.Repositories
             using var conn = CreateConnection();
             await conn.ExecuteAsync(sql, log);
         }
+
+        public async Task<IEnumerable<OrganizationLogDto>> GetOrganizationLogsAsync()
+        {
+            const string sql = @"
+                SELECT 
+                    l.LogID,
+                    l.EventType,
+                    l.TargetEntity,
+                    l.TargetID,
+                    l.EventData,
+                    l.PerformedBy,
+                    CONCAT(e.FirstName, ' ', e.LastName) as PerformedByName,
+                    l.PerformedAt
+                FROM OrganizationStructureLogs l
+                LEFT JOIN Employees e ON l.PerformedBy = e.EmployeeID
+                ORDER BY l.PerformedAt DESC";
+
+            using var conn = CreateConnection();
+            return await conn.QueryAsync<OrganizationLogDto>(sql);
+        }
     }
 }

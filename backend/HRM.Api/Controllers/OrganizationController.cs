@@ -174,5 +174,19 @@ namespace HRM.Api.Controllers
             await _service.UpdateDepartmentAsync(id, request, userId);
             return Ok(new { message = "Update successful" });
         }
+
+        [HttpGet("logs")]
+        public async Task<IActionResult> GetOrganizationLogs()
+        {
+            try
+            {
+                var logs = await _service.GetOrganizationLogsAsync();
+                return Ok(logs);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
     }
 }

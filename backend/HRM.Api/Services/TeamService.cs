@@ -293,6 +293,25 @@ namespace HRM.Api.Services
                 }
             }
 
+            // 5. Log team creation action
+            try
+            {
+                await _teamRepository.LogTeamCreationAsync(
+                    teamId: createdTeam.SubTeamID,
+                    teamName: createdTeam.TeamName,
+                    description: createdTeam.Description ?? "",
+                    departmentId: departmentId,
+                    departmentCode: department.DepartmentCode ?? "",
+                    teamLeadId: dto.TeamLeadId,
+                    performedBy: 1 // TODO: Get from HttpContext/JWT token
+                );
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't fail team creation
+                Console.WriteLine($"Warning: Could not log team creation: {ex.Message}");
+            }
+
             return (true, "Team created successfully", createdTeam.SubTeamID);
         }
     }

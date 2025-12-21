@@ -73,5 +73,10 @@ namespace HRM.Api.Repositories
         /// Log employee removal action to OrganizationStructureLogs
         /// </summary>
         Task LogRemoveEmployeeActionAsync(int employeeId, int teamId, int departmentId, string employeeName, string teamName, int performedBy);
+
+        /// <summary>
+        /// Log team creation action to OrganizationStructureLogs
+        /// </summary>
+        Task LogTeamCreationAsync(int teamId, string teamName, string description, int departmentId, string departmentCode, int? teamLeadId, int performedBy);
     }
 }

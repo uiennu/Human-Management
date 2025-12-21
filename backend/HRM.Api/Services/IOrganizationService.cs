@@ -16,6 +16,6 @@ namespace HRM.Api.Services
         Task<(bool Success, string Message)> DeleteDepartmentAsync(int id);
         Task<(bool Success, string Message, int? TeamId)> DeleteTeamAsync(int id);
         Task UpdateDepartmentAsync(int id, UpdateDepartmentDto department, int userId);
-        
+        Task<IEnumerable<OrganizationLogDto>> GetOrganizationLogsAsync();
     }
 }

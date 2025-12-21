@@ -255,5 +255,10 @@ namespace HRM.Api.Services
                 await LogActionAsync("UpdateDepartment", "Department", id, changes, userId);
             }
         }
+
+        public async Task<IEnumerable<OrganizationLogDto>> GetOrganizationLogsAsync()
+        {
+            return await _repository.GetOrganizationLogsAsync();
+        }
     }
 }

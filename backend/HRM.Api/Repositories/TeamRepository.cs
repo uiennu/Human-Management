@@ -1,6 +1,7 @@
 using HRM.Api.Data;
 using HRM.Api.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace HRM.Api.Repositories
 {
@@ -124,19 +125,56 @@ namespace HRM.Api.Repositories
 
         public async Task LogRemoveEmployeeActionAsync(int employeeId, int teamId, int departmentId, string employeeName, string teamName, int performedBy)
         {
+            var eventData = new
+            {
+                EmployeeID = employeeId,
+                EmployeeName = employeeName,
+                SubTeamID = teamId,
+                SubTeamName = teamName,
+                DepartmentID = departmentId,
+                OldSubTeamID = teamId,      // Employee was in this team
+                NewSubTeamID = (int?)null,  // Now not in any team
+                Description = $"Removed {employeeName} from team {teamName}"
+            };
+
             var sql = @"
                 INSERT INTO OrganizationStructureLogs 
-                (ActionType, Description, EmployeeID, SubTeamID, DepartmentID, OldSubTeamID, NewSubTeamID, PerformedBy, PerformedAt) 
+                (EventType, TargetEntity, TargetID, EventData, PerformedBy, PerformedAt) 
                 VALUES 
-                (@ActionType, @Description, @EmployeeID, @SubTeamID, @DepartmentID, @OldSubTeamID, NULL, @PerformedBy, @PerformedAt)";
+                (@EventType, @TargetEntity, @TargetID, @EventData, @PerformedBy, @PerformedAt)";
 
             await _context.Database.ExecuteSqlRawAsync(sql,
-                new MySqlConnector.MySqlParameter("@ActionType", "RemoveEmployeeFromTeam"),
-                new MySqlConnector.MySqlParameter("@Description", $"Removed {employeeName} from team {teamName}"),
-                new MySqlConnector.MySqlParameter("@EmployeeID", employeeId),
-                new MySqlConnector.MySqlParameter("@SubTeamID", teamId),
-                new MySqlConnector.MySqlParameter("@DepartmentID", departmentId),
-                new MySqlConnector.MySqlParameter("@OldSubTeamID", teamId),
+                new MySqlConnector.MySqlParameter("@EventType", "RemoveEmployeeFromTeam"),
+                new MySqlConnector.MySqlParameter("@TargetEntity", "Employee"),
+                new MySqlConnector.MySqlParameter("@TargetID", employeeId),
+                new MySqlConnector.MySqlParameter("@EventData", JsonSerializer.Serialize(eventData)),
+                new MySqlConnector.MySqlParameter("@PerformedBy", performedBy),
+                new MySqlConnector.MySqlParameter("@PerformedAt", DateTime.Now)
+            );
+        }
+
+        public async Task LogTeamCreationAsync(int teamId, string teamName, string description, int departmentId, string departmentCode, int? teamLeadId, int performedBy)
+        {
+            var eventData = new
+            {
+                TeamName = teamName,
+                Description = description,
+                DepartmentID = departmentId,
+                DepartmentCode = departmentCode,
+                TeamLeadID = teamLeadId
+            };
+
+            var sql = @"
+                INSERT INTO OrganizationStructureLogs 
+                (EventType, TargetEntity, TargetID, EventData, PerformedBy, PerformedAt) 
+                VALUES 
+                (@EventType, @TargetEntity, @TargetID, @EventData, @PerformedBy, @PerformedAt)";
+
+            await _context.Database.ExecuteSqlRawAsync(sql,
+                new MySqlConnector.MySqlParameter("@EventType", "CreateSubTeam"),
+                new MySqlConnector.MySqlParameter("@TargetEntity", "SubTeam"),
+                new MySqlConnector.MySqlParameter("@TargetID", teamId),
+                new MySqlConnector.MySqlParameter("@EventData", JsonSerializer.Serialize(eventData)),
                 new MySqlConnector.MySqlParameter("@PerformedBy", performedBy),
                 new MySqlConnector.MySqlParameter("@PerformedAt", DateTime.Now)
             );
