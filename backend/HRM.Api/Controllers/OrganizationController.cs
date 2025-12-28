@@ -36,11 +36,29 @@ namespace HRM.Api.Controllers
             return Ok(result);
         }
         
-        // Endpoint: GET /api/organization/employees
         [HttpGet("employees")]
         public async Task<ActionResult<IEnumerable<EmployeeSimpleDto>>> GetEmployees()
         {
             var result = await _service.GetAllEmployeesAsync();
+            return Ok(result);
+        }
+
+        // Endpoint: GET /api/organization/subordinates
+        [Authorize]
+        [HttpGet("subordinates")]
+        public async Task<ActionResult<IEnumerable<EmployeeSimpleDto>>> GetSubordinates()
+        {
+            var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
+                        ?? User.FindFirst("id")?.Value 
+                        ?? User.FindFirst("sub")?.Value
+                        ?? User.FindFirst("EmployeeID")?.Value;
+
+            if (string.IsNullOrEmpty(userIdStr) || !int.TryParse(userIdStr, out int userId))
+            {
+                return Unauthorized("User ID not found in token");
+            }
+
+            var result = await _service.GetSubordinatesAsync(userId);
             return Ok(result);
         }
 

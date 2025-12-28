@@ -85,6 +85,23 @@ namespace HRM.Api.Repositories
              using var conn = CreateConnection();
              return await conn.QueryAsync<EmployeeSimpleDto>(sql);
         }
+        
+        public async Task<IEnumerable<EmployeeSimpleDto>> GetSubordinatesAsync(int managerId)
+        {
+             const string sql = @"
+                SELECT 
+                    e.EmployeeID, 
+                    CONCAT(e.FirstName, ' ', e.LastName) as Name, 
+                    'Staff' as Position,
+                    e.AvatarUrl as Avatar,
+                    d.DepartmentName
+                FROM Employees e
+                LEFT JOIN Departments d ON e.DepartmentID = d.DepartmentID
+                WHERE e.ManagerID = @managerId AND e.IsActive = 1";
+             
+             using var conn = CreateConnection();
+             return await conn.QueryAsync<EmployeeSimpleDto>(sql, new { managerId });
+        }
 
         // ==========================================
         // RESTORED METHODS (EF Core Implementation)

@@ -5,25 +5,27 @@
 Trước khi chạy backend, cần đảm bảo:
 
 - **.NET 8 SDK**: Để chạy code .NET
-- **Docker Desktop**: Để chạy database MySQL
+- **Java 17 & Maven**: Để chạy Java Utility Service (nếu chạy local không dùng Docker)
+- **Docker Desktop**: Để chạy database MySQL và Java Service (optional)
 
 ## 2. Start Database (Docker)
 
 Project này sử dụng MySQL chạy trên Docker. Bạn không cần cài MySQL thủ công.
 
 1. Mở terminal tại thư mục root của project (nơi có file `docker-compose.yml`).
-2. Chạy lệnh sau để khởi động database:
+2. Chạy lệnh sau để khởi động container:
 
-   docker-compose up -d
+   docker-compose up -d --build
 
-
-   > **Lưu ý**: Lệnh này sẽ tự động tải MySQL image và tạo database `HRM_System` kèm dữ liệu mẫu.
+   > **Lưu ý**: Lệnh này sẽ tự động khởi động:
+   > - `hrm_mysql`: Database MySQL (HRM_System & hrm_utility).
+   > - `hrm_utility_java`: Java Utility Service (Calendar & PDF engine) tại port 8081.
 
 3. Kiểm tra container đã chạy chưa:
 
    docker ps
 
-   Bạn sẽ thấy container tên `hrm_mysql` đang chạy.
+   Bạn sẽ thấy container tên `hrm_mysql` và `hrm_utility_java` đang chạy.
 
 ## 3. Restore & Build
 
@@ -54,9 +56,22 @@ Mở browser:
 
 ## 🎯 Tóm tắt các bước chạy
 
-1. `docker-compose up -d` (Chỉ cần chạy 1 lần để bật DB)
-2. `cd backend/HRM.Api`docker-compose up -d
-3. `dotnet run`
+1. `docker-compose up -d` (Khởi động DB và Java Utility)
+2. `cd backend/HRM.Api`
+3. `dotnet run` (Khởi động C# Backend)
+
+---
+
+## ☕ 6. Java Utility Service (Manual Run)
+
+Nếu bạn không muốn chạy Java qua Docker:
+
+1. `cd backend-java/hrm-utility`
+2. `mvn spring-boot:run`
+
+Service sẽ chạy tại: http://localhost:8081
+
+---
 
 ---
 

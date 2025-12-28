@@ -17,11 +17,12 @@ import { UserRole } from "@/types/auth"
 
 const baseNavigation = [
   { name: "Dashboard", href: "/", icon: Home },
-  { name: "Leave Requests", href: "/leave", icon: Calendar },
+  { name: "Leave Requests", href: "/leave", icon: CalendarClock },
   { name: "Organization Management", href: "/organization", icon: FileText },
   { name: "Timesheet Updates", href: "/timesheet", icon: FileText },
   { name: "Check-In/Out Requests", href: "/checkin", icon: Clock },
   { name: "Work From Home", href: "/wfh", icon: Wifi },
+  { name: "Calendar", href: "/calendar", icon: Calendar },
   { name: "My Profile", href: "/profile", icon: User },
 ];
 
@@ -86,7 +87,7 @@ export function AppSidebar() {
     ];
   }
 
-    
+
 
   return (
     <div className="flex h-full w-64 flex-col bg-slate-900 text-slate-100">

@@ -3,7 +3,37 @@
 -- =================================================================
 DROP DATABASE IF EXISTS HRM_System;
 CREATE DATABASE IF NOT EXISTS HRM_System;
+
 USE HRM_System;
+
+-- HRM Utility Tables (moved into HRM_System)
+CREATE TABLE IF NOT EXISTS Holidays (
+    HolidayID INT AUTO_INCREMENT PRIMARY KEY,
+    Name VARCHAR(100) NOT NULL,
+    HolidayDate DATE NOT NULL,
+    IsRecurring BOOLEAN DEFAULT TRUE,
+    Description VARCHAR(255),
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Unified Calendar Events
+CREATE TABLE IF NOT EXISTS CalendarEvents (
+    EventID INT AUTO_INCREMENT PRIMARY KEY,
+    Title VARCHAR(200) NOT NULL,
+    Description TEXT,
+    StartTime DATETIME NOT NULL,
+    EndTime DATETIME NOT NULL,
+    EventType ENUM('HOLIDAY', 'PERSONAL', 'DEADLINE') NOT NULL,
+    UserID INT, 
+    CreatedBy INT,
+    Color VARCHAR(10),
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Seed data for Holidays
+INSERT INTO Holidays (Name, HolidayDate, IsRecurring, Description) VALUES
+('New Year Day', '2025-01-01', TRUE, 'Global celebration of new year'),
+('Lunar New Year', '2025-01-29', FALSE, 'Traditional Tet holiday');
 
 -- =================================================================
 -- SECTION 1: CORE HR & USERS (SCHEMA)
