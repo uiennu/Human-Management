@@ -38,7 +38,8 @@ namespace HRM.Api.DTOs
         public decimal TotalDays { get; set; }
         public string? Reason { get; set; }
         public List<string>? Attachments { get; set; }
-        public string Status { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public string EmployeeName { get; set; } = string.Empty;
         public DateTime RequestedDate { get; set; }
         public ApprovalInfoDto? ApprovalInfo { get; set; }
     }

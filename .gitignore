@@ -29,3 +29,17 @@ dist/
 # OS
 .DS_Store
 Thumbs.db
+
+# Java/Maven
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.iml
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+dependency-reduced-pom.xml
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar

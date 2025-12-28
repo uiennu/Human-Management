@@ -29,7 +29,7 @@ export default function LeaveRequestForm({ employeeId, onCancel }: LeaveRequestF
   const [fileError, setFileError] = useState("")
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [primaryApprover, setPrimaryApprover] = useState<string>("");
+  const [primaryApprover, setPrimaryApprover] = useState<string | null>("");
 
   const topRef = useRef<HTMLDivElement>(null);
 
@@ -55,15 +55,21 @@ export default function LeaveRequestForm({ employeeId, onCancel }: LeaveRequestF
   const loadData = async () => {
     if (!employeeId) return;
     try {
-      const [types, userBalances, approver] = await Promise.all([
+      const [types, userBalances] = await Promise.all([
         leaveService.getLeaveTypes(),
-        leaveService.getMyBalances(employeeId),
-        leaveService.getPrimaryApprover(employeeId)
+        leaveService.getMyBalances(employeeId)
       ]);
       setLeaveTypes(types);
       setBalances(userBalances);
-      setPrimaryApprover(approver.managerName);
-      // Removed auto-select logic
+
+      // Fetch approver separately - don't block form if it fails
+      try {
+        const approver = await leaveService.getPrimaryApprover(employeeId);
+        setPrimaryApprover(approver.managerName);
+      } catch (approverErr) {
+        console.log("No manager assigned - this is OK");
+        setPrimaryApprover(null);
+      }
     } catch (err) {
       console.error(err);
       setError("Failed to load leave data");

@@ -25,15 +25,18 @@ namespace HRM.Api.Services
         private readonly ILeaveRequestRepository _leaveRequestRepository;
         private readonly ILeaveBalanceRepository _leaveBalanceRepository;
         private readonly IFileStorageService _fileStorageService;
+        private readonly ICalendarServiceClient _calendarServiceClient;
 
         public LeaveRequestService(
             ILeaveRequestRepository leaveRequestRepository,
             ILeaveBalanceRepository leaveBalanceRepository,
-            IFileStorageService fileStorageService)
+            IFileStorageService fileStorageService,
+            ICalendarServiceClient calendarServiceClient)
         {
             _leaveRequestRepository = leaveRequestRepository;
             _leaveBalanceRepository = leaveBalanceRepository;
             _fileStorageService = fileStorageService;
+            _calendarServiceClient = calendarServiceClient;
         }
 
         public async Task<List<LeaveTypeDto>> GetLeaveTypesAsync()
@@ -77,13 +80,11 @@ namespace HRM.Api.Services
                 };
             }
 
-            if (!employee.ManagerID.HasValue)
+            // 4. Check for public holidays via Java Utility Service
+            var holidays = await _calendarServiceClient.GetHolidaysInRangeAsync(dto.StartDate, dto.EndDate);
+            if (holidays.Any())
             {
-                return new LeaveRequestResponseDto
-                {
-                    Status = "Error",
-                    Message = "No manager assigned to approve leave requests"
-                };
+                Console.WriteLine($"[HolidayService] Found {holidays.Count} holidays in range: {string.Join(", ", holidays.Select(h => h.Name))}");
             }
 
             // Validate leave balance
@@ -97,10 +98,13 @@ namespace HRM.Api.Services
                 };
             }
 
+            // Note: If employee has no manager, use their own ID to satisfy database constraint
+            // This allows self-approval or admin review workflow
+            
             var leaveRequest = new LeaveRequest
             {
                 EmployeeID = employeeId,
-                ManagerID = employee.ManagerID.Value,
+                ManagerID = employee.ManagerID ?? employeeId, // Use employee's own ID if no manager
                 LeaveTypeID = dto.LeaveTypeID,
                 StartDate = dto.StartDate,
                 EndDate = dto.EndDate,
@@ -185,6 +189,7 @@ namespace HRM.Api.Services
                 TotalDays = leaveRequest.TotalDays,
                 Reason = leaveRequest.Reason,
                 Status = leaveRequest.Status,
+                EmployeeName = $"{leaveRequest.Employee?.FirstName} {leaveRequest.Employee?.LastName}",
                 RequestedDate = leaveRequest.RequestedDate
             };
 

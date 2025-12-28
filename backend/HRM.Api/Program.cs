@@ -103,6 +103,8 @@ builder.Services.AddScoped<IReportRepository, ReportRepository>();
 builder.Services.AddScoped<IReportService, ReportService>();
 
 builder.Services.AddScoped<IEventReplayService, EventReplayService>();
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<ICalendarServiceClient, CalendarServiceClient>();
 
 var app = builder.Build();
 
