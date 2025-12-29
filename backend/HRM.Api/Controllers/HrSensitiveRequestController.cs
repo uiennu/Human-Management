@@ -153,64 +153,6 @@ namespace HRM.Api.Controllers
                 return StatusCode(500, new { message = "An error occurred while processing the request" });
             }
         }
-
-        /// <summary>
-        /// [DEV ONLY] Insert test data for sensitive requests
-        /// POST: /api/hr/sensitive-requests/test-data
-        /// </summary>
-        [HttpPost("test-data")]
-        [AllowAnonymous]
-        public async Task<IActionResult> InsertTestData(
-            [FromServices] Data.AppDbContext context,
-            [FromServices] IWebHostEnvironment env)
-        {
-            // Only allow in Development environment
-            if (!env.IsDevelopment())
-            {
-                return NotFound();
-            }
-
-            try
-            {
-                // Test cases covering all role levels
-                var testData = new List<Models.EmployeeProfileChange>
-                {
-                    // Level 1 employees
-                    new() { EmployeeID = 4, FieldName = "BankAccountNumber", OldValue = "5566778899", NewValue = "DAVID-NEW-BANK-001", Status = "Pending" },
-                    new() { EmployeeID = 11, FieldName = "PersonalEmail", OldValue = "liam.personal@gmail.com", NewValue = "liam.new@gmail.com", Status = "Pending" },
-                    // Level 1 managers
-                    new() { EmployeeID = 3, FieldName = "TaxID", OldValue = "TAX-CHARLIE", NewValue = "NEW-TAX-CHARLIE", Status = "Pending" },
-                    new() { EmployeeID = 6, FieldName = "BankAccountNumber", OldValue = "6655443322", NewValue = "FRANK-NEW-BANK", Status = "Pending" },
-                    // Level 2 HR Employees
-                    new() { EmployeeID = 5, FieldName = "BankAccountNumber", OldValue = "9988776655", NewValue = "EVE-NEW-BANK-001", Status = "Pending" },
-                    new() { EmployeeID = 9, FieldName = "PersonalEmail", OldValue = "ivy.personal@gmail.com", NewValue = "ivy.new@gmail.com", Status = "Pending" },
-                    // Level 3 HR Manager  
-                    new() { EmployeeID = 2, FieldName = "TaxID", OldValue = "TAX-BOB", NewValue = "NEW-TAX-BOB", Status = "Pending" },
-                    // Level 4 Admin
-                    new() { EmployeeID = 1, FieldName = "BankAccountNumber", OldValue = "123456789", NewValue = "ALICE-NEW-BANK-001", Status = "Pending" }
-                };
-
-                // Clear existing pending requests first
-                var existingPending = context.EmployeeProfileChanges.Where(c => c.Status == "Pending");
-                context.EmployeeProfileChanges.RemoveRange(existingPending);
-                await context.SaveChangesAsync();
-
-                // Insert new test data
-                context.EmployeeProfileChanges.AddRange(testData);
-                await context.SaveChangesAsync();
-
-                return Ok(new { 
-                    success = true, 
-                    message = $"Inserted {testData.Count} test records",
-                    data = testData.Select(d => new { d.EmployeeID, d.FieldName, d.NewValue })
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error inserting test data");
-                return StatusCode(500, new { message = ex.Message });
-            }
-        }
     }
 
     /// <summary>
