@@ -1,6 +1,6 @@
 "use client"
 
-import { Calendar, Clock, FileText, Home, User, LogOut, CalendarClock, Wifi, Users, UserPlus, History } from "lucide-react"
+import { Calendar, Clock, FileText, Home, User, LogOut, CalendarClock, Wifi, Users, UserPlus, History, Shield } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -74,6 +74,7 @@ export function AppSidebar() {
       ...baseNavigation.slice(1, 3), // Leave, Org
       { name: "Team Management", href: "/organization/teams", icon: Users },
       { name: "Register Employee", href: "/organization/employees/register", icon: UserPlus },
+      { name: "Sensitive Requests", href: "/sensitive-requests", icon: Shield },
       ...(isAdmin ? [{ name: "Registration History", href: "/organization/employees/registration-history", icon: History }] : []),
       ...baseNavigation.slice(3) // Timesheet, Checkin...
     ];

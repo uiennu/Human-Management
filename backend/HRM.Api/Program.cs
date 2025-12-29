@@ -106,6 +106,10 @@ builder.Services.AddScoped<IEventReplayService, EventReplayService>();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<ICalendarServiceClient, CalendarServiceClient>();
 
+// Register Sensitive Request Services (for HR management)
+builder.Services.AddScoped<ISensitiveRequestAuthorizationService, SensitiveRequestAuthorizationService>();
+builder.Services.AddScoped<ISensitiveRequestService, SensitiveRequestService>();
+
 var app = builder.Build();
 
 // ⬇⬇⬇ THÊM ĐOẠN NÀY NGAY Ở ĐÂY

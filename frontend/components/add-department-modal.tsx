@@ -114,7 +114,7 @@ export function AddDepartmentModal({ open, onOpenChange, onSubmit, parentId, par
           await organizationService.createTeam(deptId, {
             teamName: formData.name,
             description: formData.description,
-            teamLeadId: formData.managerId ? parseInt(formData.managerId) : null
+            teamLeadId: formData.managerId ? parseInt(formData.managerId) : undefined
           })
 
           toast.success("Team created successfully")
