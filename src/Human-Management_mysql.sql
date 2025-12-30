@@ -116,6 +116,16 @@ CREATE TABLE EmployeeProfileChanges (
     CONSTRAINT FK_ProfileChanges_Approver FOREIGN KEY (ApproverID) REFERENCES Employees(EmployeeID)
 );
 
+-- Supporting documents for profile changes (1 change can have multiple documents)
+CREATE TABLE EmployeeProfileChangeDocuments (
+    DocumentID INT PRIMARY KEY AUTO_INCREMENT,
+    ChangeID INT NOT NULL,
+    DocumentPath VARCHAR(500) NOT NULL,
+    DocumentName VARCHAR(255) NOT NULL,
+    UploadedDate DATETIME NOT NULL DEFAULT NOW(),
+    CONSTRAINT FK_ChangeDocuments_Change FOREIGN KEY (ChangeID) REFERENCES EmployeeProfileChanges(ChangeID) ON DELETE CASCADE
+);
+
 CREATE TABLE SubTeams (
     SubTeamID INT PRIMARY KEY AUTO_INCREMENT,
     TeamName VARCHAR(100) NOT NULL,
@@ -367,10 +377,11 @@ CREATE TABLE EmployeeEvents (
     AggregateID INT NOT NULL, 
     EventType VARCHAR(100) NOT NULL, 
     EventData JSON NOT NULL, 
-    Version INT NOT NULL, 
+    SequenceNumber INT NOT NULL,
+    EventVersion INT NOT NULL DEFAULT 1, 
     CreatedBy INT NULL, 
     CreatedAt DATETIME DEFAULT NOW(),
-    UNIQUE KEY UQ_Employee_Version (AggregateID, Version),
+    UNIQUE KEY UQ_Employee_Version (AggregateID, SequenceNumber),
     INDEX IX_AggregateID (AggregateID)
 );
 

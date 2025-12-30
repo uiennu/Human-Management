@@ -13,6 +13,7 @@ namespace HRM.Api.Data
         public DbSet<EmployeeRole> EmployeeRoles { get; set; }
         public DbSet<Department> Departments { get; set; }
         public DbSet<EmployeeProfileChange> EmployeeProfileChanges { get; set; }
+        public DbSet<EmployeeProfileChangeDocument> EmployeeProfileChangeDocuments { get; set; }
 
         // Leave Management DbSets
         public DbSet<LeaveType> LeaveTypes { get; set; }
@@ -40,6 +41,18 @@ namespace HRM.Api.Data
                 
                 // Báo cho EF biết cột này là kiểu json trong MySQL
                 entity.Property(e => e.EventData).HasColumnType("json"); 
+            });
+
+            // EmployeeProfileChangeDocument configuration
+            modelBuilder.Entity<EmployeeProfileChangeDocument>(entity =>
+            {
+                entity.ToTable("EmployeeProfileChangeDocuments");
+                entity.HasKey(d => d.DocumentID);
+                
+                entity.HasOne(d => d.Change)
+                    .WithMany(c => c.Documents)
+                    .HasForeignKey(d => d.ChangeID)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             modelBuilder.Entity<Employee>()

@@ -17,10 +17,11 @@ import {
   User,
   Building,
   Calendar,
-  ArrowRight
+  ArrowRight,
+  FileText
 } from "lucide-react"
 import { sensitiveRequestApi } from "@/lib/api/sensitive-request"
-import type { GroupedSensitiveRequest, SensitiveRequestStats, UserAuthorizationInfo } from "@/types/sensitive-request"
+import type { GroupedSensitiveRequest, SensitiveRequestStats, UserAuthorizationInfo, DocumentInfo } from "@/types/sensitive-request"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,6 +48,7 @@ export default function SensitiveRequestManagement() {
   const [error, setError] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [searchTerm, setSearchTerm] = useState("")
+  const [viewingDocument, setViewingDocument] = useState<DocumentInfo | null>(null)
   const [activeSearchTerm, setActiveSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
@@ -286,6 +288,47 @@ export default function SensitiveRequestManagement() {
                 </div>
               </div>
 
+              {/* Supporting Documents */}
+              {viewingRequest.supportingDocuments && viewingRequest.supportingDocuments.length > 0 && (
+                <div className="border-t pt-6">
+                  <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-blue-600" />
+                    Supporting Documents
+                  </h3>
+                  <div className="space-y-3">
+                    {viewingRequest.supportingDocuments.map((doc) => (
+                      <div 
+                        key={doc.documentId} 
+                        className="bg-blue-50 border border-blue-200 rounded-lg p-4 hover:border-blue-400 transition-all cursor-pointer group"
+                        onClick={() => setViewingDocument(doc)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
+                              {doc.documentPath.toLowerCase().endsWith('.pdf') ? (
+                                <FileText className="h-5 w-5 text-blue-600" />
+                              ) : (
+                                <Eye className="h-5 w-5 text-blue-600" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-medium text-blue-900">{doc.documentName}</p>
+                              <p className="text-xs text-blue-600">
+                                {doc.documentPath.toLowerCase().endsWith('.pdf') ? 'PDF Document' : 'Image File'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg group-hover:bg-blue-700 transition-colors text-sm font-medium">
+                            <Eye className="h-4 w-4" />
+                            View
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Actions */}
               {viewingRequest.status === "Pending" && (
                 <div className="border-t mt-6 pt-6">
@@ -482,6 +525,9 @@ export default function SensitiveRequestManagement() {
                         <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                           Changes
                         </th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                          Doc
+                        </th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                           Requested Date
                         </th>
@@ -517,6 +563,21 @@ export default function SensitiveRequestManagement() {
                                 </Badge>
                               ))}
                             </div>
+                          </td>
+                          <td className="px-4 py-4 text-center">
+                            {request.supportingDocuments && request.supportingDocuments.length > 0 ? (
+                              <div 
+                                className="inline-flex items-center justify-center gap-1 px-2 py-1 bg-blue-100 rounded-full" 
+                                title={request.supportingDocuments.map(d => d.documentName).join(', ')}
+                              >
+                                <FileText className="h-4 w-4 text-blue-600" />
+                                {request.supportingDocuments.length > 1 && (
+                                  <span className="text-xs font-medium text-blue-700">{request.supportingDocuments.length}</span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-slate-300">—</span>
+                            )}
                           </td>
                           <td className="px-4 py-4">
                             <p className="text-sm text-slate-700">{formatDate(request.requestedDate)}</p>
@@ -667,6 +728,73 @@ export default function SensitiveRequestManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Document Viewer Modal */}
+      {viewingDocument && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm"
+          onClick={() => setViewingDocument(null)}
+        >
+          <div 
+            className="relative max-w-6xl max-h-[90vh] w-full bg-white rounded-xl shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b bg-slate-50">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  {viewingDocument.documentPath.toLowerCase().endsWith('.pdf') ? (
+                    <FileText className="h-5 w-5 text-red-600" />
+                  ) : (
+                    <FileText className="h-5 w-5 text-blue-600" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-slate-900 truncate">{viewingDocument.documentName}</p>
+                  <p className="text-xs text-slate-600">
+                    {viewingDocument.documentPath.toLowerCase().endsWith('.pdf') ? 'PDF Document' : 'Image File'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setViewingDocument(null)}
+                className="p-2 hover:bg-slate-200 rounded-lg transition-colors"
+                title="Close"
+              >
+                <X className="w-5 h-5 text-slate-600" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="overflow-auto max-h-[calc(90vh-80px)] bg-slate-900 flex items-center justify-center p-8">
+              {viewingDocument.documentPath.toLowerCase().endsWith('.pdf') ? (
+                <div className="text-center p-12 bg-white rounded-lg">
+                  <FileText className="w-24 h-24 text-red-500 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-slate-900 mb-2">PDF Document</h3>
+                  <p className="text-slate-600 mb-4">
+                    {viewingDocument.documentName}
+                  </p>
+                  <a
+                    href={sensitiveRequestApi.getDocumentUrl(viewingDocument.documentPath)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Open PDF in New Tab
+                  </a>
+                </div>
+              ) : (
+                <img 
+                  src={sensitiveRequestApi.getDocumentUrl(viewingDocument.documentPath)} 
+                  alt={viewingDocument.documentName}
+                  className="max-w-full max-h-full object-contain"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast */}
       {toast.open && (

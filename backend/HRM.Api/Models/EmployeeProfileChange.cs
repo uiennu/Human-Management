@@ -15,5 +15,6 @@ namespace HRM.Api.Models
         // Navigation properties
         public virtual Employee? Employee { get; set; }
         public virtual Employee? Approver { get; set; }
+        public virtual ICollection<EmployeeProfileChangeDocument> Documents { get; set; } = new List<EmployeeProfileChangeDocument>();
     }
 }

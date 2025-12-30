@@ -1,5 +1,4 @@
-using HRM.Api.Data;
-using Microsoft.EntityFrameworkCore;
+using HRM.Api.Repositories;
 
 namespace HRM.Api.Services
 {
@@ -20,7 +19,7 @@ namespace HRM.Api.Services
     /// </summary>
     public class SensitiveRequestAuthorizationService : ISensitiveRequestAuthorizationService
     {
-        private readonly AppDbContext _context;
+        private readonly ISensitiveRequestRepository _repository;
         private readonly ILogger<SensitiveRequestAuthorizationService> _logger;
 
         // Role levels - higher number = higher authority
@@ -46,21 +45,16 @@ namespace HRM.Api.Services
         };
 
         public SensitiveRequestAuthorizationService(
-            AppDbContext context,
+            ISensitiveRequestRepository repository,
             ILogger<SensitiveRequestAuthorizationService> logger)
         {
-            _context = context;
+            _repository = repository;
             _logger = logger;
         }
 
         public async Task<List<string>> GetUserRolesAsync(int employeeId)
         {
-            var roles = await _context.EmployeeRoles
-                .Where(er => er.EmployeeID == employeeId)
-                .Join(_context.Roles, er => er.RoleID, r => r.RoleID, (er, r) => r.RoleName)
-                .ToListAsync();
-
-            return roles;
+            return await _repository.GetUserRolesAsync(employeeId);
         }
 
         public int GetRoleLevel(IEnumerable<string> roles)
@@ -186,24 +180,12 @@ namespace HRM.Api.Services
         private async Task<string> GetSuggestedApproverAsync(int excludeEmployeeId)
         {
             // Find an Admin who is not the requesting employee
-            var admin = await _context.EmployeeRoles
-                .Include(er => er.Role)
-                .Include(er => er.Employee)
-                .Where(er => er.Role != null && er.Role.RoleName == "Admin" && er.EmployeeID != excludeEmployeeId)
-                .Select(er => er.Employee != null ? er.Employee.FirstName + " " + er.Employee.LastName : "Unknown")
-                .FirstOrDefaultAsync();
-
+            var admin = await _repository.FindApproverByRoleAsync("Admin", excludeEmployeeId);
             if (admin != null)
                 return $"Admin ({admin})";
 
             // If no other Admin, suggest HR Manager
-            var hrManager = await _context.EmployeeRoles
-                .Include(er => er.Role)
-                .Include(er => er.Employee)
-                .Where(er => er.Role != null && er.Role.RoleName == "HR Manager" && er.EmployeeID != excludeEmployeeId)
-                .Select(er => er.Employee != null ? er.Employee.FirstName + " " + er.Employee.LastName : "Unknown")
-                .FirstOrDefaultAsync();
-
+            var hrManager = await _repository.FindApproverByRoleAsync("HR Manager", excludeEmployeeId);
             if (hrManager != null)
                 return $"HR Manager ({hrManager})";
 

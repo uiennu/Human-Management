@@ -145,4 +145,14 @@ export const sensitiveRequestApi = {
 
     return response.json()
   },
+
+  /**
+   * Get the URL to view/download a supporting document
+   * @param documentPath - The path to the document (e.g., /uploads/sensitive-documents/...)
+   * @returns Full URL to access the document
+   */
+  getDocumentUrl(documentPath: string): string {
+    const baseUrl = API_BASE_URL.replace('/api', '')
+    return `${baseUrl}${documentPath}`
+  },
 }
