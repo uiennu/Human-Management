@@ -1,6 +1,17 @@
 namespace HRM.Api.DTOs
 {
     /// <summary>
+    /// DTO for document info
+    /// </summary>
+    public class DocumentInfoDto
+    {
+        public int DocumentId { get; set; }
+        public string DocumentPath { get; set; } = "";
+        public string DocumentName { get; set; } = "";
+        public DateTime UploadedDate { get; set; }
+    }
+
+    /// <summary>
     /// DTO for listing sensitive update requests (for HR management)
     /// </summary>
     public class SensitiveRequestListItemDto
@@ -17,6 +28,7 @@ namespace HRM.Api.DTOs
         public DateTime RequestedDate { get; set; }
         public string? ApproverName { get; set; }
         public DateTime? ApprovalDate { get; set; }
+        public List<DocumentInfoDto> SupportingDocuments { get; set; } = new();
     }
 
     /// <summary>
@@ -34,6 +46,7 @@ namespace HRM.Api.DTOs
         public string? ApproverName { get; set; }
         public DateTime? ApprovalDate { get; set; }
         public List<SensitiveFieldChangeDto> Changes { get; set; } = new();
+        public List<DocumentInfoDto> SupportingDocuments { get; set; } = new();
         
         // Authorization info (populated based on current user)
         public RequestPermissionDto? Permission { get; set; }
@@ -62,6 +75,7 @@ namespace HRM.Api.DTOs
         public string DisplayName { get; set; } = "";
         public string? OldValue { get; set; }
         public string? NewValue { get; set; }
+        public List<DocumentInfoDto> SupportingDocuments { get; set; } = new();
     }
 
     /// <summary>

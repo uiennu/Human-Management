@@ -104,7 +104,8 @@ builder.Services.AddScoped<IReportService, ReportService>();
 
 builder.Services.AddScoped<IEventReplayService, EventReplayService>();
 
-// Register Sensitive Request Services (for HR management)
+// Register Sensitive Request Repository and Services (for HR management)
+builder.Services.AddScoped<ISensitiveRequestRepository, SensitiveRequestRepository>();
 builder.Services.AddScoped<ISensitiveRequestAuthorizationService, SensitiveRequestAuthorizationService>();
 builder.Services.AddScoped<ISensitiveRequestService, SensitiveRequestService>();
 
@@ -131,11 +132,12 @@ if (app.Environment.IsDevelopment())
 // Enable CORS early so preflight (OPTIONS) requests are handled
 app.UseCors("AllowLocalhost3000");
 
+// Serve static files (uploads, etc.) - MUST be before auth to allow public access
+app.UseStaticFiles();
+
 // Add authentication and authorization middleware
 app.UseAuthentication();
 app.UseAuthorization();
-
-app.UseStaticFiles();
 
 app.MapGet("/weatherforecast", () => "OK");
 app.MapGet("/", () => "HRM API Running...");

@@ -1,11 +1,19 @@
 // Types for HR Sensitive Request Management
 
+export interface DocumentInfo {
+  documentId: number
+  documentPath: string
+  documentName: string
+  uploadedDate: string
+}
+
 export interface SensitiveFieldChange {
   changeId: number
   fieldName: string
   displayName: string
   oldValue: string | null
   newValue: string | null
+  supportingDocuments: DocumentInfo[]
 }
 
 // Permission info for a specific request
@@ -29,6 +37,7 @@ export interface GroupedSensitiveRequest {
   approverName: string | null
   approvalDate: string | null
   changes: SensitiveFieldChange[]
+  supportingDocuments: DocumentInfo[]
   permission?: RequestPermission
 }
 

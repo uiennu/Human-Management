@@ -1,6 +1,6 @@
-using HRM.Api.Data;
 using HRM.Api.DTOs;
 using HRM.Api.Models;
+using HRM.Api.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
@@ -9,19 +9,153 @@ namespace HRM.Api.Services
 {
     public class SensitiveRequestService : ISensitiveRequestService
     {
-        private readonly AppDbContext _context;
+        private readonly ISensitiveRequestRepository _repository;
         private readonly ILogger<SensitiveRequestService> _logger;
         private readonly ISensitiveRequestAuthorizationService _authService;
 
         public SensitiveRequestService(
-            AppDbContext context, 
+            ISensitiveRequestRepository repository, 
             ILogger<SensitiveRequestService> logger,
             ISensitiveRequestAuthorizationService authService)
         {
-            _context = context;
+            _repository = repository;
             _logger = logger;
             _authService = authService;
         }
+
+        #region Private Helper Methods
+
+        /// <summary>
+        /// Truncate DateTime to minute precision for grouping
+        /// </summary>
+        private static DateTime TruncateToMinute(DateTime dt)
+        {
+            return new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, 0);
+        }
+
+        /// <summary>
+        /// Group changes by employee and request time
+        /// </summary>
+        private static List<IGrouping<(int EmployeeID, DateTime RequestTime), EmployeeProfileChange>> GroupChangesByRequest(
+            IEnumerable<EmployeeProfileChange> changes)
+        {
+            return changes
+                .GroupBy(c => (c.EmployeeID, RequestTime: TruncateToMinute(c.RequestedDate)))
+                .ToList();
+        }
+
+        /// <summary>
+        /// Map a group of changes to GroupedSensitiveRequestDto
+        /// </summary>
+        private static GroupedSensitiveRequestDto MapToGroupedDto(
+            IGrouping<(int EmployeeID, DateTime RequestTime), EmployeeProfileChange> group,
+            bool maskOldValues = true)
+        {
+            var first = group.First();
+            
+            // Collect all documents from all changes in the group
+            var allDocuments = group
+                .SelectMany(c => c.Documents)
+                .Select(d => new DocumentInfoDto
+                {
+                    DocumentId = d.DocumentID,
+                    DocumentPath = d.DocumentPath,
+                    DocumentName = d.DocumentName,
+                    UploadedDate = d.UploadedDate
+                })
+                .ToList();
+            
+            return new GroupedSensitiveRequestDto
+            {
+                RequestGroupId = group.Min(x => x.ChangeID),
+                EmployeeId = group.Key.EmployeeID,
+                EmployeeName = first.Employee != null
+                    ? $"{first.Employee.FirstName} {first.Employee.LastName}"
+                    : "Unknown",
+                EmployeeCode = $"EMP{group.Key.EmployeeID:D4}",
+                Department = first.Employee?.Department?.DepartmentName ?? "N/A",
+                Status = first.Status,
+                RequestedDate = first.RequestedDate,
+                ApproverName = first.Approver != null
+                    ? $"{first.Approver.FirstName} {first.Approver.LastName}"
+                    : null,
+                ApprovalDate = first.ApprovalDate,
+                Changes = group.Select(c => new SensitiveFieldChangeDto
+                {
+                    ChangeId = c.ChangeID,
+                    FieldName = c.FieldName,
+                    DisplayName = GetDisplayName(c.FieldName),
+                    OldValue = maskOldValues ? MaskValue(c.FieldName, c.OldValue) : c.OldValue,
+                    NewValue = c.NewValue,
+                    SupportingDocuments = c.Documents.Select(d => new DocumentInfoDto
+                    {
+                        DocumentId = d.DocumentID,
+                        DocumentPath = d.DocumentPath,
+                        DocumentName = d.DocumentName,
+                        UploadedDate = d.UploadedDate
+                    }).ToList()
+                }).ToList(),
+                SupportingDocuments = allDocuments
+            };
+        }
+
+        /// <summary>
+        /// Build RequestPermissionDto from authorization result
+        /// </summary>
+        private static RequestPermissionDto BuildPermissionDto(
+            ApprovalPermissionDto permission, 
+            string requestStatus)
+        {
+            return new RequestPermissionDto
+            {
+                CanApprove = permission.CanApprove && requestStatus == "Pending",
+                CanReject = permission.CanApprove && requestStatus == "Pending",
+                Reason = permission.Reason,
+                IsSelfRequest = permission.IsSelfRequest,
+                RequiresHigherAuthority = permission.RequiresHigherAuthority,
+                SuggestedApprover = permission.SuggestedApprover
+            };
+        }
+
+        /// <summary>
+        /// Get role level display name
+        /// </summary>
+        private static string GetRoleLevelName(int level)
+        {
+            return level switch
+            {
+                4 => "Admin",
+                3 => "HR Manager",
+                2 => "HR Employee",
+                _ => "Standard"
+            };
+        }
+
+        private static string GetDisplayName(string fieldName)
+        {
+            return fieldName switch
+            {
+                "TaxID" => "Tax ID / CCCD",
+                "BankAccountNumber" => "Bank Account",
+                "FirstName" => "First Name",
+                "LastName" => "Last Name",
+                _ => fieldName
+            };
+        }
+
+        private static string? MaskValue(string fieldName, string? value)
+        {
+            if (string.IsNullOrEmpty(value)) return value;
+
+            if ((fieldName == "TaxID" || fieldName == "BankAccountNumber") && value.Length > 4)
+            {
+                return new string('*', value.Length - 4) + value.Substring(value.Length - 4);
+            }
+
+            return value;
+        }
+
+        #endregion
 
         public async Task<SensitiveRequestListResponseDto> GetAllSensitiveRequestsAsync(
             int currentUserId,
@@ -30,14 +164,7 @@ namespace HRM.Api.Services
             int pageSize = 10,
             string? searchTerm = null)
         {
-            // Get all non-OTP records (actual field changes)
-            var query = _context.EmployeeProfileChanges
-                .Include(c => c.Employee)
-                    .ThenInclude(e => e!.Department)
-                .Include(c => c.Approver)
-                .Where(c => !c.FieldName.StartsWith("OTP_")) // Exclude OTP records
-                .Where(c => c.Status != "PendingOTP" && c.Status != "OTPGenerated") // Exclude OTP-related statuses
-                .AsQueryable();
+            var query = _repository.GetSensitiveRequestsQuery();
 
             // Filter by status if provided
             if (!string.IsNullOrEmpty(status) && status.ToLower() != "all")
@@ -54,79 +181,27 @@ namespace HRM.Api.Services
                     c.Employee.EmployeeID.ToString().Contains(term));
             }
 
-            // Get all changes for grouping
-            var groupedData = await query
+            // Get all changes and group them
+            var allChanges = await query
                 .OrderByDescending(c => c.RequestedDate)
                 .ToListAsync();
 
-            // Group by EmployeeID and same request date (within 1 minute)
-            var grouped = groupedData
-                .GroupBy(c => new
-                {
-                    c.EmployeeID,
-                    RequestTime = new DateTime(
-                        c.RequestedDate.Year,
-                        c.RequestedDate.Month,
-                        c.RequestedDate.Day,
-                        c.RequestedDate.Hour,
-                        c.RequestedDate.Minute,
-                        0)
-                })
-                .Select(g => new GroupedSensitiveRequestDto
-                {
-                    RequestGroupId = g.Min(x => x.ChangeID), // Use first ChangeID as group identifier
-                    EmployeeId = g.Key.EmployeeID,
-                    EmployeeName = g.First().Employee != null
-                        ? $"{g.First().Employee!.FirstName} {g.First().Employee!.LastName}"
-                        : "Unknown",
-                    EmployeeCode = $"EMP{g.Key.EmployeeID:D4}",
-                    Department = g.First().Employee?.Department?.DepartmentName ?? "N/A",
-                    Status = g.First().Status,
-                    RequestedDate = g.First().RequestedDate,
-                    ApproverName = g.First().Approver != null
-                        ? $"{g.First().Approver!.FirstName} {g.First().Approver!.LastName}"
-                        : null,
-                    ApprovalDate = g.First().ApprovalDate,
-                    Changes = g.Select(c => new SensitiveFieldChangeDto
-                    {
-                        ChangeId = c.ChangeID,
-                        FieldName = c.FieldName,
-                        DisplayName = GetDisplayName(c.FieldName),
-                        OldValue = MaskValue(c.FieldName, c.OldValue),
-                        NewValue = c.NewValue
-                    }).ToList()
-                })
+            var grouped = GroupChangesByRequest(allChanges)
+                .Select(g => MapToGroupedDto(g))
                 .ToList();
 
-            // Calculate stats from grouped data
-            var allGroupedForStats = await _context.EmployeeProfileChanges
-                .Include(c => c.Employee)
-                .Where(c => !c.FieldName.StartsWith("OTP_"))
-                .Where(c => c.Status != "PendingOTP" && c.Status != "OTPGenerated")
+            // Calculate stats (need to query all data without filters for accurate stats)
+            var allChangesForStats = await _repository.GetSensitiveRequestsQuery()
                 .OrderByDescending(c => c.RequestedDate)
                 .ToListAsync();
 
-            var allGrouped = allGroupedForStats
-                .GroupBy(c => new
-                {
-                    c.EmployeeID,
-                    RequestTime = new DateTime(
-                        c.RequestedDate.Year,
-                        c.RequestedDate.Month,
-                        c.RequestedDate.Day,
-                        c.RequestedDate.Hour,
-                        c.RequestedDate.Minute,
-                        0)
-                })
-                .Select(g => new { Status = g.First().Status })
-                .ToList();
-
+            var statsGrouped = GroupChangesByRequest(allChangesForStats);
             var stats = new SensitiveRequestStatsDto
             {
-                All = allGrouped.Count,
-                Pending = allGrouped.Count(g => g.Status == "Pending"),
-                Approved = allGrouped.Count(g => g.Status == "Approved"),
-                Rejected = allGrouped.Count(g => g.Status == "Rejected")
+                All = statsGrouped.Count,
+                Pending = statsGrouped.Count(g => g.First().Status == "Pending"),
+                Approved = statsGrouped.Count(g => g.First().Status == "Approved"),
+                Rejected = statsGrouped.Count(g => g.First().Status == "Rejected")
             };
 
             var totalCount = grouped.Count;
@@ -142,27 +217,12 @@ namespace HRM.Api.Services
             foreach (var request in pagedData)
             {
                 var permission = await _authService.GetApprovalPermissionAsync(currentUserId, request.EmployeeId);
-                request.Permission = new RequestPermissionDto
-                {
-                    CanApprove = permission.CanApprove && request.Status == "Pending",
-                    CanReject = permission.CanApprove && request.Status == "Pending",
-                    Reason = permission.Reason,
-                    IsSelfRequest = permission.IsSelfRequest,
-                    RequiresHigherAuthority = permission.RequiresHigherAuthority,
-                    SuggestedApprover = permission.SuggestedApprover
-                };
+                request.Permission = BuildPermissionDto(permission, request.Status);
             }
 
             // Get current user auth info
             var currentUserRoles = await _authService.GetUserRolesAsync(currentUserId);
             var currentUserLevel = _authService.GetRoleLevel(currentUserRoles);
-            var roleLevelName = currentUserLevel switch
-            {
-                4 => "Admin",
-                3 => "HR Manager",
-                2 => "HR Employee",
-                _ => "Standard"
-            };
 
             return new SensitiveRequestListResponseDto
             {
@@ -177,75 +237,34 @@ namespace HRM.Api.Services
                     UserId = currentUserId,
                     Roles = currentUserRoles,
                     RoleLevel = currentUserLevel,
-                    RoleLevelName = roleLevelName,
-                    CanApproveAny = currentUserLevel >= 2 // HR Employee and above can approve (some requests)
+                    RoleLevelName = GetRoleLevelName(currentUserLevel),
+                    CanApproveAny = currentUserLevel >= 2
                 }
             };
         }
 
         public async Task<GroupedSensitiveRequestDto?> GetSensitiveRequestByIdAsync(int requestGroupId, int currentUserId)
         {
-            var firstChange = await _context.EmployeeProfileChanges
-                .Include(c => c.Employee)
-                    .ThenInclude(e => e!.Department)
-                .Include(c => c.Approver)
-                .FirstOrDefaultAsync(c => c.ChangeID == requestGroupId);
+            var firstChange = await _repository.GetByIdWithDetailsAsync(requestGroupId);
 
             if (firstChange == null) return null;
 
             // Get all changes for this request group (same employee, same minute)
-            var requestTime = new DateTime(
-                firstChange.RequestedDate.Year,
-                firstChange.RequestedDate.Month,
-                firstChange.RequestedDate.Day,
-                firstChange.RequestedDate.Hour,
-                firstChange.RequestedDate.Minute,
-                0);
+            var relatedChanges = await _repository.GetRelatedChangesAsync(
+                firstChange.EmployeeID, 
+                firstChange.RequestedDate);
 
-            var relatedChanges = await _context.EmployeeProfileChanges
-                .Include(c => c.Employee)
-                .Include(c => c.Approver)
-                .Where(c => c.EmployeeID == firstChange.EmployeeID)
-                .Where(c => !c.FieldName.StartsWith("OTP_"))
-                .Where(c => c.RequestedDate >= requestTime && c.RequestedDate < requestTime.AddMinutes(1))
-                .ToListAsync();
+            // Use the common grouping and mapping
+            var group = relatedChanges
+                .GroupBy(c => (c.EmployeeID, RequestTime: TruncateToMinute(c.RequestedDate)))
+                .First();
 
-            var result = new GroupedSensitiveRequestDto
-            {
-                RequestGroupId = requestGroupId,
-                EmployeeId = firstChange.EmployeeID,
-                EmployeeName = firstChange.Employee != null
-                    ? $"{firstChange.Employee.FirstName} {firstChange.Employee.LastName}"
-                    : "Unknown",
-                EmployeeCode = $"EMP{firstChange.EmployeeID:D4}",
-                Department = firstChange.Employee?.Department?.DepartmentName ?? "N/A",
-                Status = firstChange.Status,
-                RequestedDate = firstChange.RequestedDate,
-                ApproverName = firstChange.Approver != null
-                    ? $"{firstChange.Approver.FirstName} {firstChange.Approver.LastName}"
-                    : null,
-                ApprovalDate = firstChange.ApprovalDate,
-                Changes = relatedChanges.Select(c => new SensitiveFieldChangeDto
-                {
-                    ChangeId = c.ChangeID,
-                    FieldName = c.FieldName,
-                    DisplayName = GetDisplayName(c.FieldName),
-                    OldValue = c.OldValue,
-                    NewValue = c.NewValue
-                }).ToList()
-            };
+            var result = MapToGroupedDto(group, maskOldValues: false);
+            result.RequestGroupId = requestGroupId; // Preserve the original ID
 
             // Add permission info
             var permission = await _authService.GetApprovalPermissionAsync(currentUserId, firstChange.EmployeeID);
-            result.Permission = new RequestPermissionDto
-            {
-                CanApprove = permission.CanApprove && firstChange.Status == "Pending",
-                CanReject = permission.CanApprove && firstChange.Status == "Pending",
-                Reason = permission.Reason,
-                IsSelfRequest = permission.IsSelfRequest,
-                RequiresHigherAuthority = permission.RequiresHigherAuthority,
-                SuggestedApprover = permission.SuggestedApprover
-            };
+            result.Permission = BuildPermissionDto(permission, firstChange.Status);
 
             return result;
         }
@@ -256,9 +275,7 @@ namespace HRM.Api.Services
             int approverId,
             string? reason = null)
         {
-            var firstChange = await _context.EmployeeProfileChanges
-                .Include(c => c.Employee)
-                .FirstOrDefaultAsync(c => c.ChangeID == requestGroupId);
+            var firstChange = await _repository.GetByIdWithDetailsAsync(requestGroupId);
 
             if (firstChange == null)
             {
@@ -291,19 +308,9 @@ namespace HRM.Api.Services
             }
 
             // Get all related changes
-            var requestTime = new DateTime(
-                firstChange.RequestedDate.Year,
-                firstChange.RequestedDate.Month,
-                firstChange.RequestedDate.Day,
-                firstChange.RequestedDate.Hour,
-                firstChange.RequestedDate.Minute,
-                0);
-
-            var relatedChanges = await _context.EmployeeProfileChanges
-                .Where(c => c.EmployeeID == firstChange.EmployeeID)
-                .Where(c => !c.FieldName.StartsWith("OTP_"))
-                .Where(c => c.RequestedDate >= requestTime && c.RequestedDate < requestTime.AddMinutes(1))
-                .ToListAsync();
+            var relatedChanges = await _repository.GetRelatedChangesAsync(
+                firstChange.EmployeeID, 
+                firstChange.RequestedDate);
 
             var newStatus = action.ToLower() == "approve" ? "Approved" : "Rejected";
             var now = DateTime.Now;
@@ -339,12 +346,7 @@ namespace HRM.Api.Services
                 }
 
                 // Add event for approved sensitive info update
-                var lastEvent = await _context.EmployeeEvents
-                    .Where(e => e.AggregateID == firstChange.EmployeeID)
-                    .OrderByDescending(e => e.SequenceNumber)
-                    .FirstOrDefaultAsync();
-
-                int nextSequence = (lastEvent?.SequenceNumber ?? 0) + 1;
+                var nextSequence = await _repository.GetNextEventSequenceNumberAsync(firstChange.EmployeeID);
 
                 var approvalEvent = new EmployeeEvent
                 {
@@ -365,17 +367,12 @@ namespace HRM.Api.Services
                     CreatedAt = now
                 };
 
-                _context.EmployeeEvents.Add(approvalEvent);
+                await _repository.AddEmployeeEventAsync(approvalEvent);
             }
             else if (newStatus == "Rejected")
             {
                 // Add event for rejected sensitive info update
-                var lastEvent = await _context.EmployeeEvents
-                    .Where(e => e.AggregateID == firstChange.EmployeeID)
-                    .OrderByDescending(e => e.SequenceNumber)
-                    .FirstOrDefaultAsync();
-
-                int nextSequence = (lastEvent?.SequenceNumber ?? 0) + 1;
+                var nextSequence = await _repository.GetNextEventSequenceNumberAsync(firstChange.EmployeeID);
 
                 var rejectionEvent = new EmployeeEvent
                 {
@@ -396,10 +393,10 @@ namespace HRM.Api.Services
                     CreatedAt = now
                 };
 
-                _context.EmployeeEvents.Add(rejectionEvent);
+                await _repository.AddEmployeeEventAsync(rejectionEvent);
             }
 
-            await _context.SaveChangesAsync();
+            await _repository.SaveChangesAsync();
 
             _logger.LogInformation(
                 "Sensitive request {RequestId} for employee {EmployeeId} has been {Status} by approver {ApproverId}",
@@ -410,36 +407,6 @@ namespace HRM.Api.Services
                 Success = true,
                 Message = $"Request has been {newStatus.ToLower()} successfully"
             };
-        }
-
-        private static string GetDisplayName(string fieldName)
-        {
-            return fieldName switch
-            {
-                "TaxID" => "Tax ID / CCCD",
-                "BankAccountNumber" => "Bank Account",
-                "FirstName" => "First Name",
-                "LastName" => "Last Name",
-                _ => fieldName
-            };
-        }
-
-        private static string? MaskValue(string fieldName, string? value)
-        {
-            if (string.IsNullOrEmpty(value)) return value;
-
-            // Only mask certain fields for display in list view
-            if (fieldName == "TaxID" && value.Length > 4)
-            {
-                return new string('*', value.Length - 4) + value.Substring(value.Length - 4);
-            }
-
-            if (fieldName == "BankAccountNumber" && value.Length > 4)
-            {
-                return new string('*', value.Length - 4) + value.Substring(value.Length - 4);
-            }
-
-            return value;
         }
     }
 }
