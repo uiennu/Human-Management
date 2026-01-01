@@ -137,6 +137,9 @@ export const leaveService = {
       headers: getAuthHeaders(),
     })
     if (!res.ok) {
+      if (res.status === 404) {
+        return { managerName: null }
+      }
       throw new Error('Failed to fetch primary approver')
     }
     return res.json()

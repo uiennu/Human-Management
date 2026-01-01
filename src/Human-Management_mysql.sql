@@ -3,7 +3,37 @@
 -- =================================================================
 DROP DATABASE IF EXISTS HRM_System;
 CREATE DATABASE IF NOT EXISTS HRM_System;
+
 USE HRM_System;
+
+-- HRM Utility Tables (moved into HRM_System)
+CREATE TABLE IF NOT EXISTS Holidays (
+    HolidayID INT AUTO_INCREMENT PRIMARY KEY,
+    Name VARCHAR(100) NOT NULL,
+    HolidayDate DATE NOT NULL,
+    IsRecurring BOOLEAN DEFAULT TRUE,
+    Description VARCHAR(255),
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Unified Calendar Events
+CREATE TABLE IF NOT EXISTS CalendarEvents (
+    EventID INT AUTO_INCREMENT PRIMARY KEY,
+    Title VARCHAR(200) NOT NULL,
+    Description TEXT,
+    StartTime DATETIME NOT NULL,
+    EndTime DATETIME NOT NULL,
+    EventType ENUM('HOLIDAY', 'PERSONAL', 'DEADLINE') NOT NULL,
+    UserID INT, 
+    CreatedBy INT,
+    Color VARCHAR(10),
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Seed data for Holidays
+INSERT INTO Holidays (Name, HolidayDate, IsRecurring, Description) VALUES
+('New Year Day', '2025-01-01', TRUE, 'Global celebration of new year'),
+('Lunar New Year', '2025-01-29', FALSE, 'Traditional Tet holiday');
 
 -- =================================================================
 -- SECTION 1: CORE HR & USERS (SCHEMA)
@@ -84,6 +114,16 @@ CREATE TABLE EmployeeProfileChanges (
     ApprovalDate DATETIME NULL,
     CONSTRAINT FK_ProfileChanges_Employee FOREIGN KEY (EmployeeID) REFERENCES Employees(EmployeeID),
     CONSTRAINT FK_ProfileChanges_Approver FOREIGN KEY (ApproverID) REFERENCES Employees(EmployeeID)
+);
+
+-- Supporting documents for profile changes (1 change can have multiple documents)
+CREATE TABLE EmployeeProfileChangeDocuments (
+    DocumentID INT PRIMARY KEY AUTO_INCREMENT,
+    ChangeID INT NOT NULL,
+    DocumentPath VARCHAR(500) NOT NULL,
+    DocumentName VARCHAR(255) NOT NULL,
+    UploadedDate DATETIME NOT NULL DEFAULT NOW(),
+    CONSTRAINT FK_ChangeDocuments_Change FOREIGN KEY (ChangeID) REFERENCES EmployeeProfileChanges(ChangeID) ON DELETE CASCADE
 );
 
 CREATE TABLE SubTeams (
@@ -337,10 +377,11 @@ CREATE TABLE EmployeeEvents (
     AggregateID INT NOT NULL, 
     EventType VARCHAR(100) NOT NULL, 
     EventData JSON NOT NULL, 
-    Version INT NOT NULL, 
+    SequenceNumber INT NOT NULL,
+    EventVersion INT NOT NULL DEFAULT 1, 
     CreatedBy INT NULL, 
     CreatedAt DATETIME DEFAULT NOW(),
-    UNIQUE KEY UQ_Employee_Version (AggregateID, Version),
+    UNIQUE KEY UQ_Employee_Version (AggregateID, SequenceNumber),
     INDEX IX_AggregateID (AggregateID)
 );
 

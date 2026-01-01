@@ -71,7 +71,7 @@ export interface PagedResult<T> {
 }
 
 export interface PrimaryApproverResponse {
-  managerName: string
+  managerName: string | null
 }
 
 export const LeaveStatus = {

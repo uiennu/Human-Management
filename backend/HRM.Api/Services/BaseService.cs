@@ -116,7 +116,45 @@ namespace HRM.Api.Services
                 return await _context.SaveChangesAsync();
             }
 
-            // Nếu không phải Add hay Modified thì save bình thường
+            // =========================================================
+            // TRƯỜNG HỢP 3: XÓA (DELETE)
+            // =========================================================
+            else if (entry.State == EntityState.Deleted)
+            {
+                // Bước A: Tính SequenceNumber tiếp theo (Logic giống hệt Update)
+                var lastEvent = await _context.EmployeeEvents
+                    .Where(e => e.AggregateID == entity.EmployeeID)
+                    .OrderByDescending(e => e.SequenceNumber)
+                    .FirstOrDefaultAsync();
+                
+                int nextSequence = (lastEvent?.SequenceNumber ?? 0) + 1;
+
+                // Bước B: Tạo Event "Deleted"
+                // Lưu ý: EventData lúc này nên lưu lại thông tin cuối cùng của nhân viên 
+                // hoặc lý do xóa để sau này có thể khôi phục (Undo) nếu cần.
+                var newEvent = new EmployeeEvent
+                {
+                    AggregateID = entity.EmployeeID,
+                    EventType = eventType, // VD: "EmployeeDeleted"
+                    
+                    // Serialize toàn bộ entity lần cuối để lưu kho lưu trữ (Snapshot trước khi chết)
+                    EventData = JsonSerializer.Serialize(new 
+                    { 
+                        Action = "Deleted", 
+                        DeletedAt = DateTime.Now,
+                        FinalState = entity // Lưu lại trạng thái cuối để lỡ cần Restore
+                    }), 
+                    
+                    SequenceNumber = nextSequence,
+                    EventVersion = 1,
+                    CreatedBy = performedBy,
+                    CreatedAt = DateTime.Now
+                };
+
+                _context.EmployeeEvents.Add(newEvent);
+
+                return await _context.SaveChangesAsync();
+            }
             return await _context.SaveChangesAsync();
         }
     }

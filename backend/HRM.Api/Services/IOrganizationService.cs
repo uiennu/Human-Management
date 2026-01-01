@@ -9,6 +9,7 @@ namespace HRM.Api.Services
         Task<IEnumerable<DepartmentDto>> GetAllDepartmentsAsync();
         Task<IEnumerable<TeamDto>> GetAllTeamsWithMembersAsync();
         Task<IEnumerable<EmployeeSimpleDto>> GetAllEmployeesAsync();
+        Task<IEnumerable<EmployeeSimpleDto>> GetSubordinatesAsync(int managerId);
 
         // Restored Methods
         Task<OrganizationStructureDto> GetStructureAsync();

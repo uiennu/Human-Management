@@ -11,6 +11,7 @@ namespace HRM.Api.Repositories
         Task<IEnumerable<TeamDto>> GetTeamsRawAsync();
         Task<IEnumerable<TeamMemberDto>> GetTeamMembersRawAsync();
         Task<IEnumerable<EmployeeSimpleDto>> GetAllEmployeesAsync();
+        Task<IEnumerable<EmployeeSimpleDto>> GetSubordinatesAsync(int managerId);
 
         // Restored Methods
         Task<OrganizationStructureDto> GetStructureAsync();

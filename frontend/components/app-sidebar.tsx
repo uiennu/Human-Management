@@ -1,6 +1,6 @@
 "use client"
 
-import { Calendar, Clock, FileText, Home, User, LogOut, CalendarClock, Wifi, Users, UserPlus, History } from "lucide-react"
+import { Calendar, Clock, FileText, Home, User, LogOut, CalendarClock, Wifi, Users, UserPlus, History, Shield } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -17,11 +17,12 @@ import { UserRole } from "@/types/auth"
 
 const baseNavigation = [
   { name: "Dashboard", href: "/", icon: Home },
-  { name: "Leave Requests", href: "/leave", icon: Calendar },
+  { name: "Leave Requests", href: "/leave", icon: CalendarClock },
   { name: "Organization Management", href: "/organization", icon: FileText },
   { name: "Timesheet Updates", href: "/timesheet", icon: FileText },
   { name: "Check-In/Out Requests", href: "/checkin", icon: Clock },
   { name: "Work From Home", href: "/wfh", icon: Wifi },
+  { name: "Calendar", href: "/calendar", icon: Calendar },
   { name: "My Profile", href: "/profile", icon: User },
 ];
 
@@ -73,6 +74,7 @@ export function AppSidebar() {
       ...baseNavigation.slice(1, 3), // Leave, Org
       { name: "Team Management", href: "/organization/teams", icon: Users },
       { name: "Register Employee", href: "/organization/employees/register", icon: UserPlus },
+      { name: "Sensitive Requests", href: "/sensitive-requests", icon: Shield },
       ...(isAdmin ? [{ name: "Registration History", href: "/organization/employees/registration-history", icon: History }] : []),
       ...baseNavigation.slice(3) // Timesheet, Checkin...
     ];
@@ -86,7 +88,7 @@ export function AppSidebar() {
     ];
   }
 
-    
+
 
   return (
     <div className="flex h-full w-64 flex-col bg-slate-900 text-slate-100">

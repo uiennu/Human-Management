@@ -72,6 +72,14 @@ export const organizationService = {
         return res.json()
     },
 
+    async getSubordinates(): Promise<EmployeeDto[]> {
+        const res = await fetch(`${API_URL}/organization/subordinates`, {
+            headers: getAuthHeaders(),
+        })
+        if (!res.ok) throw new Error('Failed to fetch subordinates')
+        return res.json()
+    },
+
     async createTeam(departmentId: number, data: { teamName: string; description: string; teamLeadId?: number }) {
         const res = await fetch(`${API_URL}/organization/addteam/${departmentId}`, {
             method: "POST",

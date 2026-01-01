@@ -67,14 +67,34 @@ export const profileApi = {
   },
 
   // Request sensitive information update (generates OTP)
-  async requestSensitiveUpdate(data: RequestSensitiveUpdateRequest): Promise<RequestSensitiveUpdateResponse> {
+  // Supports multiple file uploads for supporting documents (ID card photos, bank statements, etc.)
+  // Maximum 5 files, 10MB total
+  async requestSensitiveUpdate(
+    data: RequestSensitiveUpdateRequest, 
+    supportingDocuments?: File[]
+  ): Promise<RequestSensitiveUpdateResponse> {
+    const formData = new FormData();
+    
+    // Add form fields
+    if (data.idNumber) formData.append('IdNumber', data.idNumber);
+    if (data.bankAccount) formData.append('BankAccount', data.bankAccount);
+    if (data.firstName) formData.append('FirstName', data.firstName);
+    if (data.lastName) formData.append('LastName', data.lastName);
+    
+    // Add supporting documents if provided (multiple files)
+    if (supportingDocuments && supportingDocuments.length > 0) {
+      supportingDocuments.forEach(file => {
+        formData.append('supportingDocuments', file);
+      });
+    }
+
     const response = await fetch(`${API_BASE_URL}/employees/me/sensitive-update-requests`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${getAuthToken()}`,
-        'Content-Type': 'application/json',
+        // Don't set Content-Type - browser will set it automatically with boundary for FormData
       },
-      body: JSON.stringify(data),
+      body: formData,
     })
 
     if (!response.ok) {

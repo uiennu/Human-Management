@@ -47,6 +47,11 @@ namespace HRM.Api.Services
             return await _repository.GetAllEmployeesAsync();
         }
 
+        public async Task<IEnumerable<EmployeeSimpleDto>> GetSubordinatesAsync(int managerId)
+        {
+            return await _repository.GetSubordinatesAsync(managerId);
+        }
+
         // ==========================================
         // RESTORED METHODS
         // ==========================================

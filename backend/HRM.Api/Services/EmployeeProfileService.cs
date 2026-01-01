@@ -11,7 +11,7 @@ namespace HRM.Api.Services
     {
         Task<MyProfileResponseDto?> GetMyProfileAsync(int employeeId);
         Task<UpdateResultDto> UpdateBasicInfoAsync(int employeeId, UpdateBasicInfoDto dto);
-        Task<SensitiveRequestResponseDto> CreateSensitiveUpdateRequestAsync(int employeeId, SensitiveUpdateRequestDto dto);
+        Task<SensitiveRequestResponseDto> CreateSensitiveUpdateRequestAsync(int employeeId, SensitiveUpdateRequestDto dto, List<IFormFile>? supportingDocuments = null);
         Task<VerifyOtpResultDto> VerifyOtpAndSubmitAsync(int employeeId, VerifyOtpDto dto);
         Task<string> UploadAvatarAsync(int employeeId, IFormFile file);
     }
@@ -22,6 +22,7 @@ namespace HRM.Api.Services
         private readonly IEmployeeProfileChangeRepository _changeRepository;
         private readonly IOtpService _otpService;
         private readonly ILogger<EmployeeProfileService> _logger;
+        private readonly IFileStorageService _fileStorageService;
         private const int OTP_EXPIRY_SECONDS = 300; // 5 minutes
 
         public EmployeeProfileService(
@@ -29,6 +30,7 @@ namespace HRM.Api.Services
             IEmployeeProfileChangeRepository changeRepository,
             IOtpService otpService,
             ILogger<EmployeeProfileService> logger,
+            IFileStorageService fileStorageService,
             AppDbContext context, ICurrentUserService currentUserService)
             : base(context, currentUserService)
         {
@@ -36,6 +38,7 @@ namespace HRM.Api.Services
             _changeRepository = changeRepository;
             _otpService = otpService;
             _logger = logger;
+            _fileStorageService = fileStorageService;
         }
 
         public async Task<string> UploadAvatarAsync(int employeeId, IFormFile file)
@@ -237,7 +240,7 @@ namespace HRM.Api.Services
 
             return new UpdateResultDto { Success = true, Message = "Profile updated successfully", UpdatedAt = DateTime.Now };
         }
-        public async Task<SensitiveRequestResponseDto> CreateSensitiveUpdateRequestAsync(int employeeId, SensitiveUpdateRequestDto dto)
+        public async Task<SensitiveRequestResponseDto> CreateSensitiveUpdateRequestAsync(int employeeId, SensitiveUpdateRequestDto dto, List<IFormFile>? supportingDocuments = null)
         {
             var employee = await _employeeRepository.FindByEmployeeIdAsync(employeeId);
             if (employee == null) throw new InvalidOperationException("Employee not found");
@@ -245,8 +248,17 @@ namespace HRM.Api.Services
             // Xóa OTP cũ để tránh rác
             await _changeRepository.DeleteAllOtpsByEmployeeIdAsync(employeeId);
 
+            // Upload supporting documents if provided (multiple files)
+            List<(string FilePath, string FileName)>? uploadedDocuments = null;
+            if (supportingDocuments != null && supportingDocuments.Count > 0)
+            {
+                var results = await _fileStorageService.SaveMultipleSensitiveDocumentsAsync(supportingDocuments, employeeId);
+                uploadedDocuments = results;
+            }
+
             var otp = _otpService.GenerateOtp();
             var changeId = 0; // Biến này dùng để gom nhóm các thay đổi vào chung 1 mã OTP
+            var createdChangeIds = new List<int>(); // Track all created change IDs for document linking
 
             // Helper Function: Giúp tạo bản ghi thay đổi cho từng trường
             async Task AddChange(string field, string? oldVal, string? newVal)
@@ -266,6 +278,8 @@ namespace HRM.Api.Services
                 };
                 await _changeRepository.AddAsync(change);
                 await _changeRepository.SaveAsync();
+
+                createdChangeIds.Add(change.ChangeID);
 
                 // Lấy ID của thay đổi đầu tiên làm "RequestId" đại diện cho đợt này
                 if (changeId == 0) changeId = change.ChangeID;
@@ -289,6 +303,24 @@ namespace HRM.Api.Services
             if (changeId == 0)
             {
                 return new SensitiveRequestResponseDto { Message = "No changes detected needing approval." };
+            }
+
+            // Save uploaded documents to the separate documents table (linked to FIRST change only to avoid duplication)
+            if (uploadedDocuments != null && uploadedDocuments.Count > 0 && createdChangeIds.Count > 0)
+            {
+                var firstChangeId = createdChangeIds.First();
+                foreach (var doc in uploadedDocuments)
+                {
+                    var document = new EmployeeProfileChangeDocument
+                    {
+                        ChangeID = firstChangeId,
+                        DocumentPath = doc.FilePath,
+                        DocumentName = doc.FileName,
+                        UploadedDate = DateTime.Now
+                    };
+                    _context.EmployeeProfileChangeDocuments.Add(document);
+                }
+                await _context.SaveChangesAsync();
             }
 
             // 3. TẠO BẢN GHI OTP

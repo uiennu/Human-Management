@@ -53,9 +53,9 @@ export const employeeApi = {
 
     // Map backend DTO to frontend interface
     return data.map((e: any) => ({
-      id: e.employeeID.toString(),
-      name: `${e.firstName} ${e.lastName}`,
-      position: e.position || "Employee",
+      id: (e.employeeID || e.EmployeeID || e.id)?.toString(),
+      name: e.name || e.Name || (e.firstName && e.lastName ? `${e.firstName} ${e.lastName}` : (e.fullName || "Unknown")),
+      position: e.position || "Staff",
       hireDate: e.hireDate,
       status: e.isActive ? "Active" : "Terminated",
       department: e.departmentName || "Unassigned"

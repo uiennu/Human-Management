@@ -1,8 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { X, FileText, Check, Upload } from "lucide-react"
 import { leaveService } from "@/lib/api/leave-service"
+import { utilityApi } from "@/lib/api/utility"
+import { X, FileText, Check, Upload, Download, Loader2 } from "lucide-react"
 
 interface LeaveRequestDetailProps {
   request: any; // Selected request (contains at least leaveRequestID and status)
@@ -21,7 +22,9 @@ export default function LeaveRequestDetail({ request, onBack }: LeaveRequestDeta
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-const SERVER_ROOT = "http://localhost:5204";
+  const SERVER_ROOT = "http://localhost:5204";
+
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     const loadDetails = async () => {
@@ -63,18 +66,18 @@ const SERVER_ROOT = "http://localhost:5204";
 
   const hasApproval = !!details.approvalInfo;
   const getImageUrl = (path: string) => {
-      if (!path) return "";
-      
-      // 1. Xóa chữ "api/" ở đầu nếu lỡ có
-      // 2. Xóa các dấu gạch chéo thừa ở đầu chuỗi (ví dụ /uploads -> uploads)
-      // 3. Đổi tất cả dấu gạch chéo ngược "\" (Windows) thành "/" (Web)
-      const cleanPath = path
-        .replace(/^api\//i, "") 
-        .replace(/^[\\/]+/, "")
-        .replace(/\\/g, "/");
+    if (!path) return "";
 
-      return `${SERVER_ROOT}/${cleanPath}`;
-    };
+    // 1. Xóa chữ "api/" ở đầu nếu lỡ có
+    // 2. Xóa các dấu gạch chéo thừa ở đầu chuỗi (ví dụ /uploads -> uploads)
+    // 3. Đổi tất cả dấu gạch chéo ngược "\" (Windows) thành "/" (Web)
+    const cleanPath = path
+      .replace(/^api\//i, "")
+      .replace(/^[\\/]+/, "")
+      .replace(/\\/g, "/");
+
+    return `${SERVER_ROOT}/${cleanPath}`;
+  };
   const openAttachment = (path: string) => {
     const url = getImageUrl(path);
     console.log("Opening URL:", url); // Log để kiểm tra nếu còn lỗi
@@ -106,6 +109,33 @@ const SERVER_ROOT = "http://localhost:5204";
                     {status}
                   </p>
                 </div>
+                <button
+                  onClick={async () => {
+                    setDownloading(true);
+                    try {
+                      await utilityApi.generateLeavePdf({
+                        employeeName: details.employeeName || "Employee",
+                        leaveType: details.leaveType?.name,
+                        startDate: new Date(details.startDate).toLocaleDateString(),
+                        endDate: new Date(details.endDate).toLocaleDateString(),
+                        totalDays: details.totalDays,
+                        reason: details.reason,
+                        leaveRequestId: details.leaveRequestID
+                      });
+                    } finally {
+                      setDownloading(false);
+                    }
+                  }}
+                  disabled={downloading}
+                  className="flex h-8 items-center gap-2 rounded-lg bg-[#137fec] px-3 text-sm font-medium text-white hover:bg-[#137fec]/90 disabled:opacity-50"
+                >
+                  {downloading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                  PDF
+                </button>
               </div>
               <button
                 onClick={onBack}

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Toast from '@/components/ui/toast';
 import { useRouter } from 'next/navigation';
 import OtpModal from '@/components/OtpModal';
-import { Loader2, Lock, Camera, Plus, Trash2, ArrowLeft } from 'lucide-react'; 
+import { Loader2, Lock, Camera, Plus, Trash2, ArrowLeft, FileText, Upload, X } from 'lucide-react'; 
 import type { EmployeeProfile } from '@/types/profile';
 import { profileApi } from '@/lib/api/profile';
 import { fetchBanks, fetchProvinces, type Bank, type Province, type District } from '@/lib/api/external';
@@ -44,6 +44,12 @@ export default function EditProfilePage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null); 
 
+  // State for supporting documents (ID card photo, bank statement, etc.) - multiple files
+  const [supportingDocs, setSupportingDocs] = useState<File[]>([]);
+  const [supportingDocPreviews, setSupportingDocPreviews] = useState<{id: string, file: File, preview: string}[]>([]);
+  const [supportingDocError, setSupportingDocError] = useState<string>('');
+  const [viewingFile, setViewingFile] = useState<{file: File, preview: string} | null>(null);
+
   const [formData, setFormData] = useState({
     phoneNumber: '',
     personalEmail: '',
@@ -69,6 +75,15 @@ export default function EditProfilePage() {
   };
 
   useEffect(() => { loadAllData(); }, []);
+
+  // Cleanup preview URLs on component unmount
+  useEffect(() => {
+    return () => {
+      supportingDocPreviews.forEach(preview => {
+        URL.revokeObjectURL(preview.preview);
+      });
+    };
+  }, [supportingDocPreviews]);
 
   const loadAllData = async () => {
     try {
@@ -205,6 +220,52 @@ export default function EditProfilePage() {
     }
   };
 
+  // --- CHECK IF THERE ARE ANY CHANGES ---
+  const hasBasicInfoChanges = (): boolean => {
+    if (!profile) return false;
+    
+    // Check phone number
+    if (formData.phoneNumber !== (profile.basicInfo?.phoneNumber || '')) return true;
+    
+    // Check personal email
+    if (formData.personalEmail !== (profile.basicInfo?.personalEmail || '')) return true;
+    
+    // Check address
+    const currentAddress = profile.basicInfo?.address || '';
+    let newAddress = '';
+    if (addressParts.city && addressParts.district) {
+      newAddress = `${addressParts.street}, ${addressParts.district}, ${addressParts.city}`;
+    } else if (addressParts.street) {
+      newAddress = addressParts.street;
+    }
+    if (newAddress && newAddress !== currentAddress) return true;
+    
+    // Check emergency contacts - simple comparison
+    const originalContacts = profile.basicInfo?.emergencyContacts || [];
+    if (JSON.stringify(emergencyContacts) !== JSON.stringify(originalContacts)) return true;
+    
+    // Check avatar
+    if (avatarFile) return true;
+    
+    return false;
+  };
+
+  const hasSensitiveInfoChanges = (): boolean => {
+    // Check sensitive fields
+    if (formData.reqIdNumber.trim()) return true;
+    if (formData.reqFirstName.trim()) return true;
+    if (formData.reqLastName.trim()) return true;
+    
+    // Check bank account
+    if (bankParts.bankName && bankParts.accountNumber) return true;
+    
+    return false;
+  };
+
+  const hasAnyChanges = (): boolean => {
+    return hasBasicInfoChanges() || hasSensitiveInfoChanges();
+  };
+
   // --- HANDLERS ---
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -229,6 +290,77 @@ export default function EditProfilePage() {
     const newList = [...emergencyContacts];
     newList[index][field] = value;
     setEmergencyContacts(newList);
+  };
+
+  // Handle supporting documents file selection with validation (multiple files)
+  const handleSupportingDocsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    setSupportingDocError('');
+    
+    if (!files || files.length === 0) {
+      return;
+    }
+
+    const selectedFiles = Array.from(files);
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+    const maxFileSize = 5 * 1024 * 1024; // 5MB per file
+    const maxTotalSize = 10 * 1024 * 1024; // 10MB total
+    const maxFileCount = 5;
+
+    // Check total file count
+    if (supportingDocs.length + selectedFiles.length > maxFileCount) {
+      setSupportingDocError(`Maximum ${maxFileCount} files allowed`);
+      e.target.value = '';
+      return;
+    }
+
+    // Validate each file
+    for (const file of selectedFiles) {
+      if (!allowedTypes.includes(file.type)) {
+        setSupportingDocError(`File "${file.name}": Only JPG, PNG, and PDF files are allowed`);
+        e.target.value = '';
+        return;
+      }
+      if (file.size > maxFileSize) {
+        setSupportingDocError(`File "${file.name}": Size must be less than 5MB`);
+        e.target.value = '';
+        return;
+      }
+    }
+
+    // Check total size
+    const totalSize = [...supportingDocs, ...selectedFiles].reduce((acc, f) => acc + f.size, 0);
+    if (totalSize > maxTotalSize) {
+      setSupportingDocError('Total file size must be less than 10MB');
+      e.target.value = '';
+      return;
+    }
+
+    // Create preview URLs for new files
+    const newPreviews = selectedFiles.map(file => ({
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      file,
+      preview: URL.createObjectURL(file)
+    }));
+
+    setSupportingDocs(prev => [...prev, ...selectedFiles]);
+    setSupportingDocPreviews(prev => [...prev, ...newPreviews]);
+    e.target.value = ''; // Reset input to allow selecting same file again
+  };
+
+  const removeSupportingDoc = (id: string) => {
+    // Find the preview to revoke its URL
+    const previewIndex = supportingDocPreviews.findIndex(p => p.id === id);
+    if (previewIndex !== -1) {
+      const preview = supportingDocPreviews[previewIndex];
+      URL.revokeObjectURL(preview.preview);
+      
+      // Remove from both arrays using the same index
+      setSupportingDocs(prev => prev.filter((_, i) => i !== previewIndex));
+      setSupportingDocPreviews(prev => prev.filter(p => p.id !== id));
+    }
+    
+    setSupportingDocError('');
   };
 
   const handleSaveAll = async () => {
@@ -284,14 +416,17 @@ export default function EditProfilePage() {
         setToast({ open: true, type: 'success', message: 'Updated successfully!' });
         setTimeout(() => router.push('/profile'), 1000);
       } else {
-        const response = await profileApi.requestSensitiveUpdate({
-          idNumber: formData.reqIdNumber,
-          bankAccount: finalBankAccount,
-          // @ts-ignore
-          firstName: formData.reqFirstName,
-          // @ts-ignore
-          lastName: formData.reqLastName
-        });
+        const response = await profileApi.requestSensitiveUpdate(
+          {
+            idNumber: formData.reqIdNumber,
+            bankAccount: finalBankAccount,
+            // @ts-ignore
+            firstName: formData.reqFirstName,
+            // @ts-ignore
+            lastName: formData.reqLastName
+          },
+          supportingDocs.length > 0 ? supportingDocs : undefined // Pass supporting documents if provided
+        );
         setPendingRequestId(response.requestId);
         setOtpMessage(response.message);
         setShowOtpModal(true);
@@ -527,13 +662,121 @@ export default function EditProfilePage() {
                    </div>
                    {errors.bank && <p className="text-xs text-red-500 font-medium mt-1">{errors.bank}</p>}
                 </div>
+
+                {/* Supporting Document Upload */}
+                <div className="md:col-span-2 space-y-2">
+                   <Label className="text-yellow-900 font-medium">Supporting Document (Optional)</Label>
+                   <p className="text-sm text-yellow-700 mb-2">
+                     Upload proof of your changes (ID card photo, bank statement, etc.)
+                   </p>
+                   
+                   {/* File upload area - always show if under limit */}
+                   {supportingDocs.length < 5 && (
+                     <label 
+                       htmlFor="supportingDoc"
+                       className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-yellow-300 rounded-lg cursor-pointer bg-yellow-50/50 hover:bg-yellow-100/50 transition-colors"
+                     >
+                       <div className="flex flex-col items-center justify-center py-4">
+                         <Upload className="w-6 h-6 mb-1.5 text-yellow-500" />
+                         <p className="text-sm text-yellow-700">
+                           <span className="font-semibold">Click to upload</span> or drag and drop
+                         </p>
+                         <p className="text-xs text-yellow-600">
+                           JPG, PNG or PDF • Max 5MB/file • 10MB total • {5 - supportingDocs.length} files remaining
+                         </p>
+                       </div>
+                       <input
+                         id="supportingDoc"
+                         type="file"
+                         className="hidden"
+                         accept=".jpg,.jpeg,.png,.pdf"
+                         multiple
+                         onChange={handleSupportingDocsChange}
+                       />
+                     </label>
+                   )}
+
+                   {/* Display uploaded files with preview */}
+                   {supportingDocs.length > 0 && (
+                     <div className="space-y-3 mt-3">
+                       <p className="text-xs text-yellow-700 font-medium">
+                         {supportingDocs.length} file(s) selected • {(supportingDocs.reduce((acc, f) => acc + f.size, 0) / 1024).toFixed(1)} KB total
+                       </p>
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                         {supportingDocPreviews.map((preview) => (
+                           <div key={preview.id} className="relative group border-2 border-yellow-200 rounded-lg overflow-hidden bg-white hover:border-yellow-400 transition-all">
+                             {/* Preview Area - Clickable */}
+                             <div 
+                               className="aspect-video bg-yellow-50 flex items-center justify-center p-4 cursor-pointer hover:bg-yellow-100 transition-colors relative"
+                               onClick={() => setViewingFile(preview)}
+                               title="Click to view full size"
+                             >
+                               {preview.file.type.startsWith('image/') ? (
+                                 <>
+                                   <img 
+                                     src={preview.preview} 
+                                     alt={preview.file.name}
+                                     className="max-w-full max-h-full object-contain"
+                                   />
+                                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                                     <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-yellow-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium">
+                                       Click to view
+                                     </div>
+                                   </div>
+                                 </>
+                               ) : (
+                                 <div className="flex flex-col items-center justify-center gap-2">
+                                   <FileText className="w-16 h-16 text-yellow-500" />
+                                   <p className="text-xs text-yellow-700 font-medium">PDF Document</p>
+                                   <p className="text-xs text-yellow-600 opacity-0 group-hover:opacity-100 transition-opacity">Click to download</p>
+                                 </div>
+                               )}
+                             </div>
+                             
+                             {/* File Info */}
+                             <div className="p-3 bg-yellow-50/50 border-t border-yellow-200">
+                               <div className="flex items-start gap-2">
+                                 <div className="flex-1 min-w-0">
+                                   <p className="text-sm font-medium text-yellow-900 truncate" title={preview.file.name}>
+                                     {preview.file.name}
+                                   </p>
+                                   <p className="text-xs text-yellow-600 mt-0.5">
+                                     {(preview.file.size / 1024).toFixed(1)} KB • {preview.file.type.split('/')[1].toUpperCase()}
+                                   </p>
+                                 </div>
+                                 <button
+                                   type="button"
+                                   onClick={() => removeSupportingDoc(preview.id)}
+                                   className="p-1.5 hover:bg-red-100 rounded-full transition-colors group-hover:opacity-100 opacity-70"
+                                   title="Remove file"
+                                 >
+                                   <X className="w-4 h-4 text-red-600" />
+                                 </button>
+                               </div>
+                             </div>
+                           </div>
+                         ))}
+                       </div>
+                     </div>
+                   )}
+                   
+                   {supportingDocError && (
+                     <p className="text-xs text-red-500 font-medium mt-1">{supportingDocError}</p>
+                   )}
+                </div>
             </div>
           </div>
 
           {/* BUTTONS */}
           <div className="flex justify-end gap-4 pt-4">
              <Button variant="outline" size="lg" onClick={() => router.back()} className="px-6 h-11"><ArrowLeft className="w-4 h-4 mr-2"/> Cancel</Button>
-             <Button onClick={handleSaveAll} disabled={saving} size="lg" className="bg-blue-600 hover:bg-blue-700 text-white min-w-[150px] font-semibold h-11">
+             <Button 
+               onClick={handleSaveAll} 
+               disabled={saving || !hasAnyChanges()} 
+               size="lg" 
+               className="bg-blue-600 hover:bg-blue-700 text-white min-w-[150px] font-semibold h-11 disabled:opacity-50 disabled:cursor-not-allowed"
+               title={!hasAnyChanges() ? "No changes to save" : ""}
+             >
                 {saving ? <Loader2 className="animate-spin mr-2" /> : null} Save Changes
              </Button>
           </div>
@@ -548,6 +791,73 @@ export default function EditProfilePage() {
            </div>
         </div>
       </div>
+      
+      {/* File Viewer Modal */}
+      {viewingFile && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm"
+          onClick={() => setViewingFile(null)}
+        >
+          <div 
+            className="relative max-w-6xl max-h-[90vh] w-full bg-white rounded-xl shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b bg-slate-50">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  {viewingFile.file.type.startsWith('image/') ? (
+                    <FileText className="h-5 w-5 text-blue-600" />
+                  ) : (
+                    <FileText className="h-5 w-5 text-red-600" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-slate-900 truncate">{viewingFile.file.name}</p>
+                  <p className="text-xs text-slate-600">
+                    {(viewingFile.file.size / 1024).toFixed(1)} KB • {viewingFile.file.type.split('/')[1].toUpperCase()}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setViewingFile(null)}
+                className="p-2 hover:bg-slate-200 rounded-lg transition-colors"
+                title="Close"
+              >
+                <X className="w-5 h-5 text-slate-600" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="overflow-auto max-h-[calc(90vh-80px)] bg-slate-900 flex items-center justify-center p-8">
+              {viewingFile.file.type.startsWith('image/') ? (
+                <img 
+                  src={viewingFile.preview} 
+                  alt={viewingFile.file.name}
+                  className="max-w-full max-h-full object-contain"
+                />
+              ) : (
+                <div className="text-center p-12 bg-white rounded-lg">
+                  <FileText className="w-24 h-24 text-red-500 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-slate-900 mb-2">PDF Document</h3>
+                  <p className="text-slate-600 mb-4">
+                    Cannot preview PDF files in browser
+                  </p>
+                  <a
+                    href={viewingFile.preview}
+                    download={viewingFile.file.name}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Download PDF
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      
       <OtpModal isOpen={showOtpModal} onClose={() => setShowOtpModal(false)} onSubmit={handleVerifyOtp} message={otpMessage} onResend={() => {}} />
     </div>
   );

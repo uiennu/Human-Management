@@ -100,10 +100,14 @@ namespace HRM.Api.Controllers
         /// <summary>
         /// Request to update sensitive information (Tax ID/CCCD, Bank Account)
         /// This will generate and send an OTP to the employee's email
+        /// Supports optional file uploads for supporting documents (ID card photos, bank statements, etc.)
+        /// Maximum 5 files, 10MB total
         /// </summary>
         [HttpPost("sensitive-update-requests")]
         [Authorize(Policy = "EmployeeOnly")]
-        public async Task<IActionResult> RequestSensitiveUpdate([FromBody] SensitiveUpdateRequestDto dto)
+        public async Task<IActionResult> RequestSensitiveUpdate(
+            [FromForm] SensitiveUpdateRequestDto dto,
+            [FromForm] List<IFormFile>? supportingDocuments = null)
         {
             try
             {
@@ -113,8 +117,12 @@ namespace HRM.Api.Controllers
                     return Unauthorized(new { message = "User not authenticated" });
                 }
 
-                var result = await _service.CreateSensitiveUpdateRequestAsync(employeeId, dto);
+                var result = await _service.CreateSensitiveUpdateRequestAsync(employeeId, dto, supportingDocuments);
                 return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
             catch (InvalidOperationException ex)
             {
