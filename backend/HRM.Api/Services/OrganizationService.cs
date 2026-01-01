@@ -139,8 +139,8 @@ namespace HRM.Api.Services
                 var members = await _repository.GetTeamMembersAsync(id);
                 var employeeIds = members.Select(m => m.EmployeeID).ToList();
                 
-                // 2. Delete OrganizationStructureLogs for this team (FK constraint)
-                await _repository.DeleteTeamLogsAsync(id);
+                // 2. Get department info for logging
+                var department = await _repository.GetDepartmentByIdAsync(team.DepartmentID);
                 
                 // 3. Clear TeamLeadID to avoid FK constraint issues
                 if (team.TeamLeadID.HasValue)
@@ -164,6 +164,18 @@ namespace HRM.Api.Services
                     }
                     // If still in a team, keep their DepartmentID as is
                 }
+                
+                // 6. Log team deletion
+                await LogActionAsync("DeleteSubTeam", "SubTeam", id, new
+                {
+                    SubTeamID = id,
+                    TeamName = team.TeamName,
+                    Description = team.Description,
+                    DepartmentID = team.DepartmentID,
+                    DepartmentName = department?.DepartmentName,
+                    TeamLeadID = team.TeamLeadID,
+                    MemberCount = members.Count
+                }, 1); // TODO: Get actual user ID from context
                 
                 return (true, "Team deleted successfully", id);
             }

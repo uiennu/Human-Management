@@ -23,7 +23,6 @@ namespace HRM.Api.Repositories
         Task<SubTeam?> GetSubTeamByIdAsync(int id);
         Task<bool> SubTeamHasMembersAsync(int subTeamId);
         Task UpdateTeamAsync(SubTeam team);
-        Task DeleteTeamLogsAsync(int teamId);
         Task DeleteSubTeamAsync(SubTeam subTeam);
         
         // New methods for safe team deletion

@@ -233,12 +233,6 @@ namespace HRM.Api.Repositories
             await conn.ExecuteAsync(sql, new { SubTeamID = team.SubTeamID });
         }
 
-        public async Task DeleteTeamLogsAsync(int teamId)
-        {
-            const string sql = "DELETE FROM OrganizationStructureLogs WHERE SubTeamID = @SubTeamID";
-            using var conn = CreateConnection();
-            await conn.ExecuteAsync(sql, new { SubTeamID = teamId });
-        }
 
         public async Task DeleteSubTeamAsync(SubTeam subTeam)
         {

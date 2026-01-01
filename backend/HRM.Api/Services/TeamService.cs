@@ -1,16 +1,19 @@
 using HRM.Api.DTOs;
 using HRM.Api.Models;
 using HRM.Api.Repositories;
+using System.Text.Json;
 
 namespace HRM.Api.Services
 {
     public class TeamService : ITeamService
     {
         private readonly ITeamRepository _teamRepository;
+        private readonly IOrganizationRepository _organizationRepository;
 
-        public TeamService(ITeamRepository teamRepository)
+        public TeamService(ITeamRepository teamRepository, IOrganizationRepository organizationRepository)
         {
             _teamRepository = teamRepository;
+            _organizationRepository = organizationRepository;
         }
 
         public async Task<(bool Success, string Message, int? EmployeeId)> AddEmployeeToTeamAsync(int teamId, int employeeId)
@@ -52,6 +55,28 @@ namespace HRM.Api.Services
                 };
 
                 await _teamRepository.AddTeamMemberAsync(teamMember);
+
+                // Log the action
+                var employeeName = $"{employee.FirstName} {employee.LastName}";
+                await _organizationRepository.AddLogAsync(new OrganizationLogDto
+                {
+                    EventType = "AddEmployeeToTeam",
+                    TargetEntity = "Employee",
+                    TargetID = employeeId,
+                    EventData = JsonSerializer.Serialize(new
+                    {
+                        EmployeeID = employeeId,
+                        EmployeeName = employeeName,
+                        SubTeamID = teamId,
+                        SubTeamName = team.TeamName,
+                        DepartmentID = team.DepartmentID,
+                        OldSubTeamID = (int?)null,
+                        NewSubTeamID = teamId,
+                        Description = $"Added {employeeName} to team {team.TeamName}"
+                    }),
+                    PerformedBy = 1, // TODO: Get from HttpContext/JWT token
+                    PerformedAt = DateTime.Now
+                });
 
                 return (true, "Employee added to team successfully", employeeId);
             }

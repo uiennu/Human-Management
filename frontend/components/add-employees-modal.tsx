@@ -128,8 +128,10 @@ export function AddEmployeesModal({ open, onOpenChange, department }: AddEmploye
       setSearchTerm("")
       onOpenChange(false)
 
-      // Refresh the page to show updated data
-      window.location.reload()
+      // Delay reload to show toast notification
+      setTimeout(() => {
+        window.location.reload()
+      }, 1500)
     } catch (error: any) {
       console.error("Failed to add employees:", error)
       const { toast } = await import("sonner")
