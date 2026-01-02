@@ -158,4 +158,20 @@ export const organizationService = {
         }
         return res.json()
     },
+    updateTeam: async (id: number, data: { teamName: string; description?: string; teamLeadId?: number | null }) => {
+        const res = await fetch(`${API_URL}/organization/teams/${id}`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ TeamName: data.teamName, Description: data.description, TeamLeadId: data.teamLeadId }),
+        })
+        if (!res.ok) {
+            const bodyText = await res.text()
+            let parsed: any = null
+            try { parsed = JSON.parse(bodyText) } catch { parsed = bodyText }
+            console.error('updateTeam failed', { status: res.status, body: parsed })
+            const message = parsed && parsed.message ? parsed.message : (typeof parsed === 'string' ? parsed : 'Failed to update team')
+            throw new Error(message)
+        }
+        return res.json()
+    }
 }

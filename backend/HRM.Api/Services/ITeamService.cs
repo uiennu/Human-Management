@@ -49,5 +49,9 @@ namespace HRM.Api.Services
         /// Create a new team in a department
         /// </summary>
         Task<(bool Success, string Message, int? TeamId)> CreateTeamAsync(int departmentId, CreateSubTeamDto dto);
+        /// <summary>
+        /// Update an existing team
+        /// </summary>
+        Task<(bool Success, string Message)> UpdateTeamAsync(int teamId, UpdateSubTeamDto dto);
     }
 }

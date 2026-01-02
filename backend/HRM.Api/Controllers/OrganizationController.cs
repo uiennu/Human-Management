@@ -130,6 +130,20 @@ namespace HRM.Api.Controllers
         }
 
         [Authorize(Roles = "Admin,HR Manager,HR Employee")]
+        [HttpPut("teams/{teamId}")]
+        public async Task<IActionResult> UpdateTeam(int teamId, [FromBody] UpdateSubTeamDto request)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var result = await _teamService.UpdateTeamAsync(teamId, request);
+            if (result.Success) return Ok(new { success = true, message = result.Message });
+
+            if (result.Message.Contains("not found")) return NotFound(new { success = false, message = result.Message });
+
+            return StatusCode(500, new { success = false, message = result.Message });
+        }
+
+        [Authorize(Roles = "Admin,HR Manager,HR Employee")]
         [HttpDelete("teams/{teamId}/employees/{employeeId}")]
         public async Task<IActionResult> RemoveEmployeeFromTeam(int teamId, int employeeId)
         {

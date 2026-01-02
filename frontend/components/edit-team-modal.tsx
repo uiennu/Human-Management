@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
+import { organizationService } from "@/lib/api/organization-service"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -32,14 +33,23 @@ export function EditTeamModal({ open, onOpenChange, department, onSubmit }: Edit
         setFormData(department)
     }, [department])
 
-    // Mock managers list
-    const managers = [
-        { id: "mgr-001", name: "David Lee" },
-        { id: "mgr-002", name: "Emily Carter" },
-        { id: "mgr-003", name: "Michael Brown" },
-        { id: "mgr-004", name: "Sarah Johnson" },
-        { id: "mgr-006", name: "Ava Garcia" },
-    ]
+    const [managers, setManagers] = useState<{ id: string; name: string }[]>([])
+
+    useEffect(() => {
+        let mounted = true
+        ;(async () => {
+            try {
+                const emps = await organizationService.getAllEmployees()
+                if (!mounted) return
+                setManagers(emps.map(e => ({ id: String(e.employeeID), name: e.name })))
+            } catch (err) {
+                console.error("Failed to load managers", err)
+            }
+        })()
+        return () => {
+            mounted = false
+        }
+    }, [])
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()

@@ -507,8 +507,17 @@ export function OrganizationStructure() {
         await fetchData();
 
       } else if (updated.id.startsWith("team-")) {
-        // Logic cho Team nếu có API
-        toast.info("Update Team feature is coming soon");
+        // Update Team
+        const realId = parseInt(updated.id.replace("team-", ""));
+        const payload = {
+          teamName: updated.name,
+          description: updated.description,
+          teamLeadId: (updated.managerId && updated.managerId !== "") ? parseInt(updated.managerId) : null
+        };
+
+        await organizationService.updateTeam(realId, payload as any);
+        toast.success("Team updated successfully");
+        await fetchData();
       }
 
       setEditModalOpen(false);

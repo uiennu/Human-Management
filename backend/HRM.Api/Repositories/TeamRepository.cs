@@ -117,6 +117,12 @@ namespace HRM.Api.Repositories
             await _context.SaveChangesAsync();
         }
 
+        public async Task UpdateSubTeamAsync(SubTeam subTeam)
+        {
+            _context.SubTeams.Update(subTeam);
+            await _context.SaveChangesAsync();
+        }
+
         public async Task RemoveTeamMemberAsync(SubTeamMember teamMember)
         {
             _context.SubTeamMembers.Remove(teamMember);
@@ -172,6 +178,34 @@ namespace HRM.Api.Repositories
 
             await _context.Database.ExecuteSqlRawAsync(sql,
                 new MySqlConnector.MySqlParameter("@EventType", "CreateSubTeam"),
+                new MySqlConnector.MySqlParameter("@TargetEntity", "SubTeam"),
+                new MySqlConnector.MySqlParameter("@TargetID", teamId),
+                new MySqlConnector.MySqlParameter("@EventData", JsonSerializer.Serialize(eventData)),
+                new MySqlConnector.MySqlParameter("@PerformedBy", performedBy),
+                new MySqlConnector.MySqlParameter("@PerformedAt", DateTime.Now)
+            );
+        }
+
+        public async Task LogTeamUpdateAsync(int teamId, string oldTeamName, string newTeamName, string oldDescription, string newDescription, int? oldTeamLeadId, int? newTeamLeadId, int performedBy)
+        {
+            var eventData = new
+            {
+                OldTeamName = oldTeamName,
+                NewTeamName = newTeamName,
+                OldDescription = oldDescription,
+                NewDescription = newDescription,
+                OldTeamLeadID = oldTeamLeadId,
+                NewTeamLeadID = newTeamLeadId
+            };
+
+            var sql = @"
+                INSERT INTO OrganizationStructureLogs 
+                (EventType, TargetEntity, TargetID, EventData, PerformedBy, PerformedAt) 
+                VALUES 
+                (@EventType, @TargetEntity, @TargetID, @EventData, @PerformedBy, @PerformedAt)";
+
+            await _context.Database.ExecuteSqlRawAsync(sql,
+                new MySqlConnector.MySqlParameter("@EventType", "UpdateSubTeam"),
                 new MySqlConnector.MySqlParameter("@TargetEntity", "SubTeam"),
                 new MySqlConnector.MySqlParameter("@TargetID", teamId),
                 new MySqlConnector.MySqlParameter("@EventData", JsonSerializer.Serialize(eventData)),

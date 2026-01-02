@@ -339,5 +339,71 @@ namespace HRM.Api.Services
 
             return (true, "Team created successfully", createdTeam.SubTeamID);
         }
+
+        public async Task<(bool Success, string Message)> UpdateTeamAsync(int teamId, UpdateSubTeamDto dto)
+        {
+            try
+            {
+                var team = await _teamRepository.GetTeamByIdAsync(teamId);
+                if (team == null) return (false, "Team not found");
+
+                int? oldLead = team.TeamLeadID;
+                var oldTeamName = team.TeamName;
+                var oldDescription = team.Description;
+
+                // Validate new team lead if provided
+                if (dto.TeamLeadId.HasValue)
+                {
+                    var emp = await _teamRepository.GetEmployeeByIdAsync(dto.TeamLeadId.Value);
+                    if (emp == null) return (false, "Team lead employee not found");
+                    if (!emp.IsActive) return (false, "Team lead is inactive");
+                    if (emp.DepartmentID != team.DepartmentID) return (false, "Team lead must belong to the same department");
+                }
+
+                // Apply updates
+                team.TeamName = dto.TeamName;
+                team.Description = dto.Description;
+                team.TeamLeadID = dto.TeamLeadId;
+
+                await _teamRepository.UpdateSubTeamAsync(team);
+
+                // If team lead changed, ensure new lead is a member
+                if (dto.TeamLeadId.HasValue && dto.TeamLeadId != oldLead)
+                {
+                    var membership = await _teamRepository.GetTeamMemberAsync(dto.TeamLeadId.Value);
+                    if (membership == null || membership.SubTeamID != teamId)
+                    {
+                        try
+                        {
+                            await _teamRepository.AddTeamMemberAsync(new SubTeamMember { SubTeamID = teamId, EmployeeID = dto.TeamLeadId.Value });
+                        }
+                        catch { /* ignore add failure */ }
+                    }
+                }
+
+                // Log update
+                try
+                {
+                    await _teamRepository.LogTeamUpdateAsync(
+                        teamId: team.SubTeamID,
+                        oldTeamName: oldTeamName,
+                        newTeamName: dto.TeamName,
+                        oldDescription: oldDescription ?? "",
+                        newDescription: dto.Description ?? "",
+                        oldTeamLeadId: oldLead,
+                        newTeamLeadId: dto.TeamLeadId,
+                        performedBy: 1 // TODO: replace with current user id
+                    );
+                }
+                catch { }
+
+                return (true, "Team updated successfully");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error updating team: {ex.Message}");
+                return (false, "An error occurred while updating team");
+            }
+        }
     }
 }

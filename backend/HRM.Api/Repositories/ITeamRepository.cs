@@ -70,6 +70,16 @@ namespace HRM.Api.Repositories
         Task<SubTeam> AddSubTeamAsync(SubTeam subTeam);
 
         /// <summary>
+        /// Update an existing sub-team
+        /// </summary>
+        Task UpdateSubTeamAsync(SubTeam subTeam);
+
+        /// <summary>
+        /// Log team update action
+        /// </summary>
+        Task LogTeamUpdateAsync(int teamId, string oldTeamName, string newTeamName, string oldDescription, string newDescription, int? oldTeamLeadId, int? newTeamLeadId, int performedBy);
+
+        /// <summary>
         /// Log employee removal action to OrganizationStructureLogs
         /// </summary>
         Task LogRemoveEmployeeActionAsync(int employeeId, int teamId, int departmentId, string employeeName, string teamName, int performedBy);
