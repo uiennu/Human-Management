@@ -86,6 +86,15 @@ CREATE TABLE EmployeeProfileChanges (
     CONSTRAINT FK_ProfileChanges_Approver FOREIGN KEY (ApproverID) REFERENCES Employees(EmployeeID)
 );
 
+CREATE TABLE EmployeeProfileChangeDocuments (
+    DocumentID INT PRIMARY KEY AUTO_INCREMENT,
+    ChangeID INT NOT NULL,
+    DocumentPath VARCHAR(500) NOT NULL,
+    DocumentName VARCHAR(255) NOT NULL,
+    UploadedDate DATETIME NOT NULL DEFAULT NOW(),
+    CONSTRAINT FK_ChangeDocuments_Change FOREIGN KEY (ChangeID) REFERENCES EmployeeProfileChanges(ChangeID) ON DELETE CASCADE
+);
+
 CREATE TABLE SubTeams (
     SubTeamID INT PRIMARY KEY AUTO_INCREMENT,
     TeamName VARCHAR(100) NOT NULL,
