@@ -3,37 +3,7 @@
 -- =================================================================
 DROP DATABASE IF EXISTS HRM_System;
 CREATE DATABASE IF NOT EXISTS HRM_System;
-
 USE HRM_System;
-
--- HRM Utility Tables (moved into HRM_System)
-CREATE TABLE IF NOT EXISTS Holidays (
-    HolidayID INT AUTO_INCREMENT PRIMARY KEY,
-    Name VARCHAR(100) NOT NULL,
-    HolidayDate DATE NOT NULL,
-    IsRecurring BOOLEAN DEFAULT TRUE,
-    Description VARCHAR(255),
-    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Unified Calendar Events
-CREATE TABLE IF NOT EXISTS CalendarEvents (
-    EventID INT AUTO_INCREMENT PRIMARY KEY,
-    Title VARCHAR(200) NOT NULL,
-    Description TEXT,
-    StartTime DATETIME NOT NULL,
-    EndTime DATETIME NOT NULL,
-    EventType ENUM('HOLIDAY', 'PERSONAL', 'DEADLINE') NOT NULL,
-    UserID INT, 
-    CreatedBy INT,
-    Color VARCHAR(10),
-    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Seed data for Holidays
-INSERT INTO Holidays (Name, HolidayDate, IsRecurring, Description) VALUES
-('New Year Day', '2025-01-01', TRUE, 'Global celebration of new year'),
-('Lunar New Year', '2025-01-29', FALSE, 'Traditional Tet holiday');
 
 -- =================================================================
 -- SECTION 1: CORE HR & USERS (SCHEMA)
@@ -116,7 +86,6 @@ CREATE TABLE EmployeeProfileChanges (
     CONSTRAINT FK_ProfileChanges_Approver FOREIGN KEY (ApproverID) REFERENCES Employees(EmployeeID)
 );
 
--- Supporting documents for profile changes (1 change can have multiple documents)
 CREATE TABLE EmployeeProfileChangeDocuments (
     DocumentID INT PRIMARY KEY AUTO_INCREMENT,
     ChangeID INT NOT NULL,
@@ -377,11 +346,18 @@ CREATE TABLE EmployeeEvents (
     AggregateID INT NOT NULL, 
     EventType VARCHAR(100) NOT NULL, 
     EventData JSON NOT NULL, 
-    SequenceNumber INT NOT NULL,
+    
+    -- Cột này lưu thứ tự sự kiện (1, 2, 3...) cho từng nhân viên
+    SequenceNumber INT NOT NULL, 
+    
+    -- Cột này lưu phiên bản cấu trúc JSON (Mặc định là 1)
     EventVersion INT NOT NULL DEFAULT 1, 
+    
     CreatedBy INT NULL, 
     CreatedAt DATETIME DEFAULT NOW(),
-    UNIQUE KEY UQ_Employee_Version (AggregateID, SequenceNumber),
+    
+    -- Đảm bảo mỗi nhân viên có các sự kiện theo thứ tự 1, 2, 3... không trùng lặp
+    UNIQUE KEY UQ_Employee_Sequence (AggregateID, SequenceNumber),
     INDEX IX_AggregateID (AggregateID)
 );
 
@@ -647,11 +623,11 @@ INSERT INTO RedemptionRequests (EmployeeID, PointsToRedeem, CashValue, Conversio
 (4, 5, 5, 1.0, 'Processing');
 
 -- 21. EmployeeEvents (Tự động lấy tất cả Employee mới và cũ)
-INSERT INTO EmployeeEvents (AggregateID, EventType, EventData, Version, CreatedBy, CreatedAt)
+INSERT INTO EmployeeEvents (AggregateID, EventType, EventData, SequenceNumber, EventVersion, CreatedBy, CreatedAt)
 SELECT
-    e.EmployeeID,
-    'EmployeeImported',
-    JSON_OBJECT(
+    e.EmployeeID,           -- AggregateID
+    'EmployeeImported',     -- EventType
+    JSON_OBJECT(            -- EventData (Full thông tin tại thời điểm hiện tại)
         'EmployeeID', e.EmployeeID,
         'FirstName', e.FirstName,
         'LastName', e.LastName,
@@ -663,20 +639,24 @@ SELECT
         'HireDate', DATE_FORMAT(e.HireDate, '%Y-%m-%d'),
         'IsActive', e.IsActive,
         
+        -- Sensitive Info
         'PersonalEmail', e.PersonalEmail,
         'BankAccountNumber', e.BankAccountNumber,
         'TaxID', e.TaxID,
         
+        -- Relations
         'DepartmentID', e.DepartmentID,
-        'Department', d.DepartmentName,
+        'DepartmentName', d.DepartmentName,
         'ManagerID', e.ManagerID,
-        'Manager', CASE WHEN m.EmployeeID IS NOT NULL THEN CONCAT(m.FirstName, ' ', m.LastName) ELSE NULL END,
+        'ManagerName', CONCAT(m.FirstName, ' ', m.LastName),
         
+        -- Extras
         'CurrentPoints', e.CurrentPoints,
         'AvatarUrl', e.AvatarUrl
     ),
-    1,
-    1,
+    1,  -- SequenceNumber: Luôn là 1 cho dữ liệu khởi tạo
+    1,  -- EventVersion: Mặc định là 1
+    1,  -- CreatedBy: Giả sử Admin (Alice - ID 1) là người import
     NOW()
 FROM Employees e
 LEFT JOIN Departments d ON e.DepartmentID = d.DepartmentID
@@ -841,3 +821,5 @@ INSERT INTO OrganizationStructureLogs (EventType, TargetEntity, TargetID, EventD
     'ManagerID', 1
 ), 1, NOW());
 ;
+
+Select*from EmployeeEvents;
