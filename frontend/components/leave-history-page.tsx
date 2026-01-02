@@ -57,7 +57,7 @@ export default function LeaveHistoryPage() {
   const [employeeId, setEmployeeId] = useState<number | null>(null)
   const [userRole, setUserRole] = useState<string>("")
 
-  // --- PHẦN MỚI THÊM CHO APPROVAL ---
+  // Approval Data
   const [approvalRequests, setApprovalRequests] = useState<any[]>([]);
   const [loadingApprovals, setLoadingApprovals] = useState(false);
 
@@ -127,13 +127,18 @@ export default function LeaveHistoryPage() {
     };
   }, [employeeId, statusFilter, dateRangeFilter, leaveTypeFilter, currentPage, activeTab]);
 
-  // 3. useEffect: Load Approvals
+  // --- 3. useEffect MỚI: Load Approvals (ĐÃ SỬA: Chạy ngay khi có ID, không chờ chuyển tab) ---
   useEffect(() => {
-    if (activeTab === "my-approval" && employeeId) {
+    // SỬA: Bỏ điều kiện activeTab === "my-approval" để nó load ngầm luôn
+    // Thêm check userRole để chỉ Manager/Admin mới gọi API này cho đỡ tốn tài nguyên
+    const isManagerOrAdmin = ["HR Manager", "IT Manager", "Admin", "Sales Manager", "Finance Manager", "BOD Assistant"].includes(userRole);
+
+    if (employeeId && isManagerOrAdmin) {
         const fetchApprovals = async () => {
             setLoadingApprovals(true);
             try {
                 const response = await fetch(`http://localhost:8081/api/approvals/pending?managerId=${employeeId}`);
+                
                 if (response.ok) {
                     const data = await response.json();
                     setApprovalRequests(data);
@@ -146,9 +151,14 @@ export default function LeaveHistoryPage() {
                 setLoadingApprovals(false);
             }
         };
+
         fetchApprovals();
+        
+        // (Tùy chọn) Auto refresh danh sách duyệt mỗi 30s để cập nhật real-time
+        const interval = setInterval(fetchApprovals, 30000);
+        return () => clearInterval(interval);
     }
-  }, [activeTab, employeeId]);
+  }, [employeeId, userRole]); // Bỏ activeTab ra khỏi dependencies
 
 
   // Stats logic
@@ -236,11 +246,10 @@ export default function LeaveHistoryPage() {
   }
 
   if (viewingRequest) {
-    // ---- ĐÂY LÀ CHỖ QUAN TRỌNG ĐÃ SỬA ----
     return (
       <LeaveRequestDetail
         request={viewingRequest}
-        isManagerView={activeTab === "my-approval"} // Truyền cờ báo hiệu là Quản lý đang xem
+        isManagerView={activeTab === "my-approval"}
         onBack={() => setViewingRequest(null)}
       />
     )
@@ -255,9 +264,6 @@ export default function LeaveHistoryPage() {
     )
   }
 
-  // ... (Phần render UI bên dưới giữ nguyên, chỉ copy paste từ file cũ nếu cần, 
-  // nhưng ở đây mình gửi full file đã bao gồm các phần render Card, Table như cũ) ...
-  
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8 space-y-4">
@@ -287,7 +293,7 @@ export default function LeaveHistoryPage() {
             My Request
           </button>
           
-          {(userRole === "HR Manager" || userRole === "IT Manager" || userRole==="Admin" || userRole==="Sales Manager" || userRole==="Finance Manager") && (
+          {(userRole === "HR Manager" || userRole === "IT Manager" || userRole==="Admin" || userRole==="Sales Manager" || userRole==="Finance Manager" || userRole==="BOD Assistant") && (
             <button
               onClick={() => setActiveTab("my-approval")}
               className={`px-4 py-2 font-semibold text-sm transition-colors relative ${activeTab === "my-approval"
@@ -297,7 +303,7 @@ export default function LeaveHistoryPage() {
             >
               My Approval 
               {approvalRequests.length > 0 && (
-                  <span className="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                  <span className="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full animate-in fade-in zoom-in duration-300">
                       {approvalRequests.length}
                   </span>
               )}
