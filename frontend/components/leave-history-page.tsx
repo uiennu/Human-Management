@@ -301,7 +301,7 @@ export default function LeaveHistoryPage() {
           >
             My Request
           </button>
-          {(userRole === "HR Manager" || userRole === "IT Manager") && (
+          {(userRole === "HR Manager" || userRole === "IT Manager" || userRole==="Admin" || userRole==="Sales Manager" || userRole==="Finance Manager") && (
             <button
               onClick={() => setActiveTab("my-approval")}
               className={`px-4 py-2 font-semibold text-sm transition-colors relative ${activeTab === "my-approval"
