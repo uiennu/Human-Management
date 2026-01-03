@@ -69,21 +69,24 @@ namespace HRM.Api.Repositories
             return await conn.QueryAsync<TeamMemberDto>(sql);
         }
 
+        // Trong OrganizationRepository.cs (Backend)
         public async Task<IEnumerable<EmployeeSimpleDto>> GetAllEmployeesAsync()
         {
-             const string sql = @"
+            const string sql = @"
                 SELECT 
                     e.EmployeeID, 
                     CONCAT(e.FirstName, ' ', e.LastName) as Name, 
-                    'Staff' as Position,
+                    r.RoleName as Position,  -- <--- QUAN TRỌNG: Lấy RoleName làm Position
                     e.AvatarUrl as Avatar,
                     d.DepartmentName
                 FROM Employees e
                 LEFT JOIN Departments d ON e.DepartmentID = d.DepartmentID
+                LEFT JOIN EmployeeRoles er ON e.EmployeeID = er.EmployeeID -- Join bảng trung gian
+                LEFT JOIN Roles r ON er.RoleID = r.RoleID                  -- Join bảng Roles
                 WHERE e.IsActive = 1";
-             
-             using var conn = CreateConnection();
-             return await conn.QueryAsync<EmployeeSimpleDto>(sql);
+            
+            using var conn = CreateConnection();
+            return await conn.QueryAsync<EmployeeSimpleDto>(sql);
         }
         
         public async Task<IEnumerable<EmployeeSimpleDto>> GetSubordinatesAsync(int managerId)
