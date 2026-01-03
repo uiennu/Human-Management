@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Eye, X, Plus, TriangleAlert, ChevronDown, ChevronUp } from "lucide-react"
+import { Eye, X, Plus, TriangleAlert, ChevronDown, ChevronUp, Check } from "lucide-react"
 import LeaveRequestForm from "./LeaveRequestForm"
 import LeaveRequestDetail from "./LeaveRequestDetail"
 import { leaveService } from "@/lib/api/leave-service"
@@ -34,31 +34,39 @@ export default function LeaveHistoryPage() {
   const [activeTab, setActiveTab] = useState<"my-request" | "my-approval">("my-request")
   const [showBalanceDropdown, setShowBalanceDropdown] = useState(false)
   const [showCreateForm, setShowCreateForm] = useState(false)
+  
+  // Filters
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [dateRangeFilter, setDateRangeFilter] = useState<string>("last-30-days")
   const [leaveTypeFilter, setLeaveTypeFilter] = useState<string>("all")
   const [currentPage, setCurrentPage] = useState(1)
+  
+  // Dialogs
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
   const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null)
   const [viewingRequest, setViewingRequest] = useState<any | null>(null)
 
+  // Data
   const [requests, setRequests] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [balances, setBalances] = useState<any[]>([])
   const [leaveTypes, setLeaveTypes] = useState<any[]>([])
 
+  // User Info
   const [employeeId, setEmployeeId] = useState<number | null>(null)
   const [userRole, setUserRole] = useState<string>("")
 
+  // Approval Data
+  const [approvalRequests, setApprovalRequests] = useState<any[]>([]);
+  const [loadingApprovals, setLoadingApprovals] = useState(false);
 
-  // 2. useEffect: Lấy ID và Role từ Token
+  // 1. useEffect: Lấy ID và Role từ Token
   useEffect(() => {
     const token = localStorage.getItem('token');
 
     if (token) {
       try {
-        // --- ĐOẠN CODE GIẢI MÃ JWT TOKEN ---
         const base64Url = token.split('.')[1];
         const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
         const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function (c) {
@@ -66,42 +74,28 @@ export default function LeaveHistoryPage() {
         }).join(''));
 
         const payload = JSON.parse(jsonPayload);
-        console.log("Token Payload đã giải mã:", payload);
 
-        // Lấy EmployeeID
         const id = payload.EmployeeID || payload.employeeID || payload.nameid || payload.sub;
-
-        // Lấy Role
         const role = payload.role || payload.Role || payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] || "";
 
-        if (id) {
-          console.log("Đã tìm thấy ID từ Token:", id);
-          setEmployeeId(Number(id));
-        } else {
-          console.error("Không tìm thấy EmployeeID trong token");
-        }
-
-        if (role) {
-          console.log("Đã tìm thấy Role từ Token:", role);
-          setUserRole(role);
-        }
+        if (id) setEmployeeId(Number(id));
+        if (role) setUserRole(role);
+        
       } catch (e) {
         console.error("Lỗi khi giải mã token:", e);
       }
-    } else {
-      console.log("Không tìm thấy token trong localStorage");
     }
   }, []);
 
 
+  // 2. useEffect: Load My Requests
   useEffect(() => {
     let ignore = false;
 
-    if (employeeId && employeeId > 0) {
+    if (employeeId && employeeId > 0 && activeTab === 'my-request') {
       const fetchRequests = async () => {
         setLoading(true);
         try {
-          // console.log("✅ Bắt đầu gọi API với ID:", employeeId);
           const data = await leaveService.getMyRequests(employeeId, {
             status: statusFilter,
             dateRange: dateRangeFilter,
@@ -131,24 +125,55 @@ export default function LeaveHistoryPage() {
     return () => {
       ignore = true;
     };
-  }, [employeeId, statusFilter, dateRangeFilter, leaveTypeFilter, currentPage]);
+  }, [employeeId, statusFilter, dateRangeFilter, leaveTypeFilter, currentPage, activeTab]);
 
-  // State for stats counts
+  // --- 3. useEffect MỚI: Load Approvals (ĐÃ SỬA: Chạy ngay khi có ID, không chờ chuyển tab) ---
+  useEffect(() => {
+    // SỬA: Bỏ điều kiện activeTab === "my-approval" để nó load ngầm luôn
+    // Thêm check userRole để chỉ Manager/Admin mới gọi API này cho đỡ tốn tài nguyên
+    const isManagerOrAdmin = ["HR Manager", "IT Manager", "Admin", "Sales Manager", "Finance Manager", "BOD Assistant"].includes(userRole);
+
+    if (employeeId && isManagerOrAdmin) {
+        const fetchApprovals = async () => {
+            setLoadingApprovals(true);
+            try {
+                const response = await fetch(`http://localhost:8081/api/approvals/pending?managerId=${employeeId}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    setApprovalRequests(data);
+                } else {
+                    console.error("Failed to fetch approvals");
+                }
+            } catch (error) {
+                console.error("Error fetching approvals:", error);
+            } finally {
+                setLoadingApprovals(false);
+            }
+        };
+
+        fetchApprovals();
+        
+        // (Tùy chọn) Auto refresh danh sách duyệt mỗi 30s để cập nhật real-time
+        const interval = setInterval(fetchApprovals, 30000);
+        return () => clearInterval(interval);
+    }
+  }, [employeeId, userRole]); // Bỏ activeTab ra khỏi dependencies
+
+
+  // Stats logic
   const [stats, setStats] = useState({ all: 0, pending: 0, approved: 0, rejected: 0 })
 
-  // Separate effect for Stats to prevent them from changing when Status Filter changes
   useEffect(() => {
     if (employeeId && employeeId > 0) {
       const fetchStats = async () => {
         try {
-          // Fetch ALL requests for current date/type range to calculate stats
-          // We use a large pageSize to get all relevant items for counting
           const data = await leaveService.getMyRequests(employeeId, {
-            status: 'all', // Always fetch all for stats
+            status: 'all',
             dateRange: dateRangeFilter,
             leaveTypeId: leaveTypeFilter,
             page: 1,
-            pageSize: 1000 // Assume max 1000 for stats overview
+            pageSize: 1000 
           });
 
           const allReqs = data.data || [];
@@ -164,7 +189,7 @@ export default function LeaveHistoryPage() {
       }
       fetchStats();
     }
-  }, [employeeId, dateRangeFilter, leaveTypeFilter]); // Intentionally exclude statusFilter
+  }, [employeeId, dateRangeFilter, leaveTypeFilter]); 
 
   const loadLeaveTypes = async () => {
     try {
@@ -185,42 +210,6 @@ export default function LeaveHistoryPage() {
     }
   };
 
-  // Helper to re-fetch manually if needed (e.g. after cancellation)
-  const refreshData = () => {
-    if (!employeeId) return;
-    const fetchRequests = async () => {
-      setLoading(true);
-      try {
-        const data = await leaveService.getMyRequests(employeeId, {
-          status: statusFilter,
-          dateRange: dateRangeFilter,
-          leaveTypeId: leaveTypeFilter,
-          page: currentPage
-        });
-        setRequests(data.data || []);
-      } catch (err) {
-        console.error(err);
-        setError("Failed to load leave history");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRequests();
-    loadBalances();
-  }
-
-
-  const getTotalBalance = () => {
-    return balances.reduce((acc, curr) => acc + curr.balanceDays, 0);
-  };
-
-  const getUsedDays = () => {
-    return requests
-      .filter(r => r.status === 'Approved')
-      .reduce((acc, curr) => acc + curr.totalDays, 0);
-  };
-
   const handleCancelRequest = (id: number) => {
     setSelectedRequestId(id)
     setCancelDialogOpen(true)
@@ -230,9 +219,7 @@ export default function LeaveHistoryPage() {
     if (!selectedRequestId) return;
     try {
       await leaveService.cancelLeaveRequest(selectedRequestId);
-      refreshData();
-      setCancelDialogOpen(false);
-      setSelectedRequestId(null);
+      window.location.reload(); 
     } catch (error) {
       console.error("Failed to cancel request", error);
       alert("Failed to cancel request");
@@ -243,11 +230,6 @@ export default function LeaveHistoryPage() {
     setViewingRequest(request)
   }
 
-  const handleApplyFilters = () => {
-    // No-op or just reset page, since state change triggers effect
-    setCurrentPage(1);
-  }
-
   const handleClearFilters = () => {
     setStatusFilter("all")
     setDateRangeFilter("last-30-days")
@@ -255,10 +237,19 @@ export default function LeaveHistoryPage() {
     setCurrentPage(1);
   }
 
+  const handleApprove = (id: number) => {
+      alert(`Approving request ${id} (Integrate API later)`);
+  }
+
+  const handleReject = (id: number) => {
+      alert(`Rejecting request ${id} (Integrate API later)`);
+  }
+
   if (viewingRequest) {
     return (
       <LeaveRequestDetail
         request={viewingRequest}
+        isManagerView={activeTab === "my-approval"}
         onBack={() => setViewingRequest(null)}
       />
     )
@@ -301,7 +292,8 @@ export default function LeaveHistoryPage() {
           >
             My Request
           </button>
-          {(userRole === "HR Manager" || userRole === "IT Manager" || userRole==="Admin" || userRole==="Sales Manager" || userRole==="Finance Manager") && (
+          
+          {(userRole === "HR Manager" || userRole === "IT Manager" || userRole==="Admin" || userRole==="Sales Manager" || userRole==="Finance Manager" || userRole==="BOD Assistant") && (
             <button
               onClick={() => setActiveTab("my-approval")}
               className={`px-4 py-2 font-semibold text-sm transition-colors relative ${activeTab === "my-approval"
@@ -309,61 +301,46 @@ export default function LeaveHistoryPage() {
                 : "text-slate-600 hover:text-slate-900"
                 }`}
             >
-              My Approval
+              My Approval 
+              {approvalRequests.length > 0 && (
+                  <span className="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full animate-in fade-in zoom-in duration-300">
+                      {approvalRequests.length}
+                  </span>
+              )}
             </button>
           )}
         </div>
 
-        {/* My Request Tab Content */}
+        {/* CONTENT: MY REQUEST TAB */}
         {activeTab === "my-request" && (
           <>
-            {/* Statistics Cards - 4 cards */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <Card
-                className="cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={() => setStatusFilter("all")}
-              >
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setStatusFilter("all")}>
                 <CardContent className="!px-3 !py-2">
                   <p className="text-sm font-medium text-slate-600">All my request</p>
                   <p className="text-2xl font-bold text-slate-900">{stats.all}</p>
                 </CardContent>
               </Card>
-              <Card
-                className="cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={() => setStatusFilter("Pending")}
-              >
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setStatusFilter("Pending")}>
                 <CardContent className="!px-3 !py-2">
                   <p className="text-sm font-medium text-amber-600">Pending request</p>
-                  <p className="text-2xl font-bold text-amber-700">
-                    {stats.pending}
-                  </p>
+                  <p className="text-2xl font-bold text-amber-700">{stats.pending}</p>
                 </CardContent>
               </Card>
-              <Card
-                className="cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={() => setStatusFilter("Approved")}
-              >
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setStatusFilter("Approved")}>
                 <CardContent className="!px-3 !py-2">
                   <p className="text-sm font-medium text-emerald-600">Approved Request</p>
-                  <p className="text-2xl font-bold text-emerald-700">
-                    {stats.approved}
-                  </p>
+                  <p className="text-2xl font-bold text-emerald-700">{stats.approved}</p>
                 </CardContent>
               </Card>
-              <Card
-                className="cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={() => setStatusFilter("Rejected")}
-              >
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setStatusFilter("Rejected")}>
                 <CardContent className="!px-3 !py-2">
                   <p className="text-sm font-medium text-rose-600">Declined Request</p>
-                  <p className="text-2xl font-bold text-rose-700">
-                    {stats.rejected}
-                  </p>
+                  <p className="text-2xl font-bold text-rose-700">{stats.rejected}</p>
                 </CardContent>
               </Card>
             </div>
 
-            {/* My Balance Dropdown */}
             <Card>
               <CardContent className="p-3">
                 <button
@@ -371,11 +348,7 @@ export default function LeaveHistoryPage() {
                   className="flex items-center justify-between w-full text-left"
                 >
                   <h2 className="text-sm font-semibold text-slate-900">My Balance</h2>
-                  {showBalanceDropdown ? (
-                    <ChevronUp className="h-5 w-5 text-slate-600" />
-                  ) : (
-                    <ChevronDown className="h-5 w-5 text-slate-600" />
-                  )}
+                  {showBalanceDropdown ? <ChevronUp className="h-5 w-5 text-slate-600" /> : <ChevronDown className="h-5 w-5 text-slate-600" />}
                 </button>
                 {showBalanceDropdown && (
                   <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -388,17 +361,108 @@ export default function LeaveHistoryPage() {
                               <p className="text-sm font-bold text-slate-900 mt-1">{balance.name || balance.Name || 'Unknown'}</p>
                             </div>
                             <div className="text-right">
-                              <span className="text-5xl font-extrabold text-blue-600 block leading-none">
-                                {balance.balanceDays}
-                              </span>
+                              <span className="text-5xl font-extrabold text-blue-600 block leading-none">{balance.balanceDays}</span>
                               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Days Available</span>
                             </div>
                           </CardContent>
                         </Card>
                       ))
-                    ) : (
-                      <p className="text-sm text-slate-500 col-span-full">No balance information available</p>
-                    )}
+                    ) : <p className="text-sm text-slate-500 col-span-full">No balance information available</p>}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-3">
+                <h2 className="mb-2 text-xs font-semibold text-slate-900">Filter by</h2>
+                <div className="flex flex-wrap items-end gap-4">
+                  <div className="flex-1 min-w-[200px]">
+                    <label className="mb-2 block text-sm font-medium text-slate-700">Status</label>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger className="bg-slate-50 cursor-pointer"><SelectValue placeholder="All" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="Approved">Approved</SelectItem>
+                        <SelectItem value="Pending">Pending</SelectItem>
+                        <SelectItem value="Rejected">Rejected</SelectItem>
+                        <SelectItem value="Cancelled">Cancelled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex-1 min-w-[200px]">
+                    <label className="mb-2 block text-sm font-medium text-slate-700">Date Range</label>
+                    <Select value={dateRangeFilter} onValueChange={setDateRangeFilter}>
+                      <SelectTrigger className="bg-slate-50 cursor-pointer"><SelectValue placeholder="Last 30 Days" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="last-7-days">Last 7 Days</SelectItem>
+                        <SelectItem value="last-30-days">Last 30 Days</SelectItem>
+                        <SelectItem value="last-90-days">Last 90 Days</SelectItem>
+                        <SelectItem value="this-year">This Year</SelectItem>
+                        <SelectItem value="all-time">All Time</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex-1 min-w-[200px]">
+                    <label className="mb-2 block text-sm font-medium text-slate-700">Leave Type</label>
+                    <Select value={leaveTypeFilter} onValueChange={setLeaveTypeFilter}>
+                      <SelectTrigger className="bg-slate-50 cursor-pointer"><SelectValue placeholder="All" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        {leaveTypes.map(type => (
+                          <SelectItem key={type.leaveTypeID} value={type.leaveTypeID.toString()}>{type.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={handleClearFilters} variant="outline" className="cursor-pointer">Clear Filters</Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-3">
+                <h2 className="mb-3 text-sm font-semibold text-slate-900">Request History</h2>
+                {loading ? <p className="text-center py-4">Loading...</p> : error ? <p className="text-center py-4 text-red-500">{error}</p> : requests.length === 0 ? <p className="text-center py-4 text-gray-500">No leave requests found.</p> : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-slate-200">
+                          <th className="pb-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Leave Type</th>
+                          <th className="pb-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Dates</th>
+                          <th className="pb-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-600">Total Days</th>
+                          <th className="pb-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Status</th>
+                          <th className="pb-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Submitted Date</th>
+                          <th className="pb-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-600">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {requests.map((request) => (
+                          <tr key={request.leaveRequestID} className="hover:bg-slate-50 cursor-pointer" onClick={() => handleViewDetails(request)}>
+                            <td className="py-2 text-sm text-slate-900">{request.leaveTypeName || 'Unknown'}</td>
+                            <td className="py-2 text-sm text-slate-600">
+                              {new Date(request.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })} - 
+                              {new Date(request.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                            </td>
+                            <td className="py-2 text-center text-sm text-slate-900">{request.totalDays}</td>
+                            <td className="py-2">
+                              <Badge variant="outline" className={`${statusColors[request.status as LeaveStatus] || 'bg-gray-100'} font-medium`}>{request.status}</Badge>
+                            </td>
+                            <td className="py-2 text-sm text-slate-600">{new Date(request.requestedDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
+                            <td className="py-2 text-center">
+                              {request.status === "Pending" && (
+                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-slate-600 hover:text-rose-600 cursor-pointer"
+                                  onClick={(e) => { e.stopPropagation(); handleCancelRequest(request.leaveRequestID); }}>
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </CardContent>
@@ -406,175 +470,53 @@ export default function LeaveHistoryPage() {
           </>
         )}
 
-        {/* My Approval Tab Content */}
+        {/* CONTENT: MY APPROVAL TAB */}
         {activeTab === "my-approval" && (
           <Card>
             <CardContent className="p-3">
-              <h2 className="text-sm font-semibold text-slate-900 mb-2">Pending Approvals</h2>
-              <p className="text-slate-600">This section will show leave requests pending your approval.</p>
-              {/* TODO: Implement approval logic */}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Filters - Only show in My Request tab */}
-        {activeTab === "my-request" && (
-          <Card>
-            <CardContent className="p-3">
-              <h2 className="mb-2 text-xs font-semibold text-slate-900">Filter by</h2>
-              <div className="flex flex-wrap items-end gap-4">
-                <div className="flex-1 min-w-[200px]">
-                  <label className="mb-2 block text-sm font-medium text-slate-700">Status</label>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="bg-slate-50 cursor-pointer">
-                      <SelectValue placeholder="All" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all" className="cursor-pointer">All</SelectItem>
-                      <SelectItem value="Approved" className="cursor-pointer">Approved</SelectItem>
-                      <SelectItem value="Pending" className="cursor-pointer">Pending</SelectItem>
-                      <SelectItem value="Rejected" className="cursor-pointer">Rejected</SelectItem>
-                      <SelectItem value="Cancelled" className="cursor-pointer">Cancelled</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex-1 min-w-[200px]">
-                  <label className="mb-2 block text-sm font-medium text-slate-700">Date Range</label>
-                  <Select value={dateRangeFilter} onValueChange={setDateRangeFilter}>
-                    <SelectTrigger className="bg-slate-50 cursor-pointer">
-                      <SelectValue placeholder="Last 30 Days" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="last-7-days" className="cursor-pointer">Last 7 Days</SelectItem>
-                      <SelectItem value="last-30-days" className="cursor-pointer">Last 30 Days</SelectItem>
-                      <SelectItem value="last-90-days" className="cursor-pointer">Last 90 Days</SelectItem>
-                      <SelectItem value="this-year" className="cursor-pointer">This Year</SelectItem>
-                      <SelectItem value="all-time" className="cursor-pointer">All Time</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex-1 min-w-[200px]">
-                  <label className="mb-2 block text-sm font-medium text-slate-700">Leave Type</label>
-                  <Select value={leaveTypeFilter} onValueChange={setLeaveTypeFilter}>
-                    <SelectTrigger className="bg-slate-50 cursor-pointer">
-                      <SelectValue placeholder="All" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all" className="cursor-pointer">All</SelectItem>
-                      {leaveTypes.map(type => (
-                        <SelectItem key={type.leaveTypeID} value={type.leaveTypeID.toString()} className="cursor-pointer">
-                          {type.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex gap-2">
-                  {/* Apply Filters Removed/Hidden since it is auto-applied, or we can keep it just for show/refresh */}
-                  {/* <Button onClick={handleApplyFilters} ...> Apply Filters </Button> */}
-                  <Button onClick={handleClearFilters} variant="outline" className="cursor-pointer">
-                    Clear Filters
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Request History Table - Only show in My Request tab */}
-        {activeTab === "my-request" && (
-          <Card>
-            <CardContent className="p-3">
-              <h2 className="mb-3 text-sm font-semibold text-slate-900">Request History</h2>
-
-              {loading ? (
-                <p className="text-center py-4">Loading...</p>
-              ) : error ? (
-                <p className="text-center py-4 text-red-500">{error}</p>
-              ) : requests.length === 0 ? (
-                <p className="text-center py-4 text-gray-500">No leave requests found.</p>
-              ) : (
+              <h2 className="text-sm font-semibold text-slate-900 mb-4">Pending Approvals</h2>
+              {loadingApprovals ? <p className="text-center py-8 text-gray-500">Loading pending requests...</p> : approvalRequests.length === 0 ? <p className="text-center py-8 text-gray-500">You have no pending requests to approve.</p> : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b border-slate-200">
-                        <th className="pb-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
-                          Leave Type
-                        </th>
-                        <th className="pb-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
-                          Dates
-                        </th>
-                        <th className="pb-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-600">
-                          Total Days
-                        </th>
-                        <th className="pb-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
-                          Status
-                        </th>
-                        <th className="pb-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
-                          Submitted Date
-                        </th>
-                        <th className="pb-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-600">
-                          Actions
-                        </th>
+                      <tr className="border-b border-slate-200 bg-slate-50/50">
+                        <th className="pb-3 pt-2 pl-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Employee</th>
+                        <th className="pb-3 pt-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Leave Type</th>
+                        <th className="pb-3 pt-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Dates</th>
+                        <th className="pb-3 pt-2 text-center text-xs font-semibold uppercase tracking-wider text-slate-600">Days</th>
+                        <th className="pb-3 pt-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Status</th>
+                        <th className="pb-3 pt-2 text-center text-xs font-semibold uppercase tracking-wider text-slate-600">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {requests.map((request) => (
-                        <tr
-                          key={request.leaveRequestID}
-                          className="hover:bg-slate-50 cursor-pointer"
-                          onClick={() => handleViewDetails(request)}
-                        >
-                          <td className="py-2 text-sm text-slate-900">{request.leaveTypeName || 'Unknown'}</td>
-                          <td className="py-2 text-sm text-slate-600">
-                            {new Date(request.startDate).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                            })}{" "}
-                            -{" "}
-                            {new Date(request.endDate).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            })}
+                      {approvalRequests.map((req: any) => (
+                        <tr key={req.leaveRequestID} className="hover:bg-slate-50 transition-colors">
+                          <td className="py-3 pl-2">
+                             <div className="flex items-center gap-3">
+                                <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden border border-blue-200">
+                                   {req.avatarUrl ? <img src={req.avatarUrl} alt="avatar" className="h-full w-full object-cover" /> : <span className="text-xs font-bold text-blue-600">{req.employeeName ? req.employeeName.charAt(0) : 'U'}</span>}
+                                </div>
+                                <div className="flex flex-col">
+                                   <span className="text-sm font-medium text-slate-900">{req.employeeName || 'Unknown'}</span>
+                                   <span className="text-xs text-slate-500">Employee</span>
+                                </div>
+                             </div>
                           </td>
-                          <td className="py-2 text-center text-sm text-slate-900">{request.totalDays}</td>
-                          <td className="py-2">
-                            <Badge
-                              variant="outline"
-                              className={`${statusColors[request.status as LeaveStatus] || 'bg-gray-100'} font-medium`}
-                            >
-                              {request.status}
-                            </Badge>
-                          </td>
-                          <td className="py-2 text-sm text-slate-600">
-                            {new Date(request.requestedDate).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            })}
-                          </td>
-                          <td className="py-2">
-                            <div className="flex items-center justify-center gap-2">
-                              <div className="flex w-8 justify-center">
-                                {request.status === "Pending" && (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-8 w-8 p-0 text-slate-600 hover:text-rose-600 cursor-pointer"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleCancelRequest(request.leaveRequestID);
-                                    }}
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                )}
+                          <td className="py-3 text-sm text-slate-700 font-medium">{req.leaveTypeName}</td>
+                          <td className="py-3 text-sm text-slate-600">
+                              <div className="flex flex-col">
+                                  <span>{new Date(req.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                                  <span className="text-xs text-slate-400">to {new Date(req.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
                               </div>
-                            </div>
+                          </td>
+                          <td className="py-3 text-center"><span className="inline-flex items-center justify-center px-2 py-1 rounded-md bg-slate-100 text-xs font-bold text-slate-700">{req.totalDays}</span></td>
+                          <td className="py-3"><Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">{req.status}</Badge></td>
+                          <td className="py-3 text-center">
+                              <div className="flex items-center justify-center gap-2">
+                                  <Button size="sm" className="h-8 w-8 p-0 bg-blue-100 hover:bg-blue-200 text-blue-700 border border-blue-200 rounded-full" onClick={() => handleViewDetails(req)} title="View Details"><Eye className="h-4 w-4" /></Button>
+                                  <Button size="sm" className="h-8 w-8 p-0 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 border border-emerald-200 rounded-full" onClick={() => handleApprove(req.leaveRequestID)} title="Approve"><Check className="h-4 w-4" /></Button>
+                                  <Button size="sm" className="h-8 w-8 p-0 bg-rose-100 hover:bg-rose-200 text-rose-700 border border-rose-200 rounded-full" onClick={() => handleReject(req.leaveRequestID)} title="Reject"><X className="h-4 w-4" /></Button>
+                              </div>
                           </td>
                         </tr>
                       ))}
@@ -582,43 +524,19 @@ export default function LeaveHistoryPage() {
                   </table>
                 </div>
               )}
-
-              {/* Pagination */}
-              <div className="mt-6 flex items-center justify-between border-t border-slate-200 pt-4">
-                <p className="text-sm text-slate-600">
-                  Showing {requests.length} records
-                </p>
-              </div>
             </CardContent>
           </Card>
         )}
       </div>
 
-      {/* Cancel Confirmation Dialog */}
       <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
         <AlertDialogContent className="flex max-w-md flex-col items-center justify-center rounded-xl bg-white p-6 text-center">
-          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#D32F2F]/10 p-3">
-            <TriangleAlert className="h-10 w-10 text-[#D32F2F]" />
-          </div>
-          <AlertDialogTitle className="mb-2 text-xl font-bold text-[#333333] sm:text-2xl">
-            Confirm Cancellation
-          </AlertDialogTitle>
-          <AlertDialogDescription className="mb-6 text-center text-gray-600">
-            Are you sure you want to cancel this leave request? This action cannot be undone.
-          </AlertDialogDescription>
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#D32F2F]/10 p-3"><TriangleAlert className="h-10 w-10 text-[#D32F2F]" /></div>
+          <AlertDialogTitle className="mb-2 text-xl font-bold text-[#333333] sm:text-2xl">Confirm Cancellation</AlertDialogTitle>
+          <AlertDialogDescription className="mb-6 text-center text-gray-600">Are you sure you want to cancel this leave request? This action cannot be undone.</AlertDialogDescription>
           <div className="flex w-full justify-center gap-3 sm:flex-row">
-            <button
-              onClick={confirmCancel}
-              className="flex h-10 min-w-[84px] max-w-[480px] flex-1 cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-[#D32F2F] px-4 text-sm font-bold leading-normal tracking-[0.015em] text-white transition-colors hover:bg-red-700"
-            >
-              <span className="truncate">Yes, Cancel</span>
-            </button>
-            <button
-              onClick={() => setCancelDialogOpen(false)}
-              className="flex h-10 min-w-[84px] max-w-[480px] flex-1 cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-gray-200 px-4 text-sm font-bold leading-normal tracking-[0.015em] text-[#333333] transition-colors hover:bg-gray-300"
-            >
-              <span className="truncate">No, Keep It</span>
-            </button>
+            <button onClick={confirmCancel} className="flex h-10 min-w-[84px] max-w-[480px] flex-1 cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-[#D32F2F] px-4 text-sm font-bold leading-normal tracking-[0.015em] text-white transition-colors hover:bg-red-700"><span className="truncate">Yes, Cancel</span></button>
+            <button onClick={() => setCancelDialogOpen(false)} className="flex h-10 min-w-[84px] max-w-[480px] flex-1 cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-gray-200 px-4 text-sm font-bold leading-normal tracking-[0.015em] text-[#333333] transition-colors hover:bg-gray-300"><span className="truncate">No, Keep It</span></button>
           </div>
         </AlertDialogContent>
       </AlertDialog>

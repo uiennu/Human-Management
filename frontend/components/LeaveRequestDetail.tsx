@@ -8,6 +8,7 @@ import { X, FileText, Check, Upload, Download, Loader2 } from "lucide-react"
 interface LeaveRequestDetailProps {
   request: any; // Selected request (contains at least leaveRequestID and status)
   onBack: () => void;
+  isManagerView?: boolean;
 }
 
 const statusStyles: Record<string, { bg: string; text: string }> = {
@@ -17,7 +18,7 @@ const statusStyles: Record<string, { bg: string; text: string }> = {
   Cancelled: { bg: "bg-gray-500/20", text: "text-gray-600" },
 }
 
-export default function LeaveRequestDetail({ request, onBack }: LeaveRequestDetailProps) {
+export default function LeaveRequestDetail({ request, onBack, isManagerView = false }: LeaveRequestDetailProps) {
   const [details, setDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -29,7 +30,13 @@ export default function LeaveRequestDetail({ request, onBack }: LeaveRequestDeta
   useEffect(() => {
     const loadDetails = async () => {
       try {
-        const data = await leaveService.getLeaveRequestDetail(request.leaveRequestID);
+        // --- SỬA LỖI Ở ĐÂY: Thêm ": any" để TypeScript không báo đỏ ---
+        const data: any = await leaveService.getLeaveRequestDetail(request.leaveRequestID);
+        
+        // Nếu API trả về thiếu employeeName nhưng request cha có, ta merge vào
+        if (!data.employeeName && request.employeeName) {
+            data.employeeName = request.employeeName;
+        }
         setDetails(data);
       } catch (error) {
         console.error("Failed to load details", error);
@@ -294,7 +301,10 @@ export default function LeaveRequestDetail({ request, onBack }: LeaveRequestDeta
                     <div className="h-full w-px bg-transparent"></div>
                   </div>
                   <div className="pb-8">
-                    <p className="font-medium text-[#111418]">Submitted by You</p>
+                    {/* --- ĐÃ SỬA: Hiển thị tên nhân viên nếu là quản lý xem --- */}
+                    <p className="font-medium text-[#111418]">
+                        Submitted by {isManagerView ? (request.employeeName || details.employeeName || 'Employee') : 'You'}
+                    </p>
                     <p className="text-sm text-[#617589]">
                       {new Date(details.requestedDate).toLocaleString()}
                     </p>

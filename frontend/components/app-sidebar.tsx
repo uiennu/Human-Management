@@ -31,24 +31,78 @@ export function AppSidebar() {
   const { logout, token, roles, hasAnyRole } = useAuth();
   const router = useRouter();
   const [profile, setProfile] = useState<EmployeeProfile | null>(null);
+  
+  // State lưu số lượng pending
+  const [pendingCount, setPendingCount] = useState(0);
 
+  // --- LOGIC FETCH SỐ LƯỢNG (Đã sửa lại phần lấy Role) ---
+  useEffect(() => {
+    const storedToken = localStorage.getItem('token');
+    if (!storedToken) return;
+
+    try {
+      // 1. Giải mã token
+      const base64Url = storedToken.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      
+      const payload = JSON.parse(jsonPayload);
+      
+      // 2. Lấy ID (Thử mọi trường hợp)
+      const empId = payload.EmployeeID || payload.employeeID || payload.nameid || payload.sub || payload.Id || payload.id;
+      
+      // 3. Lấy Role (SỬA LỖI TẠI ĐÂY: Thêm trường hợp role dài loằng ngoằng của .NET)
+      let rawRole = payload.role || payload.Role || payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] || "";
+      
+      // Chuyển về mảng string để dễ xử lý
+      let userRoles: string[] = [];
+      if (Array.isArray(rawRole)) userRoles = rawRole;
+      else if (typeof rawRole === 'string') userRoles = [rawRole];
+
+      // 4. Check quyền: Chỉ Manager hoặc Admin mới cần fetch số này
+      const isManagerOrAdmin = userRoles.some(r => /Manager|Admin|Assistant/i.test(r));
+
+      if (empId && isManagerOrAdmin) {
+         const fetchPendingCount = async () => {
+            try {
+               const res = await fetch(`http://localhost:8081/api/approvals/pending?managerId=${empId}`);
+               if (res.ok) {
+                 const data = await res.json();
+                 setPendingCount(data.length);
+               }
+            } catch(e) { 
+                console.error("Sidebar fetch error:", e); 
+            }
+         };
+         
+         fetchPendingCount();
+         
+         // Auto refresh mỗi 30 giây
+         const interval = setInterval(fetchPendingCount, 30000);
+         return () => clearInterval(interval);
+      }
+    } catch (e) { 
+        console.error("Sidebar token parse error:", e); 
+    }
+  }, []); 
+
+
+  // Fetch Profile (Logic cũ)
   useEffect(() => {
     async function fetchProfile() {
       try {
         const data = await profileApi.getProfile();
         setProfile(data);
       } catch (err: any) {
-        console.error("Error fetching profile for sidebar:", err);
         if (err.message === "UNAUTHORIZED") {
           logout();
           router.replace("/login");
         }
       }
     }
-
-    if (token) {
-      fetchProfile();
-    }
+    if (token) fetchProfile();
   }, [token]);
 
   const handleLogout = () => {
@@ -59,36 +113,32 @@ export function AppSidebar() {
   const displayName = profile ? `${profile.firstName} ${profile.lastName}` : "User";
   const displayPosition = profile?.position || "Employee";
 
-  // Check if user has HR or Admin role
+  // Logic hiển thị menu
   const isHROrAdmin = hasAnyRole([UserRole.HRManager, UserRole.Admin, UserRole.HREmployee]);
   const isAdmin = hasAnyRole([UserRole.Admin]);
   const isManager = hasAnyRole([UserRole.ITManager, UserRole.SalesManager, UserRole.FinanceManager, UserRole.BODAssistant]);
-  // Build navigation based on actual user roles
-  let navigation = baseNavigation; // Mặc định là menu cơ bản
+
+  let navigation = baseNavigation;
 
   if (isHROrAdmin) {
-    // Nếu là HR/Admin: Hiện full menu (bao gồm Reports, Team Mgmt, Register...)
     navigation = [
-      ...baseNavigation.slice(0, 1), // Dashboard
+      ...baseNavigation.slice(0, 1),
       { name: "Reports", href: "/reports", icon: FileText },
-      ...baseNavigation.slice(1, 3), // Leave, Org
+      ...baseNavigation.slice(1, 3),
       { name: "Team Management", href: "/organization/teams", icon: Users },
       { name: "Register Employee", href: "/organization/employees/register", icon: UserPlus },
       { name: "Sensitive Requests", href: "/sensitive-requests", icon: Shield },
       ...(isAdmin ? [{ name: "Registration History", href: "/organization/employees/registration-history", icon: History }] : []),
-      ...baseNavigation.slice(3) // Timesheet, Checkin...
+      ...baseNavigation.slice(3)
     ];
   } else if (isManager) {
-    // Nếu KHÔNG phải HR, nhưng là Manager: Hiện menu Manager (thêm Reports)
     navigation = [
-      ...baseNavigation.slice(0, 1), // Dashboard
+      ...baseNavigation.slice(0, 1),
       { name: "Reports", href: "/reports", icon: FileText },
-      ...baseNavigation.slice(1, 3), // Leave, Org
-      ...baseNavigation.slice(3) // Timesheet, Checkin...
+      ...baseNavigation.slice(1, 3),
+      ...baseNavigation.slice(3)
     ];
   }
-
-
 
   return (
     <div className="flex h-full w-64 flex-col bg-slate-900 text-slate-100">
@@ -112,12 +162,25 @@ export function AppSidebar() {
               key={item.name}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors relative group", 
                 isActive ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white",
               )}
             >
-              <item.icon className="h-5 w-5" />
-              {item.name}
+              <item.icon className="h-5 w-5 shrink-0" />
+              
+              <span className="flex-1 truncate">{item.name}</span>
+
+              {/* LOGIC HIỂN THỊ BADGE */}
+              {item.name === "Leave Requests" && pendingCount > 0 && (
+                <div className="ml-auto shrink-0 pl-2">
+                    <Badge 
+                    variant="destructive" 
+                    className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white shadow-sm hover:bg-red-600 border-0"
+                    >
+                    {pendingCount}
+                    </Badge>
+                </div>
+              )}
             </Link>
           );
         })}
@@ -139,7 +202,7 @@ export function AppSidebar() {
             <p className="truncate text-xs text-slate-400">{displayPosition}</p>
           </div>
         </div>
-        {/* Display user roles */}
+        
         {roles.length > 0 && (
           <div className="mt-3">
             <label className="block text-xs text-slate-400 mb-1">Your Roles</label>
@@ -152,6 +215,7 @@ export function AppSidebar() {
             </div>
           </div>
         )}
+
         <Button
           variant="ghost"
           className="mt-2 w-full justify-start text-slate-300 hover:bg-slate-800 hover:text-white"
