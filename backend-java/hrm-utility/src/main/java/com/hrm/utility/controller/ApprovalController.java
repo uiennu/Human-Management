@@ -10,6 +10,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/approvals")
+@CrossOrigin(origins = "http://localhost:3000")
 public class ApprovalController {
 
     @Autowired

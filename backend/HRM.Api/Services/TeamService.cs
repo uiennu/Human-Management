@@ -1,6 +1,7 @@
 using HRM.Api.DTOs;
 using HRM.Api.Models;
 using HRM.Api.Repositories;
+using System.Linq;
 using System.Text.Json;
 
 namespace HRM.Api.Services
@@ -40,11 +41,19 @@ namespace HRM.Api.Services
                     return (false, "Employee is locked or inactive and cannot be assigned to a team", null);
                 }
 
-                // Check if employee is already in a team
-                var existingMembership = await _teamRepository.GetTeamMemberAsync(employeeId);
-                if (existingMembership != null)
+                // Check existing memberships for this employee
+                var memberships = await _teamRepository.GetTeamMembersByEmployeeAsync(employeeId);
+
+                // If already a member of this exact team, reject
+                if (memberships.Any(m => m.SubTeamID == teamId))
                 {
-                    return (false, "Employee is already assigned to a team", null);
+                    return (false, "Employee is already a member of this team", null);
+                }
+
+                // If employee has memberships in other departments, reject
+                if (memberships.Any(m => m.SubTeam != null && m.SubTeam.DepartmentID != team.DepartmentID))
+                {
+                    return (false, "Employee is already assigned to a team in a different department", null);
                 }
 
                 // Add employee to team

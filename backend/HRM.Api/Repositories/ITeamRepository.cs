@@ -1,4 +1,5 @@
 using HRM.Api.Models;
+using System.Collections.Generic;
 
 namespace HRM.Api.Repositories
 {
@@ -13,6 +14,11 @@ namespace HRM.Api.Repositories
         /// Get team member record for a specific employee
         /// </summary>
         Task<SubTeamMember?> GetTeamMemberAsync(int employeeId);
+
+        /// <summary>
+        /// Get all team membership records for a specific employee
+        /// </summary>
+        Task<List<SubTeamMember>> GetTeamMembersByEmployeeAsync(int employeeId);
 
         /// <summary>
         /// Check if an employee is already in any team

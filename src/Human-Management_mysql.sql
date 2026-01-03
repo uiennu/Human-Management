@@ -113,8 +113,8 @@ CREATE TABLE SubTeamMembers (
     SubTeamID INT NOT NULL,
     EmployeeID INT NOT NULL,
     
-    UNIQUE(EmployeeID), -- Một nhân viên chỉ thuộc 1 team tại 1 thời điểm
-
+    -- Allow an employee to belong to multiple teams (within same department).
+    -- Business rule enforcement is handled at application/referential level.
     CONSTRAINT FK_SubTeamMembers_SubTeam 
         FOREIGN KEY (SubTeamID) REFERENCES SubTeams(SubTeamID) ON DELETE CASCADE,
     CONSTRAINT FK_SubTeamMembers_Employee 
@@ -668,7 +668,7 @@ LEFT JOIN Employees m ON e.ManagerID = m.EmployeeID;
 INSERT INTO SubTeams (TeamName, Description, DepartmentID, TeamLeadID) VALUES
 -- IT (2 Teams cũ)
 ('Backend Core', 'Responsible for API, Database', 3, 3),   -- Lead: Charlie
-('Frontend UI', 'Responsible for Interface', 3, 1),        -- Lead: Alice (Dữ liệu cũ)
+('Frontend UI', 'Responsible for Interface', 3, 8),        -- Lead: Harry (updated to match IT department)
 
 -- HR (2 Teams cũ)
 ('Talent Acquisition', 'Recruiting', 2, 2),                -- Lead: Bob
@@ -691,17 +691,18 @@ INSERT INTO SubTeamMembers (SubTeamID, EmployeeID) VALUES
 (1, 3), 
 (1, 4), 
 
--- 2. Frontend UI (IT): Alice (1), Harry (8-Mới) => 2 người
-(2, 1), 
+-- 2. Frontend UI (IT): David (4), Harry (8) => 2 người (both in Dept 3)
+(2, 4), 
 (2, 8),
 
 -- 3. Talent Acquisition (HR): Bob (2), Eve (5) => 2 người
 (3, 2), 
 (3, 5),
 
--- 4. C&B Team (HR): Ivy (9-Mới), Jack (10-Mới) => 2 người
 (4, 9), 
 (4, 10),
+-- include team lead Bob (2) as member as well
+(4, 2),
 
 -- 5. Sales Force (Sales): Frank (6-Mới), Liam (11-Mới) => 2 người
 (5, 6),
@@ -711,9 +712,10 @@ INSERT INTO SubTeamMembers (SubTeamID, EmployeeID) VALUES
 (6, 7),
 (6, 12),
 
--- 7. Strategic Board (BOD): Kevin (13-Mới), Laura (14-Mới) => 2 người
 (7, 13),
-(7, 14);
+(7, 14),
+-- include team lead Alice (1) as member
+(7, 1);
 
 -- ==============================================
 -- 7. LOG HOẠT ĐỘNG ORGANIZATION

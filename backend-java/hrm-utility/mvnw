@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
+WRAPPER_DIR="$ROOT_DIR/.mvn/wrapper"
+DISTRO_PROPS="$WRAPPER_DIR/maven-wrapper.properties"
+mkdir -p "$WRAPPER_DIR"
+if [ -f "$DISTRO_PROPS" ]; then
+  DIST_URL=$(grep -E '^distributionUrl=' "$DISTRO_PROPS" | sed 's/distributionUrl=//')
+else
+  DIST_URL="https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.4/apache-maven-3.9.4-bin.zip"
+fi
+DIST_DIR="$WRAPPER_DIR/apache-maven"
+MVN_BIN="$DIST_DIR/bin/mvn"
+if [ ! -x "$MVN_BIN" ]; then
+  echo "Downloading Apache Maven from $DIST_URL"
+  TMPZIP="$WRAPPER_DIR/maven-dist.zip"
+  if command -v curl >/dev/null 2>&1; then
+    curl -sSL -o "$TMPZIP" "$DIST_URL"
+  elif command -v wget >/dev/null 2>&1; then
+    wget -q -O "$TMPZIP" "$DIST_URL"
+  else
+    echo "curl or wget required to download Maven distribution." >&2
+    exit 1
+  fi
+  rm -rf "$DIST_DIR"
+  mkdir -p "$DIST_DIR"
+  if command -v unzip >/dev/null 2>&1; then
+    unzip -q "$TMPZIP" -d "$WRAPPER_DIR"
+  else
+    mkdir -p "$WRAPPER_DIR/tmp_extract"
+    python - <<PY
+import zipfile,sys
+zipfile.ZipFile('$TMPZIP').extractall('$WRAPPER_DIR')
+PY
+  fi
+  # move extracted folder to apache-maven
+  EXTRACTED=$(ls -d "$WRAPPER_DIR"/*apache-maven* 2>/dev/null || true)
+  if [ -z "$EXTRACTED" ]; then
+    # try pattern matching for apache-maven-*
+    EXTRACTED=$(ls -d "$WRAPPER_DIR"/apache-maven-* 2>/dev/null | head -n1 || true)
+  fi
+  if [ -n "$EXTRACTED" ]; then
+    mv "$EXTRACTED" "$DIST_DIR" 2>/dev/null || true
+  fi
+  rm -f "$TMPZIP"
+fi
+exec "$DIST_DIR/bin/mvn" "$@"

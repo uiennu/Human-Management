@@ -111,4 +111,5 @@ Cách 2: Chỉ chạy thêm dữ liệu mới (Nếu không muốn xóa DB cũ) 
 (Lưu ý: Cách 2 có thể báo lỗi "Table already exists" ở phần tạo bảng, nhưng sẽ vẫn chạy tiếp phần INSERT bên dưới).
 
 ## Nếu có add table hoặc insert dữ liệu, cần chạy lại file mysql thì chạy lệnh dưới đây là đc:
-cmd /c "docker exec -i hrm_mysql mysql -u root -p123456 < src/Human-Management_mysql.sql"
+cmd /c "docker exec -i hrm_mysql mysql -u root -p123456 < Human-Management_mysql.sql"
+cmd /c "docker exec -i hrm_mysql mysql -u root -p123456 < Human-Management_mysql.sql"

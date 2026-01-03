@@ -34,6 +34,15 @@ namespace HRM.Api.Repositories
                 .FirstOrDefaultAsync(stm => stm.EmployeeID == employeeId);
         }
 
+        public async Task<List<SubTeamMember>> GetTeamMembersByEmployeeAsync(int employeeId)
+        {
+            return await _context.SubTeamMembers
+                .Include(stm => stm.SubTeam)
+                    .ThenInclude(st => st.Department)
+                .Where(stm => stm.EmployeeID == employeeId)
+                .ToListAsync();
+        }
+
         public async Task<bool> IsEmployeeInTeamAsync(int employeeId)
         {
             return await _context.SubTeamMembers

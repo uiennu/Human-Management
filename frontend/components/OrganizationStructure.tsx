@@ -474,8 +474,6 @@ export function OrganizationStructure() {
 
   // --- HANDLER CHUNG ---
   const handleAddEntity = async (data: any) => {
-    // Logic giả lập, sau này bạn có thể gọi API Create ở đây
-    toast.info("Create feature coming soon with API integration")
     setAddDeptModalOpen(false)
     setAddTeamModalOpen(false)
     setAddSubTeamModalOpen(false)
@@ -561,7 +559,6 @@ export function OrganizationStructure() {
 
   const handleDeleteEmployee = (deptId: string, empId: string) => {
     // Logic xóa nhân viên khỏi team (Cần API)
-    toast.info("Remove Employee feature coming soon")
     // Find the employee and department
     const findEmployee = (depts: Department[]): { emp: Employee; dept: Department } | null => {
       for (const dept of depts) {
