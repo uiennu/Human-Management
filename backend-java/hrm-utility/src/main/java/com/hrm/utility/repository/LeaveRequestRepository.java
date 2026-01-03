@@ -11,6 +11,7 @@ import java.util.List;
 public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Integer> {
 
     // SỬA LẠI: Dùng @Query để chỉ định chính xác câu lệnh lấy dữ liệu
+    // JPQL uses the entity class name (LeaveRequest) and Java property names (managerID, status).
     @Query("SELECT l FROM LeaveRequest l WHERE l.managerID = :managerId AND l.status = :status")
     List<LeaveRequest> findByManagerIDAndStatus(@Param("managerId") Integer managerId, @Param("status") String status);
 }

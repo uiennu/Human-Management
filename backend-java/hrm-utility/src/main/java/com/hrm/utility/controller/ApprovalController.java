@@ -10,7 +10,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/approvals")
-@CrossOrigin(origins = "http://localhost:3000")
 public class ApprovalController {
 
     @Autowired
@@ -20,7 +19,7 @@ public class ApprovalController {
     @GetMapping("/pending")
     public ResponseEntity<List<LeaveRequestResponseDto>> getPendingRequests(
             @RequestParam Integer managerId) {
-            
+
         // Lưu ý: Trong thực tế, managerId nên lấy từ JWT Token để bảo mật
         List<LeaveRequestResponseDto> result = leaveService.getPendingApprovals(managerId);
         return ResponseEntity.ok(result);

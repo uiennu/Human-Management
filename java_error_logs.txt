@@ -1,0 +1,200 @@
+﻿	at java.base/java.lang.Thread.run(Unknown Source) ~[na:na]
+
+Hibernate: select lr1_0.LeaveRequestID,lr1_0.EmployeeID,lr1_0.EndDate,lr1_0.LeaveTypeID,lr1_0.ManagerID,lr1_0.RequestedDate,lr1_0.StartDate,lr1_0.Status,lr1_0.TotalDays from LeaveRequests lr1_0 where lr1_0.ManagerID=? and lr1_0.Status=?
+Hibernate: select e1_0.EmployeeID,e1_0.AvatarUrl,e1_0.FirstName,e1_0.LastName from Employees e1_0 where e1_0.EmployeeID=?
+Hibernate: select lt1_0.LeaveTypeID,lt1_0.Name from LeaveTypes lt1_0 where lt1_0.LeaveTypeID=?
+Hibernate: select lr1_0.LeaveRequestID,lr1_0.EmployeeID,lr1_0.EndDate,lr1_0.LeaveTypeID,lr1_0.ManagerID,lr1_0.RequestedDate,lr1_0.StartDate,lr1_0.Status,lr1_0.TotalDays from LeaveRequests lr1_0 where lr1_0.ManagerID=? and lr1_0.Status=?
+Hibernate: select e1_0.EmployeeID,e1_0.AvatarUrl,e1_0.FirstName,e1_0.LastName from Employees e1_0 where e1_0.EmployeeID=?
+Hibernate: select lt1_0.LeaveTypeID,lt1_0.Name from LeaveTypes lt1_0 where lt1_0.LeaveTypeID=?
+Hibernate: select lr1_0.LeaveRequestID,lr1_0.EmployeeID,lr1_0.EndDate,lr1_0.LeaveTypeID,lr1_0.ManagerID,lr1_0.RequestedDate,lr1_0.StartDate,lr1_0.Status,lr1_0.TotalDays from LeaveRequests lr1_0 where lr1_0.ManagerID=? and lr1_0.Status=?
+Hibernate: select e1_0.EmployeeID,e1_0.AvatarUrl,e1_0.FirstName,e1_0.LastName from Employees e1_0 where e1_0.EmployeeID=?
+Hibernate: select lt1_0.LeaveTypeID,lt1_0.Name from LeaveTypes lt1_0 where lt1_0.LeaveTypeID=?
+Hibernate: select lr1_0.LeaveRequestID,lr1_0.EmployeeID,lr1_0.EndDate,lr1_0.LeaveTypeID,lr1_0.ManagerID,lr1_0.RequestedDate,lr1_0.StartDate,lr1_0.Status,lr1_0.TotalDays from LeaveRequests lr1_0 where lr1_0.ManagerID=? and lr1_0.Status=?
+Hibernate: select e1_0.EmployeeID,e1_0.AvatarUrl,e1_0.FirstName,e1_0.LastName from Employees e1_0 where e1_0.EmployeeID=?
+Hibernate: select lt1_0.LeaveTypeID,lt1_0.Name from LeaveTypes lt1_0 where lt1_0.LeaveTypeID=?
+2026-01-03T11:35:43.832Z ERROR 1 --- [hrm-utility] [nio-8081-exec-4] o.a.c.c.C.[.[.[/].[dispatcherServlet]    : Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Request processing failed: java.lang.IllegalArgumentException: When allowCredentials is true, allowedOrigins cannot contain the special value "*" since that cannot be set on the "Access-Control-Allow-Origin" response header. To allow credentials to a set of origins, list them explicitly or consider using "allowedOriginPatterns" instead.] with root cause
+
+java.lang.IllegalArgumentException: When allowCredentials is true, allowedOrigins cannot contain the special value "*" since that cannot be set on the "Access-Control-Allow-Origin" response header. To allow credentials to a set of origins, list them explicitly or consider using "allowedOriginPatterns" instead.
+	at org.springframework.web.cors.CorsConfiguration.validateAllowCredentials(CorsConfiguration.java:572) ~[spring-web-6.1.3.jar!/:6.1.3]
+	at org.springframework.web.servlet.handler.AbstractHandlerMapping.getHandler(AbstractHandlerMapping.java:542) ~[spring-webmvc-6.1.3.jar!/:6.1.3]
+	at org.springframework.web.servlet.DispatcherServlet.getHandler(DispatcherServlet.java:1283) ~[spring-webmvc-6.1.3.jar!/:6.1.3]
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1065) ~[spring-webmvc-6.1.3.jar!/:6.1.3]
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979) ~[spring-webmvc-6.1.3.jar!/:6.1.3]
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014) ~[spring-webmvc-6.1.3.jar!/:6.1.3]
+	at org.springframework.web.servlet.FrameworkServlet.doGet(FrameworkServlet.java:903) ~[spring-webmvc-6.1.3.jar!/:6.1.3]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:564) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885) ~[spring-webmvc-6.1.3.jar!/:6.1.3]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:205) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51) ~[tomcat-embed-websocket-10.1.18.jar!/:na]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100) ~[spring-web-6.1.3.jar!/:6.1.3]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.3.jar!/:6.1.3]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93) ~[spring-web-6.1.3.jar!/:6.1.3]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.3.jar!/:6.1.3]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201) ~[spring-web-6.1.3.jar!/:6.1.3]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.3.jar!/:6.1.3]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:482) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:115) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:340) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:391) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:896) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1744) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1191) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:61) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at java.base/java.lang.Thread.run(Unknown Source) ~[na:na]
+
+Hibernate: select lr1_0.LeaveRequestID,lr1_0.EmployeeID,lr1_0.EndDate,lr1_0.LeaveTypeID,lr1_0.ManagerID,lr1_0.RequestedDate,lr1_0.StartDate,lr1_0.Status,lr1_0.TotalDays from LeaveRequests lr1_0 where lr1_0.ManagerID=? and lr1_0.Status=?
+Hibernate: select e1_0.EmployeeID,e1_0.AvatarUrl,e1_0.FirstName,e1_0.LastName from Employees e1_0 where e1_0.EmployeeID=?
+Hibernate: select lt1_0.LeaveTypeID,lt1_0.Name from LeaveTypes lt1_0 where lt1_0.LeaveTypeID=?
+Hibernate: select lr1_0.LeaveRequestID,lr1_0.EmployeeID,lr1_0.EndDate,lr1_0.LeaveTypeID,lr1_0.ManagerID,lr1_0.RequestedDate,lr1_0.StartDate,lr1_0.Status,lr1_0.TotalDays from LeaveRequests lr1_0 where lr1_0.ManagerID=? and lr1_0.Status=?
+Hibernate: select e1_0.EmployeeID,e1_0.AvatarUrl,e1_0.FirstName,e1_0.LastName from Employees e1_0 where e1_0.EmployeeID=?
+Hibernate: select lt1_0.LeaveTypeID,lt1_0.Name from LeaveTypes lt1_0 where lt1_0.LeaveTypeID=?
+Hibernate: select lr1_0.LeaveRequestID,lr1_0.EmployeeID,lr1_0.EndDate,lr1_0.LeaveTypeID,lr1_0.ManagerID,lr1_0.RequestedDate,lr1_0.StartDate,lr1_0.Status,lr1_0.TotalDays from LeaveRequests lr1_0 where lr1_0.ManagerID=? and lr1_0.Status=?
+Hibernate: select e1_0.EmployeeID,e1_0.AvatarUrl,e1_0.FirstName,e1_0.LastName from Employees e1_0 where e1_0.EmployeeID=?
+Hibernate: select lt1_0.LeaveTypeID,lt1_0.Name from LeaveTypes lt1_0 where lt1_0.LeaveTypeID=?
+Hibernate: select lr1_0.LeaveRequestID,lr1_0.EmployeeID,lr1_0.EndDate,lr1_0.LeaveTypeID,lr1_0.ManagerID,lr1_0.RequestedDate,lr1_0.StartDate,lr1_0.Status,lr1_0.TotalDays from LeaveRequests lr1_0 where lr1_0.ManagerID=? and lr1_0.Status=?
+Hibernate: select e1_0.EmployeeID,e1_0.AvatarUrl,e1_0.FirstName,e1_0.LastName from Employees e1_0 where e1_0.EmployeeID=?
+Hibernate: select lt1_0.LeaveTypeID,lt1_0.Name from LeaveTypes lt1_0 where lt1_0.LeaveTypeID=?
+2026-01-03T11:39:31.836Z ERROR 1 --- [hrm-utility] [nio-8081-exec-2] o.a.c.c.C.[.[.[/].[dispatcherServlet]    : Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Request processing failed: java.lang.IllegalArgumentException: When allowCredentials is true, allowedOrigins cannot contain the special value "*" since that cannot be set on the "Access-Control-Allow-Origin" response header. To allow credentials to a set of origins, list them explicitly or consider using "allowedOriginPatterns" instead.] with root cause
+
+java.lang.IllegalArgumentException: When allowCredentials is true, allowedOrigins cannot contain the special value "*" since that cannot be set on the "Access-Control-Allow-Origin" response header. To allow credentials to a set of origins, list them explicitly or consider using "allowedOriginPatterns" instead.
+	at org.springframework.web.cors.CorsConfiguration.validateAllowCredentials(CorsConfiguration.java:572) ~[spring-web-6.1.3.jar!/:6.1.3]
+	at org.springframework.web.servlet.handler.AbstractHandlerMapping.getHandler(AbstractHandlerMapping.java:542) ~[spring-webmvc-6.1.3.jar!/:6.1.3]
+	at org.springframework.web.servlet.DispatcherServlet.getHandler(DispatcherServlet.java:1283) ~[spring-webmvc-6.1.3.jar!/:6.1.3]
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1065) ~[spring-webmvc-6.1.3.jar!/:6.1.3]
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979) ~[spring-webmvc-6.1.3.jar!/:6.1.3]
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014) ~[spring-webmvc-6.1.3.jar!/:6.1.3]
+	at org.springframework.web.servlet.FrameworkServlet.doGet(FrameworkServlet.java:903) ~[spring-webmvc-6.1.3.jar!/:6.1.3]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:564) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885) ~[spring-webmvc-6.1.3.jar!/:6.1.3]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:205) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51) ~[tomcat-embed-websocket-10.1.18.jar!/:na]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100) ~[spring-web-6.1.3.jar!/:6.1.3]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.3.jar!/:6.1.3]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93) ~[spring-web-6.1.3.jar!/:6.1.3]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.3.jar!/:6.1.3]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201) ~[spring-web-6.1.3.jar!/:6.1.3]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.3.jar!/:6.1.3]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:482) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:115) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:340) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:391) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:896) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1744) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1191) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:61) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at java.base/java.lang.Thread.run(Unknown Source) ~[na:na]
+
+Hibernate: select lr1_0.LeaveRequestID,lr1_0.EmployeeID,lr1_0.EndDate,lr1_0.LeaveTypeID,lr1_0.ManagerID,lr1_0.RequestedDate,lr1_0.StartDate,lr1_0.Status,lr1_0.TotalDays from LeaveRequests lr1_0 where lr1_0.ManagerID=? and lr1_0.Status=?
+Hibernate: select e1_0.EmployeeID,e1_0.AvatarUrl,e1_0.FirstName,e1_0.LastName from Employees e1_0 where e1_0.EmployeeID=?
+Hibernate: select lt1_0.LeaveTypeID,lt1_0.Name from LeaveTypes lt1_0 where lt1_0.LeaveTypeID=?
+Hibernate: select lr1_0.LeaveRequestID,lr1_0.EmployeeID,lr1_0.EndDate,lr1_0.LeaveTypeID,lr1_0.ManagerID,lr1_0.RequestedDate,lr1_0.StartDate,lr1_0.Status,lr1_0.TotalDays from LeaveRequests lr1_0 where lr1_0.ManagerID=? and lr1_0.Status=?
+Hibernate: select e1_0.EmployeeID,e1_0.AvatarUrl,e1_0.FirstName,e1_0.LastName from Employees e1_0 where e1_0.EmployeeID=?
+Hibernate: select lt1_0.LeaveTypeID,lt1_0.Name from LeaveTypes lt1_0 where lt1_0.LeaveTypeID=?
+Hibernate: select lr1_0.LeaveRequestID,lr1_0.EmployeeID,lr1_0.EndDate,lr1_0.LeaveTypeID,lr1_0.ManagerID,lr1_0.RequestedDate,lr1_0.StartDate,lr1_0.Status,lr1_0.TotalDays from LeaveRequests lr1_0 where lr1_0.ManagerID=? and lr1_0.Status=?
+Hibernate: select e1_0.EmployeeID,e1_0.AvatarUrl,e1_0.FirstName,e1_0.LastName from Employees e1_0 where e1_0.EmployeeID=?
+Hibernate: select lt1_0.LeaveTypeID,lt1_0.Name from LeaveTypes lt1_0 where lt1_0.LeaveTypeID=?
+Hibernate: select lr1_0.LeaveRequestID,lr1_0.EmployeeID,lr1_0.EndDate,lr1_0.LeaveTypeID,lr1_0.ManagerID,lr1_0.RequestedDate,lr1_0.StartDate,lr1_0.Status,lr1_0.TotalDays from LeaveRequests lr1_0 where lr1_0.ManagerID=? and lr1_0.Status=?
+Hibernate: select e1_0.EmployeeID,e1_0.AvatarUrl,e1_0.FirstName,e1_0.LastName from Employees e1_0 where e1_0.EmployeeID=?
+Hibernate: select lt1_0.LeaveTypeID,lt1_0.Name from LeaveTypes lt1_0 where lt1_0.LeaveTypeID=?
+Hibernate: select lr1_0.LeaveRequestID,lr1_0.EmployeeID,lr1_0.EndDate,lr1_0.LeaveTypeID,lr1_0.ManagerID,lr1_0.RequestedDate,lr1_0.StartDate,lr1_0.Status,lr1_0.TotalDays from LeaveRequests lr1_0 where lr1_0.ManagerID=? and lr1_0.Status=?
+Hibernate: select e1_0.EmployeeID,e1_0.AvatarUrl,e1_0.FirstName,e1_0.LastName from Employees e1_0 where e1_0.EmployeeID=?
+Hibernate: select lt1_0.LeaveTypeID,lt1_0.Name from LeaveTypes lt1_0 where lt1_0.LeaveTypeID=?
+Hibernate: select lr1_0.LeaveRequestID,lr1_0.EmployeeID,lr1_0.EndDate,lr1_0.LeaveTypeID,lr1_0.ManagerID,lr1_0.RequestedDate,lr1_0.StartDate,lr1_0.Status,lr1_0.TotalDays from LeaveRequests lr1_0 where lr1_0.ManagerID=? and lr1_0.Status=?
+Hibernate: select e1_0.EmployeeID,e1_0.AvatarUrl,e1_0.FirstName,e1_0.LastName from Employees e1_0 where e1_0.EmployeeID=?
+Hibernate: select lt1_0.LeaveTypeID,lt1_0.Name from LeaveTypes lt1_0 where lt1_0.LeaveTypeID=?
+2026-01-03T11:44:53.425Z ERROR 1 --- [hrm-utility] [nio-8081-exec-1] o.a.c.c.C.[.[.[/].[dispatcherServlet]    : Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Request processing failed: java.lang.IllegalArgumentException: When allowCredentials is true, allowedOrigins cannot contain the special value "*" since that cannot be set on the "Access-Control-Allow-Origin" response header. To allow credentials to a set of origins, list them explicitly or consider using "allowedOriginPatterns" instead.] with root cause
+
+java.lang.IllegalArgumentException: When allowCredentials is true, allowedOrigins cannot contain the special value "*" since that cannot be set on the "Access-Control-Allow-Origin" response header. To allow credentials to a set of origins, list them explicitly or consider using "allowedOriginPatterns" instead.
+	at org.springframework.web.cors.CorsConfiguration.validateAllowCredentials(CorsConfiguration.java:572) ~[spring-web-6.1.3.jar!/:6.1.3]
+	at org.springframework.web.servlet.handler.AbstractHandlerMapping.getHandler(AbstractHandlerMapping.java:542) ~[spring-webmvc-6.1.3.jar!/:6.1.3]
+	at org.springframework.web.servlet.DispatcherServlet.getHandler(DispatcherServlet.java:1283) ~[spring-webmvc-6.1.3.jar!/:6.1.3]
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1065) ~[spring-webmvc-6.1.3.jar!/:6.1.3]
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979) ~[spring-webmvc-6.1.3.jar!/:6.1.3]
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014) ~[spring-webmvc-6.1.3.jar!/:6.1.3]
+	at org.springframework.web.servlet.FrameworkServlet.doGet(FrameworkServlet.java:903) ~[spring-webmvc-6.1.3.jar!/:6.1.3]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:564) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885) ~[spring-webmvc-6.1.3.jar!/:6.1.3]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:205) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51) ~[tomcat-embed-websocket-10.1.18.jar!/:na]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100) ~[spring-web-6.1.3.jar!/:6.1.3]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.3.jar!/:6.1.3]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93) ~[spring-web-6.1.3.jar!/:6.1.3]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.3.jar!/:6.1.3]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201) ~[spring-web-6.1.3.jar!/:6.1.3]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.3.jar!/:6.1.3]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:482) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:115) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:340) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:391) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:896) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1744) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1191) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:61) ~[tomcat-embed-core-10.1.18.jar!/:na]
+	at java.base/java.lang.Thread.run(Unknown Source) ~[na:na]
+
+Hibernate: select lr1_0.LeaveRequestID,lr1_0.EmployeeID,lr1_0.EndDate,lr1_0.LeaveTypeID,lr1_0.ManagerID,lr1_0.RequestedDate,lr1_0.StartDate,lr1_0.Status,lr1_0.TotalDays from LeaveRequests lr1_0 where lr1_0.ManagerID=? and lr1_0.Status=?
+Hibernate: select e1_0.EmployeeID,e1_0.AvatarUrl,e1_0.FirstName,e1_0.LastName from Employees e1_0 where e1_0.EmployeeID=?
+Hibernate: select lt1_0.LeaveTypeID,lt1_0.Name from LeaveTypes lt1_0 where lt1_0.LeaveTypeID=?
+Hibernate: select lr1_0.LeaveRequestID,lr1_0.EmployeeID,lr1_0.EndDate,lr1_0.LeaveTypeID,lr1_0.ManagerID,lr1_0.RequestedDate,lr1_0.StartDate,lr1_0.Status,lr1_0.TotalDays from LeaveRequests lr1_0 where lr1_0.ManagerID=? and lr1_0.Status=?
+Hibernate: select e1_0.EmployeeID,e1_0.AvatarUrl,e1_0.FirstName,e1_0.LastName from Employees e1_0 where e1_0.EmployeeID=?
+Hibernate: select lt1_0.LeaveTypeID,lt1_0.Name from LeaveTypes lt1_0 where lt1_0.LeaveTypeID=?
+Hibernate: select lr1_0.LeaveRequestID,lr1_0.EmployeeID,lr1_0.EndDate,lr1_0.LeaveTypeID,lr1_0.ManagerID,lr1_0.RequestedDate,lr1_0.StartDate,lr1_0.Status,lr1_0.TotalDays from LeaveRequests lr1_0 where lr1_0.ManagerID=? and lr1_0.Status=?
+Hibernate: select e1_0.EmployeeID,e1_0.AvatarUrl,e1_0.FirstName,e1_0.LastName from Employees e1_0 where e1_0.EmployeeID=?
+Hibernate: select lt1_0.LeaveTypeID,lt1_0.Name from LeaveTypes lt1_0 where lt1_0.LeaveTypeID=?
+Hibernate: select lr1_0.LeaveRequestID,lr1_0.EmployeeID,lr1_0.EndDate,lr1_0.LeaveTypeID,lr1_0.ManagerID,lr1_0.RequestedDate,lr1_0.StartDate,lr1_0.Status,lr1_0.TotalDays from LeaveRequests lr1_0 where lr1_0.ManagerID=? and lr1_0.Status=?
+Hibernate: select e1_0.EmployeeID,e1_0.AvatarUrl,e1_0.FirstName,e1_0.LastName from Employees e1_0 where e1_0.EmployeeID=?
+Hibernate: select lt1_0.LeaveTypeID,lt1_0.Name from LeaveTypes lt1_0 where lt1_0.LeaveTypeID=?
+Hibernate: select lr1_0.LeaveRequestID,lr1_0.EmployeeID,lr1_0.EndDate,lr1_0.LeaveTypeID,lr1_0.ManagerID,lr1_0.RequestedDate,lr1_0.StartDate,lr1_0.Status,lr1_0.TotalDays from LeaveRequests lr1_0 where lr1_0.ManagerID=? and lr1_0.Status=?
+Hibernate: select e1_0.EmployeeID,e1_0.AvatarUrl,e1_0.FirstName,e1_0.LastName from Employees e1_0 where e1_0.EmployeeID=?
+Hibernate: select lt1_0.LeaveTypeID,lt1_0.Name from LeaveTypes lt1_0 where lt1_0.LeaveTypeID=?
