@@ -632,8 +632,31 @@ export function OrganizationStructure() {
   }
 
   const confirmMoveEmployee = () => {
-    toast.info("Move Employee feature coming soon with API integration")
-    setMoveModalOpen(false)
+    (async () => {
+      if (!draggedEmployee || !sourceDept || !targetDept) return
+      try {
+        const employeeId = parseInt(draggedEmployee.id)
+        const targetTeamId = parseInt(targetDept.id.replace("team-", ""))
+
+        if (isNaN(employeeId) || isNaN(targetTeamId)) {
+          toast.error("Invalid employee or team ID")
+          setMoveModalOpen(false)
+          return
+        }
+
+        await organizationService.moveEmployee(employeeId, targetTeamId)
+        toast.success("Employee moved successfully")
+        await fetchData()
+      } catch (err: any) {
+        console.error('Move employee failed', err)
+        toast.error(err?.message || 'Failed to move employee')
+      } finally {
+        setMoveModalOpen(false)
+        setDraggedEmployee(null)
+        setSourceDept(null)
+        setTargetDept(null)
+      }
+    })()
   }
 
   // --- ZOOM & PAN STATE ---

@@ -174,4 +174,23 @@ export const organizationService = {
         }
         return res.json()
     }
+    ,
+    moveEmployee: async (employeeId: number, targetTeamId: number) => {
+        const res = await fetch(`${API_URL}/organization/move-employee`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ employeeId, targetTeamId }),
+        })
+
+        if (!res.ok) {
+            const bodyText = await res.text()
+            let parsed: any = null
+            try { parsed = JSON.parse(bodyText) } catch { parsed = bodyText }
+            console.error('moveEmployee failed', { status: res.status, body: parsed })
+            const message = parsed && parsed.message ? parsed.message : (typeof parsed === 'string' ? parsed : 'Failed to move employee')
+            throw new Error(message)
+        }
+
+        return res.json()
+    }
 }

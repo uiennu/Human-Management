@@ -213,5 +213,92 @@ namespace HRM.Api.Repositories
                 new MySqlConnector.MySqlParameter("@PerformedAt", DateTime.Now)
             );
         }
+
+        public async Task<(bool Success, string Message)> MoveEmployeeAsync(int employeeId, int targetTeamId, int performedBy)
+        {
+            // Atomic move: remove existing membership (if any), then add to target team, then log move
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var targetTeam = await _context.SubTeams
+                    .Include(st => st.Department)
+                    .FirstOrDefaultAsync(st => st.SubTeamID == targetTeamId);
+
+                if (targetTeam == null)
+                    return (false, "Target team not found");
+
+                var existingMembership = await _context.SubTeamMembers
+                    .Include(stm => stm.SubTeam)
+                    .FirstOrDefaultAsync(stm => stm.EmployeeID == employeeId);
+
+                int? oldTeamId = null;
+                string? oldTeamName = null;
+                if (existingMembership != null)
+                {
+                    oldTeamId = existingMembership.SubTeamID;
+                    oldTeamName = existingMembership.SubTeam?.TeamName;
+
+                    // Ensure same department if old team exists
+                    var oldTeam = await _context.SubTeams
+                        .Include(st => st.Department)
+                        .FirstOrDefaultAsync(st => st.SubTeamID == oldTeamId.Value);
+
+                    if (oldTeam == null)
+                        return (false, "Old team not found");
+
+                    if (oldTeam.DepartmentID != targetTeam.DepartmentID)
+                        return (false, "Cannot move employee to a team in a different department");
+
+                    // Remove old membership
+                    _context.SubTeamMembers.Remove(existingMembership);
+                    await _context.SaveChangesAsync();
+                }
+
+                // Add new membership
+                var newMember = new SubTeamMember { SubTeamID = targetTeamId, EmployeeID = employeeId };
+                await _context.SubTeamMembers.AddAsync(newMember);
+                await _context.SaveChangesAsync();
+
+                // Log move event
+                var employee = await _context.Employees.FirstOrDefaultAsync(e => e.EmployeeID == employeeId);
+                var employeeName = employee != null ? $"{employee.FirstName} {employee.LastName}" : "";
+
+                var eventData = new
+                {
+                    EmployeeID = employeeId,
+                    EmployeeName = employeeName,
+                    OldSubTeamID = oldTeamId,
+                    NewSubTeamID = targetTeamId,
+                    OldSubTeamName = oldTeamName,
+                    NewSubTeamName = targetTeam.TeamName,
+                    DepartmentID = targetTeam.DepartmentID,
+                    Description = $"Moved {employeeName} from {oldTeamName ?? "(none)"} to {targetTeam.TeamName}"
+                };
+
+                var sql = @"
+                    INSERT INTO OrganizationStructureLogs 
+                    (EventType, TargetEntity, TargetID, EventData, PerformedBy, PerformedAt) 
+                    VALUES 
+                    (@EventType, @TargetEntity, @TargetID, @EventData, @PerformedBy, @PerformedAt)";
+
+                await _context.Database.ExecuteSqlRawAsync(sql,
+                    new MySqlConnector.MySqlParameter("@EventType", "MoveEmployeeToTeam"),
+                    new MySqlConnector.MySqlParameter("@TargetEntity", "Employee"),
+                    new MySqlConnector.MySqlParameter("@TargetID", employeeId),
+                    new MySqlConnector.MySqlParameter("@EventData", JsonSerializer.Serialize(eventData)),
+                    new MySqlConnector.MySqlParameter("@PerformedBy", performedBy),
+                    new MySqlConnector.MySqlParameter("@PerformedAt", DateTime.Now)
+                );
+
+                await transaction.CommitAsync();
+                return (true, "Employee moved successfully");
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                Console.WriteLine($"Error moving employee: {ex.Message}");
+                return (false, "An error occurred while moving employee");
+            }
+        }
     }
 }

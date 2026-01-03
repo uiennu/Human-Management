@@ -405,5 +405,27 @@ namespace HRM.Api.Services
                 return (false, "An error occurred while updating team");
             }
         }
+
+        public async Task<(bool Success, string Message)> MoveEmployeeAsync(int employeeId, int targetTeamId)
+        {
+            try
+            {
+                // Validate employee exists
+                var employee = await _teamRepository.GetEmployeeByIdAsync(employeeId);
+                if (employee == null) return (false, "Employee not found");
+                if (!employee.IsActive) return (false, "Employee is locked or inactive and cannot be moved");
+
+                // Delegate atomic move to repository which ensures transaction and logging
+                // performedBy currently hardcoded; ideally should be retrieved from context
+                var performedBy = 1;
+                var result = await _teamRepository.MoveEmployeeAsync(employeeId, targetTeamId, performedBy);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error moving employee in service: {ex.Message}");
+                return (false, "An error occurred while moving employee");
+            }
+        }
     }
 }

@@ -88,5 +88,10 @@ namespace HRM.Api.Repositories
         /// Log team creation action to OrganizationStructureLogs
         /// </summary>
         Task LogTeamCreationAsync(int teamId, string teamName, string description, int departmentId, string departmentCode, int? teamLeadId, int performedBy);
+
+        /// <summary>
+        /// Move an employee from their current team (if any) to target team atomically and log the action
+        /// </summary>
+        Task<(bool Success, string Message)> MoveEmployeeAsync(int employeeId, int targetTeamId, int performedBy);
     }
 }

@@ -177,24 +177,17 @@ namespace HRM.Api.Controllers
             return BadRequest(new { success = false, message = result.Message });
         }
 
+        [Authorize(Roles = "Admin,HR Manager,HR Employee")]
         [HttpPost("move-employee")]
         public async Task<IActionResult> MoveEmployee([FromBody] MoveEmployeeDto request)
         {
-             // 1. Remove from current team (if any) - This requires knowing the current team. 
-             // Ideally the request should have CurrentTeamId or we fetch it.
-             // But simplified Move: just try Add. If "already in team", we need to Remove first.
-             
-             // Check if employee is in a team
-             // (Logic simplified: Allow UI to handle remove first or backend does it)
-             // Let's assume frontend calls Remove then Add, OR we do it here if we want atomic 'Move'.
-             // For now, implementing Atomic Move via TeamService would be better, but 'MoveEmployeeAsync' is missing.
-             // I will use _teamService.AddEmployeeToTeamAsync which fails if already assigned.
-             
-             // TODO: Real Move Impl
-             var addResult = await _teamService.AddEmployeeToTeamAsync(request.TargetTeamId, request.EmployeeId);
-             if (addResult.Success) return Ok(new { success = true, message = addResult.Message });
-             
-             return BadRequest(new { success = false, message = addResult.Message });
+            if (request == null || request.EmployeeId <= 0 || request.TargetTeamId <= 0)
+                return BadRequest(new { success = false, message = "Invalid request data" });
+
+            var result = await _teamService.MoveEmployeeAsync(request.EmployeeId, request.TargetTeamId);
+            if (result.Success) return Ok(new { success = true, message = result.Message });
+            if (result.Message.Contains("not found")) return NotFound(new { success = false, message = result.Message });
+            return BadRequest(new { success = false, message = result.Message });
         }
 
         [HttpPut("departments/{id}")]
