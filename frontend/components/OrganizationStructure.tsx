@@ -370,15 +370,33 @@ export function OrganizationStructure() {
         organizationService.getAllTeams(),
         organizationService.getAllEmployees(),
       ])
+      // -------------------------------------------------------------
+      // BƯỚC 1: TÌM ADMIN TRONG DANH SÁCH NHÂN VIÊN (MỚI THÊM)
+      // -------------------------------------------------------------
+      // Tìm người có position hoặc RoleName là 'Admin'
+      // Lưu ý: Đảm bảo API getAllEmployees trả về trường 'position' hoặc 'RoleName' đúng
+      const adminUser = empData.find((e: any) => 
+          e.position === 'Admin' || 
+          e.Position === 'Admin' || 
+          e.roleName === 'Admin' ||
+          e.RoleName === 'Admin'
+      );
 
-      // 1. Create Root Node
+      // -------------------------------------------------------------
+      // BƯỚC 2: TẠO ROOT NODE VỚI THÔNG TIN ADMIN (ĐÃ SỬA)
+      // -------------------------------------------------------------
       const rootNode: Department = {
         id: "root",
-        name: "Human Resource Management",
+        name: "LeaveFlow Company",
         code: "ROOT",
-        manager: "CEO",
-        managerId: "ceo-001",
-        description: "Organization Root",
+        
+        // Nếu tìm thấy Admin thì hiện tên, không thì hiện mặc định
+        manager: adminUser ? (adminUser.name ) : "No admin has been assigned yet",
+        
+        // Gán ID của Admin (để các Modal hoạt động đúng nếu cần)
+        managerId: adminUser ? adminUser.employeeID.toString() : "",
+        
+        description: "Company root department.",
         employees: [],
         subdepartments: [],
       }
