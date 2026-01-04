@@ -1,16 +1,17 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { ArrowLeft, CloudUpload } from "lucide-react"
+import { ArrowLeft, CloudUpload, Check } from "lucide-react"
 import { leaveService } from "@/lib/api/leave-service"
 import type { LeaveType, LeaveBalance } from "@/types/leave"
 
 interface LeaveRequestFormProps {
   employeeId: number | null;
   onCancel: () => void;
+  onSuccess?: (requestId: number) => void;
 }
 
-export default function LeaveRequestForm({ employeeId, onCancel }: LeaveRequestFormProps) {
+export default function LeaveRequestForm({ employeeId, onCancel, onSuccess }: LeaveRequestFormProps) {
   // State
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
   const [balances, setBalances] = useState<LeaveBalance[]>([]);
@@ -30,6 +31,7 @@ export default function LeaveRequestForm({ employeeId, onCancel }: LeaveRequestF
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [primaryApprover, setPrimaryApprover] = useState<string | null>("");
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const topRef = useRef<HTMLDivElement>(null);
 
@@ -139,12 +141,23 @@ export default function LeaveRequestForm({ employeeId, onCancel }: LeaveRequestF
     }
     if (!employeeId) return;
     try {
-      await leaveService.createLeaveRequest(employeeId, {
+      const response = await leaveService.createLeaveRequest(employeeId, {
         ...formData,
         attachments: files
       });
-      alert("Leave request submitted successfully!");
-      onCancel();
+
+      // Show success modal
+      setShowSuccessModal(true);
+
+      // Wait 2 seconds then navigate to detail
+      setTimeout(() => {
+        setShowSuccessModal(false);
+        if (onSuccess && response?.leaveRequestID) {
+          onSuccess(response.leaveRequestID);
+        } else {
+          onCancel();
+        }
+      }, 2000);
     } catch (err: any) {
       setError(err.message || "Failed to submit request");
     } finally {
@@ -442,6 +455,24 @@ export default function LeaveRequestForm({ employeeId, onCancel }: LeaveRequestF
           </div>
         </div>
       </div>
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-8 text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
+              <Check className="h-10 w-10 text-emerald-600" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">Success!</h3>
+            <p className="text-gray-600">
+              Your leave request has been submitted successfully.
+            </p>
+            <p className="text-sm text-gray-500 mt-4">
+              Redirecting to request details...
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

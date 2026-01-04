@@ -113,3 +113,7 @@ Cách 2: Chỉ chạy thêm dữ liệu mới (Nếu không muốn xóa DB cũ) 
 ## Nếu có add table hoặc insert dữ liệu, cần chạy lại file mysql thì chạy lệnh dưới đây là đc:
 cmd /c "docker exec -i hrm_mysql mysql -u root -p123456 < Human-Management_mysql.sql"
 cmd /c "docker exec -i hrm_mysql mysql -u root -p123456 < Human-Management_mysql.sql"
+Get-Content Human-Management_mysql.sql | docker exec -i hrm_mysql mysql -u root -p123456 HRM_System
+
+## Rebuild java
+docker-compose up -d --build hrm-utility-service

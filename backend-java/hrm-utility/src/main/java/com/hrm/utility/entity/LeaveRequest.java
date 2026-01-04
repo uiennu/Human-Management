@@ -34,6 +34,12 @@ public class LeaveRequest {
     @Column(name = "RequestedDate")
     private LocalDateTime requestedDate;
 
+    @Column(name = "ApprovalNote")
+    private String approvalNote;
+
+    @Column(name = "ApprovedDate")
+    private LocalDateTime approvedDate;
+
     // Join để lấy thông tin người xin nghỉ (Employee)
     @ManyToOne
     @JoinColumn(name = "EmployeeID", insertable = false, updatable = false)

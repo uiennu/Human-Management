@@ -6,6 +6,9 @@ import com.hrm.utility.repository.LeaveRequestRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -20,6 +23,14 @@ public class LeaveService {
         List<LeaveRequest> requests = leaveRequestRepository.findByManagerIDAndStatus(managerId, "Pending");
 
         // 2. Convert Entity sang DTO
+        return requests.stream().map(this::mapToDto).collect(Collectors.toList());
+    }
+
+    public List<LeaveRequestResponseDto> getAllApprovals(Integer managerId) {
+        // Lấy TẤT CẢ đơn của manager (không phân biệt status)
+        List<LeaveRequest> requests = leaveRequestRepository.findByManagerID(managerId);
+
+        // Convert Entity sang DTO
         return requests.stream().map(this::mapToDto).collect(Collectors.toList());
     }
 
@@ -42,7 +53,31 @@ public class LeaveService {
         if (entity.getLeaveType() != null) {
             dto.setLeaveTypeName(entity.getLeaveType().getName());
         }
-        
+
         return dto;
+    }
+
+    public void approveRequest(Integer leaveRequestID, String note) {
+        LeaveRequest request = leaveRequestRepository.findById(leaveRequestID)
+                .orElseThrow(() -> new RuntimeException("Leave request not found"));
+
+        request.setStatus("Approved");
+        request.setApprovalNote(note);
+        // Use Vietnam timezone (GMT+7)
+        request.setApprovedDate(ZonedDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime());
+
+        leaveRequestRepository.save(request);
+    }
+
+    public void rejectRequest(Integer leaveRequestID, String note) {
+        LeaveRequest request = leaveRequestRepository.findById(leaveRequestID)
+                .orElseThrow(() -> new RuntimeException("Leave request not found"));
+
+        request.setStatus("Rejected");
+        request.setApprovalNote(note);
+        // Use Vietnam timezone (GMT+7)
+        request.setApprovedDate(ZonedDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime());
+
+        leaveRequestRepository.save(request);
     }
 }

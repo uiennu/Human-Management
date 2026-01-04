@@ -144,4 +144,30 @@ export const leaveService = {
     }
     return res.json()
   },
+
+  async approveRequest(requestId: number, comment?: string) {
+    const res = await fetch(`http://localhost:8081/api/approvals/${requestId}/approve`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ note: comment || '' }),
+    })
+    if (!res.ok) {
+      const error = await res.json()
+      throw new Error(error.message || 'Failed to approve request')
+    }
+    return res.json()
+  },
+
+  async declineRequest(requestId: number, comment: string) {
+    const res = await fetch(`http://localhost:8081/api/approvals/${requestId}/reject`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ note: comment }),
+    })
+    if (!res.ok) {
+      const error = await res.json()
+      throw new Error(error.message || 'Failed to decline request')
+    }
+    return res.json()
+  },
 }

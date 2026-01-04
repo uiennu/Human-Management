@@ -198,8 +198,19 @@ namespace HRM.Api.Services
                 detailDto.Attachments = _fileStorageService.GetFiles(leaveRequest.AttachmentPath);
             }
 
-            // Populate approval info from history if approved or rejected
-            if (leaveRequest.Histories != null && leaveRequest.Histories.Any())
+            // Populate approval info from ApprovalNote and ApprovedDate fields (set by Java backend)
+            if ((leaveRequest.Status == LeaveStatus.Approved || leaveRequest.Status == LeaveStatus.Rejected) 
+                && leaveRequest.ApprovedDate.HasValue)
+            {
+                detailDto.ApprovalInfo = new ApprovalInfoDto
+                {
+                    ApproverName = $"{leaveRequest.Manager?.FirstName} {leaveRequest.Manager?.LastName}",
+                    ActionDate = leaveRequest.ApprovedDate.Value,
+                    Note = leaveRequest.ApprovalNote
+                };
+            }
+            // Fallback: Try to get from history if ApprovedDate is not set (for old records)
+            else if (leaveRequest.Histories != null && leaveRequest.Histories.Any())
             {
                 var approvalHistory = leaveRequest.Histories
                     .Where(h => h.Status == LeaveStatus.Approved || h.Status == LeaveStatus.Rejected)

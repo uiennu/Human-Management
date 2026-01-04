@@ -17,6 +17,8 @@ namespace HRM.Api.Models
         public string Status { get; set; } = LeaveStatus.Pending;
         public DateTime RequestedDate { get; set; } = DateTime.Now;
         public string? AttachmentPath { get; set; }
+        public string? ApprovalNote { get; set; }
+        public DateTime? ApprovedDate { get; set; }
 
         // Navigation
         public virtual Employee? Employee { get; set; }

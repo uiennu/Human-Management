@@ -143,7 +143,8 @@ export default function LeaveHistoryPage() {
       const fetchApprovals = async () => {
         setLoadingApprovals(true);
         try {
-          const response = await fetch(`http://localhost:8081/api/approvals/pending?managerId=${employeeId}`);
+          // Changed from /pending to /all to get ALL approval requests
+          const response = await fetch(`http://localhost:8081/api/approvals/all?managerId=${employeeId}`);
 
           if (response.ok) {
             const data = await response.json();
@@ -211,7 +212,7 @@ export default function LeaveHistoryPage() {
       }
       fetchStats();
     }
-  }, [employeeId, dateRangeFilter, leaveTypeFilter]);
+  }, [employeeId, statusFilter, dateRangeFilter, leaveTypeFilter]);
 
   const loadLeaveTypes = async () => {
     try {
@@ -273,6 +274,20 @@ export default function LeaveHistoryPage() {
     alert(`Rejecting request ${id} (Integrate API later)`);
   }
 
+  const handleRequestCreated = async (requestId: number) => {
+    // Close the form
+    setShowCreateForm(false);
+
+    // Fetch the newly created request details and show detail view
+    try {
+      const requestDetail = await leaveService.getLeaveRequestDetail(requestId);
+      setViewingRequest(requestDetail);
+    } catch (error) {
+      console.error("Failed to load request details", error);
+      // If failed to load details, just close the form
+    }
+  }
+
   // Filter approval requests
   const filteredApprovalRequests = approvalRequests.filter((req: any) => {
     // Status filter
@@ -314,6 +329,7 @@ export default function LeaveHistoryPage() {
       <LeaveRequestForm
         employeeId={employeeId}
         onCancel={() => setShowCreateForm(false)}
+        onSuccess={handleRequestCreated}
       />
     )
   }

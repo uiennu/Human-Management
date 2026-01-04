@@ -27,15 +27,27 @@ export default function LeaveRequestDetail({ request, onBack, isManagerView = fa
 
   const [downloading, setDownloading] = useState(false);
 
+  // Approval/Decline modal state
+  const [showApproveModal, setShowApproveModal] = useState(false)
+  const [showDeclineModal, setShowDeclineModal] = useState(false)
+  const [comment, setComment] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+  const [commentError, setCommentError] = useState("")
+
+  // Success modal state
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [successMessage, setSuccessMessage] = useState("")
+
+
   useEffect(() => {
     const loadDetails = async () => {
       try {
         // --- SỬA LỖI Ở ĐÂY: Thêm ": any" để TypeScript không báo đỏ ---
         const data: any = await leaveService.getLeaveRequestDetail(request.leaveRequestID);
-        
+
         // Nếu API trả về thiếu employeeName nhưng request cha có, ta merge vào
         if (!data.employeeName && request.employeeName) {
-            data.employeeName = request.employeeName;
+          data.employeeName = request.employeeName;
         }
         setDetails(data);
       } catch (error) {
@@ -95,6 +107,72 @@ export default function LeaveRequestDetail({ request, onBack, isManagerView = fa
       window.open(url, "_blank", "noopener,noreferrer");
     }
   };
+
+  // Action handlers
+  const handleApprove = () => {
+    setComment("")
+    setCommentError("")
+    setShowApproveModal(true)
+  }
+
+  const handleDecline = () => {
+    setComment("")
+    setCommentError("")
+    setShowDeclineModal(true)
+  }
+
+  const submitApproval = async () => {
+    setSubmitting(true)
+    try {
+      await leaveService.approveRequest(details.leaveRequestID, comment)
+      setShowApproveModal(false)
+
+      // Show success modal
+      setSuccessMessage("Request approved successfully!")
+      setShowSuccessModal(true)
+
+      // Wait 2 seconds then go back
+      setTimeout(() => {
+        setShowSuccessModal(false)
+        onBack()
+      }, 2000)
+    } catch (error) {
+      console.error("Failed to approve request", error)
+      alert("❌ Failed to approve request. Please try again.")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const submitDecline = async () => {
+    // Validate comment is required
+    if (!comment.trim()) {
+      setCommentError("Comment is required for declining a request")
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      await leaveService.declineRequest(details.leaveRequestID, comment)
+      setShowDeclineModal(false)
+
+      // Show success modal
+      setSuccessMessage("Request declined successfully!")
+      setShowSuccessModal(true)
+
+      // Wait 2 seconds then go back
+      setTimeout(() => {
+        setShowSuccessModal(false)
+        onBack()
+      }, 2000)
+    } catch (error) {
+      console.error("Failed to decline request", error)
+      alert("❌ Failed to decline request. Please try again.")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
 
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-[#f6f7f8] font-sans">
@@ -303,7 +381,7 @@ export default function LeaveRequestDetail({ request, onBack, isManagerView = fa
                   <div className="pb-8">
                     {/* --- ĐÃ SỬA: Hiển thị tên nhân viên nếu là quản lý xem --- */}
                     <p className="font-medium text-[#111418]">
-                        Submitted by {isManagerView ? (request.employeeName || details.employeeName || 'Employee') : 'You'}
+                      Submitted by {isManagerView ? (request.employeeName || details.employeeName || 'Employee') : 'You'}
                     </p>
                     <p className="text-sm text-[#617589]">
                       {new Date(details.requestedDate).toLocaleString()}
@@ -311,10 +389,122 @@ export default function LeaveRequestDetail({ request, onBack, isManagerView = fa
                   </div>
                 </div>
               </div>
+
+              {/* Action Buttons - Only show for managers viewing pending requests */}
+              {isManagerView && status === "Pending" && (
+                <div className="flex gap-3 px-4 pb-6 pt-4">
+                  <button
+                    onClick={handleApprove}
+                    className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 transition-colors"
+                  >
+                    <Check className="h-5 w-5" />
+                    Approve Request
+                  </button>
+                  <button
+                    onClick={handleDecline}
+                    className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-rose-600 px-4 py-3 text-sm font-bold text-white hover:bg-rose-700 transition-colors"
+                  >
+                    <X className="h-5 w-5" />
+                    Decline Request
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
+
+      {/* Approve Modal */}
+      {showApproveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Approve Request</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Are you sure you want to approve this leave request?
+            </p>
+
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Comment (Optional)
+            </label>
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Add a comment..."
+              className="w-full rounded-lg border border-gray-300 p-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
+              rows={4}
+            />
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowApproveModal(false)}
+                disabled={submitting}
+                className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitApproval}
+                disabled={submitting}
+                className="flex-1 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+              >
+                {submitting ? "Approving..." : "Confirm Approve"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Decline Modal */}
+      {showDeclineModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Decline Request</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Please provide a reason for declining this request.
+            </p>
+
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Comment <span className="text-rose-600">*</span>
+            </label>
+            <textarea
+              value={comment}
+              onChange={(e) => {
+                setComment(e.target.value)
+                setCommentError("")
+              }}
+              placeholder="Reason for declining..."
+              className={`w-full rounded-lg border p-3 text-sm outline-none transition-colors ${commentError
+                ? "border-rose-500 focus:border-rose-500 focus:ring-2 focus:ring-rose-200"
+                : "border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                }`}
+              rows={4}
+            />
+            {commentError && (
+              <p className="text-sm text-rose-600 mt-1">{commentError}</p>
+            )}
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowDeclineModal(false)
+                  setCommentError("")
+                }}
+                disabled={submitting}
+                className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitDecline}
+                disabled={submitting}
+                className="flex-1 rounded-lg bg-rose-600 px-4 py-2 text-sm font-bold text-white hover:bg-rose-700 disabled:opacity-50 transition-colors"
+              >
+                {submitting ? "Declining..." : "Confirm Decline"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Image Modal */}
       {selectedImage && (
@@ -337,6 +527,24 @@ export default function LeaveRequestDetail({ request, onBack, isManagerView = fa
               alt="Attachment preview"
               className="max-h-[90vh] max-w-[90vw] object-contain"
             />
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-8 text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
+              <Check className="h-10 w-10 text-emerald-600" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">Success!</h3>
+            <p className="text-gray-600">
+              {successMessage}
+            </p>
+            <p className="text-sm text-gray-500 mt-4">
+              Returning to approval list...
+            </p>
           </div>
         </div>
       )}
