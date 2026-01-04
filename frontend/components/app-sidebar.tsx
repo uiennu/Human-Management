@@ -35,7 +35,7 @@ export function AppSidebar() {
   // State lưu số lượng pending
   const [pendingCount, setPendingCount] = useState(0);
 
-  // --- LOGIC FETCH SỐ LƯỢNG (Đã sửa lại phần lấy Role) ---
+  // --- LOGIC FETCH SỐ LƯỢNG (Đã sửa lại để chỉ đếm trạng thái Pending) ---
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
     if (!storedToken) return;
@@ -50,13 +50,11 @@ export function AppSidebar() {
       
       const payload = JSON.parse(jsonPayload);
       
-      // 2. Lấy ID (Thử mọi trường hợp)
+      // 2. Lấy ID 
       const empId = payload.EmployeeID || payload.employeeID || payload.nameid || payload.sub || payload.Id || payload.id;
       
-      // 3. Lấy Role (SỬA LỖI TẠI ĐÂY: Thêm trường hợp role dài loằng ngoằng của .NET)
+      // 3. Lấy Role
       let rawRole = payload.role || payload.Role || payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] || "";
-      
-      // Chuyển về mảng string để dễ xử lý
       let userRoles: string[] = [];
       if (Array.isArray(rawRole)) userRoles = rawRole;
       else if (typeof rawRole === 'string') userRoles = [rawRole];
@@ -70,7 +68,12 @@ export function AppSidebar() {
                const res = await fetch(`http://localhost:8081/api/approvals/pending?managerId=${empId}`);
                if (res.ok) {
                  const data = await res.json();
-                 setPendingCount(data.length);
+                 
+                 // --- SỬA LỖI TẠI ĐÂY ---
+                 // API trả về cả Approved/Rejected, nên cần lọc chỉ lấy Pending
+                 const pendingOnly = data.filter((item: any) => item.status === 'Pending');
+                 
+                 setPendingCount(pendingOnly.length);
                }
             } catch(e) { 
                 console.error("Sidebar fetch error:", e); 
@@ -79,7 +82,6 @@ export function AppSidebar() {
          
          fetchPendingCount();
          
-         // Auto refresh mỗi 30 giây
          const interval = setInterval(fetchPendingCount, 30000);
          return () => clearInterval(interval);
       }
