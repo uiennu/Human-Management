@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -14,239 +14,184 @@ import { toast } from "sonner"
 interface AddDepartmentModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSubmit: () => void // Changed to void as we handle API internally
-  parentId?: string | null // If present, we are adding a Team under this Department
+  onSubmit: () => void
+  parentId?: string | null
   parentName?: string
 }
 
 export function AddDepartmentModal({ open, onOpenChange, onSubmit, parentId, parentName }: AddDepartmentModalProps) {
   const isTeam = !!parentId
-
-  // 1. State lưu dữ liệu form
-  const [formData, setFormData] = useState({
-    name: "",
-    code: "", // Teams might not strictly need code in UI but DB might not enforce it? DTO has Name, Desc, TeamLead.
-    description: "",
-    managerId: "", // This will be Team Lead ID
-  })
-
+  const [formData, setFormData] = useState({ name: "", code: "", description: "", managerId: "" })
   const [loading, setLoading] = useState(false)
   const [managers, setManagers] = useState<{ id: number; name: string }[]>([])
 
-  // 2. State lưu lỗi
-  const [errors, setErrors] = useState({
-    name: "",
-  })
-
-  // Fetch potential managers/team leads
   useEffect(() => {
     if (open) {
       // Reset form
       setFormData({ name: "", code: "", description: "", managerId: "" })
-      setErrors({ name: "" })
-
+      
       const fetchEmployees = async () => {
         try {
           const employees = await organizationService.getAllEmployees();
-
           let eligibleManagers = employees;
 
-          // Nếu đang thêm Team vào Department, lọc nhân viên thuộc Department đó
-          if (isTeam && parentId && parentName) {
-            eligibleManagers = employees.filter(e => e.departmentName === parentName);
+          // LOGIC LỌC:
+          if (isTeam && parentId) {
+             // Thêm Team: Chỉ lấy nhân viên đang ở trong Department cha
+             eligibleManagers = employees.filter((e: any) => e.departmentName === parentName);
+          } else {
+             // Thêm Department: Chỉ lấy nhân viên CHƯA thuộc Department nào (tự do)
+             eligibleManagers = employees.filter((e: any) => !e.departmentName);
           }
 
-          // Nếu đang thêm Department, lọc nhân viên chưa thuộc bất kỳ Department nào
-          if (!isTeam) {
-            eligibleManagers = employees.filter(e => !e.departmentName);
-          }
-
-          // Lọc trùng lặp ID trước khi map
-          const uniqueManagers = Array.from(
-            new Map(eligibleManagers.map(item => [item.employeeID, item])).values()
-          );
-
-          setManagers(uniqueManagers.map(e => ({
-            id: e.employeeID,
-            name: e.name
-          })));
-        } catch (error) {
-          console.error("Failed to fetch employees", error);
-          setManagers([]);
+          // Map data để hiển thị
+          const uniqueManagers = Array.from(new Map(eligibleManagers.map((item:any) => [item.employeeID, item])).values());
+          setManagers(uniqueManagers.map((e: any) => ({ id: e.employeeID, name: e.name })));
+        } catch (error) { 
+          console.error(error);
+          setManagers([]); 
         }
       }
-
       fetchEmployees();
     }
   }, [open, isTeam, parentId, parentName]);
 
-  // 3. Hàm kiểm tra hợp lệ
-  const validateForm = () => {
-    let isValid = true
-    const newErrors = { name: "" }
-
-    if (!formData.name.trim()) {
-      newErrors.name = isTeam ? "Team Name is required" : "Department Name is required"
-      isValid = false
-    }
-
-    setErrors(newErrors)
-    return isValid
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    // 1. Validate các trường chung (như Name)
-    if (validateForm()) {
-      try {
+    try {
         setLoading(true)
-
-        // TRƯỜNG HỢP 1: TẠO TEAM (SUB-DEPARTMENT)
         if (isTeam && parentId) {
-          const deptId = parseInt(parentId.replace("dept-", ""))
-
-          if (isNaN(deptId)) {
-            toast.error("Invalid Department ID for creating a team.")
-            return // Thoát hàm, finally sẽ chạy để tắt loading
-          }
-
-          await organizationService.createTeam(deptId, {
-            teamName: formData.name,
-            description: formData.description,
-            teamLeadId: formData.managerId ? parseInt(formData.managerId) : undefined
-          })
-
-          toast.success("Team created successfully")
+            const deptId = parseInt(parentId.replace("dept-", ""))
+            await organizationService.createTeam(deptId, {
+                teamName: formData.name,
+                description: formData.description,
+                teamLeadId: formData.managerId ? parseInt(formData.managerId) : undefined
+            })
+            toast.success("Team created successfully")
+        } else {
+            if (!formData.code) {
+                toast.error("Department Code is required")
+                setLoading(false)
+                return
+            }
+            await organizationService.createDepartment({
+                name: formData.name,
+                departmentCode: formData.code,
+                description: formData.description,
+                managerId: formData.managerId ? parseInt(formData.managerId) : null
+            })
+            toast.success("Department created successfully")
         }
-        // TRƯỜNG HỢP 2: TẠO DEPARTMENT (PHÒNG BAN CẤP CAO)
-        else {
-          // Validate riêng cho Department: Bắt buộc phải có Code
-          if (!formData.code.trim()) {
-            toast.error("Department Code is required")
-            return // Thoát hàm, finally sẽ chạy để tắt loading
-          }
-
-          await organizationService.createDepartment({
-            name: formData.name,
-            departmentCode: formData.code,
-            description: formData.description,
-            managerId: formData.managerId ? parseInt(formData.managerId) : null
-          })
-
-          toast.success("Department created successfully")
-        }
-
-        // 3. Nếu thành công (không bị lỗi ở trên) thì làm mới dữ liệu và đóng modal
         onSubmit()
         onOpenChange(false)
-
-      } catch (error: any) {
-        // 4. Bắt lỗi từ API trả về
+    } catch (error: any) {
         toast.error(error.message || "Failed to create")
-      } finally {
-        // 5. Luôn tắt loading dù thành công hay thất bại
+    } finally {
         setLoading(false)
-      }
     }
-  }
-
-  const handleChange = (field: string, value: string) => {
-    setFormData({ ...formData, [field]: value })
-    if (field === 'name') setErrors({ ...errors, name: "" })
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{isTeam ? `Add Team to ${parentName}` : "Add Department"}</DialogTitle>
+          <DialogTitle>{isTeam ? `Add Team to ${parentName}` : "Add New Department"}</DialogTitle>
         </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-4">
-            {/* Input Name */}
-            <div className="space-y-2">
-              <Label htmlFor="name">
-                {isTeam ? "Team Name" : "Department Name"} <span className="text-red-500">*</span>
+        
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            {/* NAME */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">
+                Name <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="name"
-                placeholder={isTeam ? "e.g. Backend Team" : "e.g. Marketing"}
                 value={formData.name}
-                onChange={(e) => handleChange("name", e.target.value)}
-                className={errors.name ? "border-red-500 focus-visible:ring-red-500" : ""}
-                disabled={loading}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="col-span-3"
+                placeholder={isTeam ? "e.g. Backend Team" : "e.g. Marketing"}
+                required
               />
-              {errors.name && <p className="text-red-500 text-xs">{errors.name}</p>}
             </div>
 
+            {/* CODE (Chỉ hiện khi thêm Department) */}
             {!isTeam && (
-              <div className="space-y-2">
-                <Label htmlFor="code">
-                  Department Code <span className="text-red-500">*</span>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="code" className="text-right">
+                  Code <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="code"
-                  placeholder="e.g. HR, IT, SALE"
                   value={formData.code}
-                  onChange={(e) => handleChange("code", e.target.value)}
-                  className="uppercase" // Code thường viết hoa
-                  disabled={loading}
+                  onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                  className="col-span-3 uppercase"
+                  placeholder="e.g. MKT"
                 />
               </div>
             )}
 
-            {/* Description */}
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+            {/* DESCRIPTION */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="description" className="text-right">
+                Description
+              </Label>
               <Textarea
                 id="description"
-                placeholder="Enter a short description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="resize-none"
-                rows={3}
-                disabled={loading}
+                className="col-span-3"
+                placeholder="Short description..."
               />
             </div>
 
-            {/* Manager/Team Lead Select */}
-            <div className="space-y-2">
-              <Label htmlFor="manager">
-                {isTeam ? "Team Lead" : "Department Manager"}
+            {/* MANAGER / TEAM LEAD */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="manager" className="text-right">
+                {isTeam ? "Team Lead" : "Manager"}
               </Label>
-              <Select
-                value={formData.managerId}
-                onValueChange={(value) => handleChange("managerId", value)}
-                disabled={loading}
-              >
-                <SelectTrigger id="manager">
-                  <SelectValue placeholder="Select an employee" />
-                </SelectTrigger>
-                <SelectContent>
-                  {managers.map((manager) => (
-                    <SelectItem key={manager.id} value={manager.id.toString()}>
-                      {manager.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="col-span-3">
+                <Select 
+                  value={formData.managerId} 
+                  onValueChange={(value) => setFormData({ ...formData, managerId: value })}
+                >
+                  <SelectTrigger id="manager">
+                    <SelectValue placeholder="Select an employee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {managers.length > 0 ? (
+                        managers.map((manager) => (
+                        <SelectItem key={manager.id} value={manager.id.toString()}>
+                            {manager.name}
+                        </SelectItem>
+                        ))
+                    ) : (
+                        <div className="p-2 text-sm text-gray-500 text-center">
+                            {isTeam 
+                                ? "No employees in this department" 
+                                : "All employees are assigned. Add new employee first."}
+                        </div>
+                    )}
+                  </SelectContent>
+                </Select>
+                {/* Gợi ý nhỏ bên dưới */}
+                {managers.length === 0 && !isTeam && (
+                    <p className="text-[10px] text-red-500 mt-1">
+                        * Create a user without department first to assign as Manager.
+                    </p>
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button
-              type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white min-w-[100px]"
-              disabled={loading}
-            >
-              {loading ? "Saving..." : "Save"}
+            <Button type="submit" disabled={loading}>
+              {loading ? "Saving..." : "Save changes"}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

@@ -1,4 +1,6 @@
 using HRM.Api.DTOs;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace HRM.Api.Services
 {
@@ -48,7 +50,7 @@ namespace HRM.Api.Services
         /// <summary>
         /// Create a new team in a department
         /// </summary>
-        Task<(bool Success, string Message, int? TeamId)> CreateTeamAsync(int departmentId, CreateSubTeamDto dto);
+        Task<(bool Success, string Message, int? TeamId)> CreateTeamAsync(int departmentId, CreateSubTeamDto dto, int userId);
         /// <summary>
         /// Update an existing team
         /// </summary>

@@ -13,9 +13,9 @@ namespace HRM.Api.Services
 
         // Restored Methods
         Task<OrganizationStructureDto> GetStructureAsync();
-        Task<(bool Success, string Message, object? Data)> AddDepartmentAsync(CreateDepartmentDto dto);
-        Task<(bool Success, string Message)> DeleteDepartmentAsync(int id);
-        Task<(bool Success, string Message, int? TeamId)> DeleteTeamAsync(int id);
+        Task<(bool Success, string Message, object? Data)> AddDepartmentAsync(CreateDepartmentDto dto, int userId);        
+        Task<(bool Success, string Message)> DeleteDepartmentAsync(int id, int userId);
+        Task<(bool Success, string Message, int? TeamId)> DeleteTeamAsync(int id, int userId);
         Task UpdateDepartmentAsync(int id, UpdateDepartmentDto department, int userId);
         Task<IEnumerable<OrganizationLogDto>> GetOrganizationLogsAsync();
     }

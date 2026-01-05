@@ -48,27 +48,18 @@ function getAuthHeaders(): HeadersInit {
 }
 
 export const organizationService = {
-    async getAllDepartments(): Promise<DepartmentDto[]> {
-        const res = await fetch(`${API_URL}/organization/departments`, {
-            headers: getAuthHeaders(),
-        })
-        if (!res.ok) throw new Error('Failed to fetch departments')
+    async getAllDepartments() {
+        const res = await fetch(`${API_URL}/organization/departments`, { headers: getAuthHeaders() })
         return res.json()
     },
 
-    async getAllTeams(): Promise<TeamResponseDto[]> {
-        const res = await fetch(`${API_URL}/organization/teams`, {
-            headers: getAuthHeaders(),
-        })
-        if (!res.ok) throw new Error('Failed to fetch teams')
+    async getAllTeams() {
+        const res = await fetch(`${API_URL}/organization/teams`, { headers: getAuthHeaders() })
         return res.json()
     },
 
-    async getAllEmployees(): Promise<EmployeeDto[]> {
-        const res = await fetch(`${API_URL}/organization/employees`, {
-            headers: getAuthHeaders(),
-        })
-        if (!res.ok) throw new Error('Failed to fetch employees')
+    async getAllEmployees() {
+        const res = await fetch(`${API_URL}/organization/employees`, { headers: getAuthHeaders() })
         return res.json()
     },
 
@@ -82,80 +73,49 @@ export const organizationService = {
 
     async createTeam(departmentId: number, data: { teamName: string; description: string; teamLeadId?: number }) {
         const res = await fetch(`${API_URL}/organization/addteam/${departmentId}`, {
-            method: "POST",
-            headers: getAuthHeaders(),
-            body: JSON.stringify(data),
+            method: "POST", headers: getAuthHeaders(), body: JSON.stringify(data),
         })
-
-        if (!res.ok) {
-            const error = await res.json()
-            throw new Error(error.message || "Failed to create team")
-        }
+        if (!res.ok) throw await res.json()
         return res.json()
     },
 
     async createDepartment(data: { name: string; departmentCode: string; description?: string; managerId?: number | null }) {
         const res = await fetch(`${API_URL}/organization/adddepartment`, {
-            method: "POST",
-            headers: getAuthHeaders(),
-            body: JSON.stringify(data),
+            method: "POST", headers: getAuthHeaders(), body: JSON.stringify(data),
         })
-
-        if (!res.ok) {
-            const error = await res.json()
-            throw new Error(error.message || "Failed to create department")
-        }
+        if (!res.ok) throw await res.json()
         return res.json()
     },
 
     async deleteDepartment(id: number) {
         const res = await fetch(`${API_URL}/organization/deletedepartment/${id}`, {
-            method: 'DELETE',
-            headers: getAuthHeaders(),
+            method: 'DELETE', headers: getAuthHeaders(),
         })
-
-        // Xử lý lỗi từ Backend trả về (ví dụ: 409 Conflict nếu còn nhân viên)
-        if (!res.ok) {
-            const error = await res.json()
-            throw new Error(error.message || 'Failed to delete department')
-        }
+        if (!res.ok) throw await res.json()
         return res.json()
     },
 
     async removeEmployeeFromTeam(teamId: number, employeeId: number) {
         const res = await fetch(`${API_URL}/organization/teams/${teamId}/employees/${employeeId}`, {
-            method: 'DELETE',
-            headers: getAuthHeaders(),
+            method: 'DELETE', headers: getAuthHeaders(),
         })
-        if (!res.ok) {
-            const error = await res.json()
-            throw new Error(error.message || 'Failed to remove employee from team')
-        }
+        if (!res.ok) throw await res.json()
         return res.json()
     },
 
     async deleteTeam(id: number) {
         const res = await fetch(`${API_URL}/organization/deleteteam/${id}`, {
-            method: 'DELETE',
-            headers: getAuthHeaders(),
+            method: 'DELETE', headers: getAuthHeaders(),
         })
-        if (!res.ok) {
-            const error = await res.json()
-            throw new Error(error.message || 'Failed to delete team')
-        }
+        if (!res.ok) throw await res.json()
         return res.json()
     },
 
-    updateDepartment: async (id: number, data: any) => {
+    async updateDepartment(id: number, data: any) {
         const res = await fetch(`${API_URL}/organization/departments/${id}`, {
-            method: 'PUT',
-            headers: getAuthHeaders(),
-            body: JSON.stringify(data),
+            method: 'PUT', headers: getAuthHeaders(), body: JSON.stringify(data),
         })
-        if (!res.ok) {
-            const error = await res.json()
-            throw new Error(error.message || 'Failed to update department')
-        }
+        if (!res.ok) throw await res.json()
         return res.json()
     },
     updateTeam: async (id: number, data: { teamName: string; description?: string; teamLeadId?: number | null }) => {
