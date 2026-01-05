@@ -448,8 +448,19 @@ INSERT INTO Employees (
 ('Kevin', 'Truong', 'kevin@hrm.com', '$2a$11$jPe9nGpFaZHptsngP.dKGe8z/nStZ8YcPap7HN/D4LhjVvbJ5LFfe', '0901000013', 'District 1, HCM', CURDATE(), 1, 1, 1, 180, 'Male', 'kevin.personal@gmail.com', '8899001122', 'TAX-KEVIN', 'https://randomuser.me/api/portraits/men/13.jpg'),
 
 -- ID 14: Laura (BOD Assistant)
-('Laura', 'Bui', 'laura@hrm.com', '$2a$11$jPe9nGpFaZHptsngP.dKGe8z/nStZ8YcPap7HN/D4LhjVvbJ5LFfe', '0901000014', 'District 3, HCM', CURDATE(), 1, 1, 1, 180, 'Female', 'laura.personal@gmail.com', '9900112233', 'TAX-LAURA', 'https://randomuser.me/api/portraits/women/14.jpg');
+('Laura', 'Bui', 'laura@hrm.com', '$2a$11$jPe9nGpFaZHptsngP.dKGe8z/nStZ8YcPap7HN/D4LhjVvbJ5LFfe', '0901000014', 'District 3, HCM', CURDATE(), 1, 1, 1, 180, 'Female', 'laura.personal@gmail.com', '9900112233', 'TAX-LAURA', 'https://randomuser.me/api/portraits/women/14.jpg'),
 
+-- --- NHÂN VIÊN TỰ DO (CHƯA CÓ DEPARTMENT) ĐỂ TEST ---
+-- ID 15: Tom Free (Chưa có Dept)
+('Tom', 'Free', 'tom.free@hrm.com', '$2a$11$jPe9nGpFaZHptsngP.dKGe8z/nStZ8YcPap7HN/D4LhjVvbJ5LFfe', '0909000001', 'District 1, HCM', CURDATE(), NULL, 1, 1, 0, 'Male', 'tom.personal@gmail.com', '100000001', 'TAX-FREE-1', 'https://randomuser.me/api/portraits/men/15.jpg'),
+-- ID 16: Jerry NoDept (Chưa có Dept)
+('Jerry', 'NoDept', 'jerry.nodept@hrm.com', '$2a$11$jPe9nGpFaZHptsngP.dKGe8z/nStZ8YcPap7HN/D4LhjVvbJ5LFfe', '0909000002', 'District 3, HCM', CURDATE(), NULL, 1, 1, 0, 'Male', 'jerry.personal@gmail.com', '100000002', 'TAX-FREE-2', 'https://randomuser.me/api/portraits/men/16.jpg'),
+-- ID 17: Anna Floater (Chưa có Dept)
+('Anna', 'Floater', 'anna.floater@hrm.com', '$2a$11$jPe9nGpFaZHptsngP.dKGe8z/nStZ8YcPap7HN/D4LhjVvbJ5LFfe', '0909000003', 'Thu Duc, HCM', CURDATE(), NULL, 1, 1, 0, 'Female', 'anna.personal@gmail.com', '100000003', 'TAX-FREE-3', 'https://randomuser.me/api/portraits/women/17.jpg'),
+-- ID 18: Max Pending (Chưa có Dept)
+('Max', 'Pending', 'max.pending@hrm.com', '$2a$11$jPe9nGpFaZHptsngP.dKGe8z/nStZ8YcPap7HN/D4LhjVvbJ5LFfe', '0909000004', 'Binh Thanh, HCM', CURDATE(), NULL, 1, 1, 0, 'Male', 'max.personal@gmail.com', '100000004', 'TAX-FREE-4', 'https://randomuser.me/api/portraits/men/18.jpg'),
+-- ID 19: Sarah Newbie (Chưa có Dept)
+('Sarah', 'Newbie', 'sarah.newbie@hrm.com', '$2a$11$jPe9nGpFaZHptsngP.dKGe8z/nStZ8YcPap7HN/D4LhjVvbJ5LFfe', '0909000005', 'District 7, HCM', CURDATE(), NULL, 1, 1, 0, 'Female', 'sarah.personal@gmail.com', '100000005', 'TAX-FREE-5', 'https://randomuser.me/api/portraits/women/19.jpg');
 
 -- Emergency contacts
 INSERT INTO EmployeeEmergencyContacts (EmployeeID, Name, Relation, Phone) VALUES
@@ -466,7 +477,13 @@ INSERT INTO EmployeeEmergencyContacts (EmployeeID, Name, Relation, Phone) VALUES
 (11, 'Bro Dang', 'Brother', '0901121212'),
 (12, 'Mom Cao', 'Mother', '0901232323'),
 (13, 'Wife Truong', 'Wife', '0901343434'),
-(14, 'Husband Bui', 'Husband', '0901454545');
+(14, 'Husband Bui', 'Husband', '0901454545'),
+
+(15, 'Mom Tom', 'Mother', '0909111111'),
+(16, 'Dad Jerry', 'Father', '0909222222'),
+(17, 'Sis Anna', 'Sister', '0909333333'),
+(18, 'Bro Max', 'Brother', '0909444444'),
+(19, 'Mom Sarah', 'Mother', '0909555555');
 
 -- Update lại Manager cho Department (Đảm bảo mỗi phòng ban đều có Manager)
 UPDATE Departments SET ManagerID = 1 WHERE DepartmentID = 1; -- BOD: Alice
@@ -490,7 +507,13 @@ INSERT INTO EmployeeRoles (EmployeeID, RoleID) VALUES
 (11, 7), -- Liam: Sales Employee
 (12, 9), -- Mia: Finance Employee
 (13, 10), -- Kevin: BOD Assistant
-(14, 10); -- Laura: BOD Assistant
+(14, 10), -- Laura: BOD Assistant
+-- Roles cho nhân viên tự do (Tạm thời để họ là IT Employee để login được)
+(15, 1),
+(16, 1),
+(17, 1),
+(18, 1),
+(19, 1);
 
 -- 5. EmployeeProfileChanges (Giữ nguyên mẫu cũ)
 INSERT INTO EmployeeProfileChanges (EmployeeID, FieldName, OldValue, NewValue, Status, ApproverID) VALUES 

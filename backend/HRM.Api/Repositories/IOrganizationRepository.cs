@@ -15,6 +15,10 @@ namespace HRM.Api.Repositories
 
         // Restored Methods
         Task<OrganizationStructureDto> GetStructureAsync();
+
+        Task<Employee?> GetEmployeeByIdAsync(int id);
+        Task<(bool Success, string Message, int? TeamId)> DeleteTeamAsync(int id);
+        
         Task<bool> DepartmentNameExistsAsync(string name);
         Task<bool> DepartmentCodeExistsAsync(string code);
         Task<Department> AddDepartmentAsync(Department department);

@@ -61,27 +61,29 @@ namespace HRM.Api.Services
             return await _repository.GetStructureAsync();
         }
 
-        public async Task<(bool Success, string Message, object? Data)> AddDepartmentAsync(CreateDepartmentDto dto)
+        public async Task<(bool Success, string Message, object? Data)> AddDepartmentAsync(CreateDepartmentDto dto, int userId)
         {
-            // 1. Validate
+            // 1. Validate dữ liệu đầu vào
             if (string.IsNullOrWhiteSpace(dto.Name) || string.IsNullOrWhiteSpace(dto.DepartmentCode))
-            {
                 return (false, "Name and Department Code are required.", null);
-            }
 
-            // 2. Check trùng tên
+            // 2. Check trùng Tên và Code
             if (await _repository.DepartmentNameExistsAsync(dto.Name))
-            {
                 return (false, "Department name already exists.", null);
-            }
 
-            // 3. Check trùng code
             if (await _repository.DepartmentCodeExistsAsync(dto.DepartmentCode))
-            {
                 return (false, "Department code already exists.", null);
+
+            // 3. Check Manager (đảm bảo Manager chưa thuộc Dept khác)
+            if (dto.ManagerId.HasValue)
+            {
+                var manager = await _repository.GetEmployeeByIdAsync(dto.ManagerId.Value);
+                if (manager != null && manager.DepartmentID.HasValue)
+                {
+                    return (false, $"Employee '{manager.FirstName} {manager.LastName}' is already assigned to another department.", null);
+                }
             }
 
-            // 4. Tạo Entity
             var newDept = new Department
             {
                 DepartmentName = dto.Name,
@@ -94,13 +96,19 @@ namespace HRM.Api.Services
             {
                 var createdDept = await _repository.AddDepartmentAsync(newDept);
 
+                // --- GHI LOG SAU KHI TẠO THÀNH CÔNG ---
+                await LogActionAsync("CreateDepartment", "Department", createdDept.DepartmentID, new
+                {
+                    Name = createdDept.DepartmentName,
+                    Code = createdDept.DepartmentCode,
+                    ManagerID = createdDept.ManagerID
+                }, userId);
+
                 var responseData = new
                 {
                     id = createdDept.DepartmentID,
                     name = createdDept.DepartmentName,
-                    departmentCode = createdDept.DepartmentCode,
-                    managerId = createdDept.ManagerID,
-                    description = createdDept.Description
+                    departmentCode = createdDept.DepartmentCode
                 };
 
                 return (true, "Department created successfully", responseData);
@@ -111,17 +119,22 @@ namespace HRM.Api.Services
             }
         }
 
-        public async Task<(bool Success, string Message)> DeleteDepartmentAsync(int id)
+        public async Task<(bool Success, string Message)> DeleteDepartmentAsync(int id, int userId)
         {
             var dept = await _repository.GetDepartmentByIdAsync(id);
-            if (dept == null)
-            {
-                return (false, "Department not found."); 
-            }
+            if (dept == null) return (false, "Department not found.");
+
+            // Lưu thông tin cũ để ghi vào log
+            var logData = new { Name = dept.DepartmentName, Code = dept.DepartmentCode };
 
             try
             {
+                // Gọi Repo để thực hiện xóa (Repo đã xử lý việc gỡ nhân viên, xóa subteam)
                 await _repository.DeleteDepartmentAsync(dept);
+
+                // --- GHI LOG ---
+                await LogActionAsync("DeleteDepartment", "Department", id, logData, userId);
+
                 return (true, "Department deleted successfully");
             }
             catch (Exception ex)
@@ -130,59 +143,23 @@ namespace HRM.Api.Services
             }
         }
 
-        public async Task<(bool Success, string Message, int? TeamId)> DeleteTeamAsync(int id)
+        public async Task<(bool Success, string Message, int? TeamId)> DeleteTeamAsync(int id, int userId)
         {
             var team = await _repository.GetSubTeamByIdAsync(id);
-            if (team == null)
-            {
-                return (false, "Team not found.", null);
-            }
+            if (team == null) return (false, "Team not found.", null);
+
+            var logData = new { Name = team.TeamName, DeptID = team.DepartmentID };
 
             try
             {
-                // 1. Get all members BEFORE deleting (to know who to update)
-                var members = await _repository.GetTeamMembersAsync(id);
-                var employeeIds = members.Select(m => m.EmployeeID).ToList();
-                
-                // 2. Get department info for logging
-                var department = await _repository.GetDepartmentByIdAsync(team.DepartmentID);
-                
-                // 3. Clear TeamLeadID to avoid FK constraint issues
-                if (team.TeamLeadID.HasValue)
+                var result = await _repository.DeleteTeamAsync(id); 
+
+                if (result.Success)
                 {
-                    team.TeamLeadID = null;
-                    await _repository.UpdateTeamAsync(team);
+                    // --- GHI LOG ---
+                    await LogActionAsync("DeleteSubTeam", "SubTeam", id, logData, userId);
                 }
-                
-                // 4. Delete the team (CASCADE will auto-delete SubTeamMembers)
-                await _repository.DeleteSubTeamAsync(team);
-                
-                // 5. Now update each employee's department if they're not in any other team
-                foreach (var employeeId in employeeIds)
-                {
-                    bool stillInATeam = await _repository.IsEmployeeInAnyTeamAsync(employeeId);
-                    
-                    if (!stillInATeam)
-                    {
-                        // Employee is no longer in any team, so clear their department
-                        await _repository.UpdateEmployeeDepartmentAsync(employeeId, null);
-                    }
-                    // If still in a team, keep their DepartmentID as is
-                }
-                
-                // 6. Log team deletion
-                await LogActionAsync("DeleteSubTeam", "SubTeam", id, new
-                {
-                    SubTeamID = id,
-                    TeamName = team.TeamName,
-                    Description = team.Description,
-                    DepartmentID = team.DepartmentID,
-                    DepartmentName = department?.DepartmentName,
-                    TeamLeadID = team.TeamLeadID,
-                    MemberCount = members.Count
-                }, 1); // TODO: Get actual user ID from context
-                
-                return (true, "Team deleted successfully", id);
+                return result;
             }
             catch (Exception ex)
             {
@@ -206,69 +183,25 @@ namespace HRM.Api.Services
 
         public async Task UpdateDepartmentAsync(int id, UpdateDepartmentDto request, int userId)
         {
-            // 1. LẤY DỮ LIỆU CŨ (Hiện có trong DB)
             var oldDept = await _repository.GetDepartmentByIdAsync(id);
-            
-            // Nếu không tìm thấy phòng ban thì thôi, hoặc throw exception tùy bạn
-            if (oldDept == null) return; 
+            if (oldDept == null) return;
 
-            // 2. TÍNH TOÁN SỰ THAY ĐỔI (DIFF LOGIC)
             var changes = new List<object>();
 
-            // --- So sánh Tên Phòng Ban ---
-            // Logic giống Repository: Chỉ update nếu chuỗi không rỗng
+            // Logic so sánh thay đổi để log chi tiết
             if (!string.IsNullOrWhiteSpace(request.DepartmentName) && request.DepartmentName != oldDept.DepartmentName)
-            {
-                changes.Add(new 
-                { 
-                    Field = "DepartmentName", 
-                    OldValue = oldDept.DepartmentName, 
-                    NewValue = request.DepartmentName 
-                });
-            }
+                changes.Add(new { Field = "DepartmentName", Old = oldDept.DepartmentName, New = request.DepartmentName });
 
-            // --- So sánh Mã Phòng Ban ---
             if (!string.IsNullOrWhiteSpace(request.DepartmentCode) && request.DepartmentCode != oldDept.DepartmentCode)
-            {
-                changes.Add(new 
-                { 
-                    Field = "DepartmentCode", 
-                    OldValue = oldDept.DepartmentCode, 
-                    NewValue = request.DepartmentCode 
-                });
-            }
+                changes.Add(new { Field = "DepartmentCode", Old = oldDept.DepartmentCode, New = request.DepartmentCode });
 
-            // --- So sánh Description ---
-            // Description cho phép null hoặc rỗng để cập nhật
-            if (request.Description != null && request.Description != oldDept.Description)
-            {
-                changes.Add(new 
-                { 
-                    Field = "Description", 
-                    OldValue = oldDept.Description, 
-                    NewValue = request.Description 
-                });
-            }
-
-            // --- So sánh ManagerID (QUAN TRỌNG) ---
-            // ManagerID có thể là null (khi chọn None)
             if (request.ManagerID != oldDept.ManagerID)
-            {
-                changes.Add(new 
-                { 
-                    Field = "ManagerID", 
-                    OldValue = oldDept.ManagerID, 
-                    NewValue = request.ManagerID 
-                });
-            }
+                changes.Add(new { Field = "ManagerID", Old = oldDept.ManagerID, New = request.ManagerID });
 
-            // 3. GỌI REPO ĐỂ UPDATE VÀO DB
             await _repository.UpdateDepartmentAsync(id, request, userId);
 
-            // 4. LƯU LOG (Chỉ lưu nếu có thay đổi thực sự)
             if (changes.Count > 0)
             {
-                // LogActionAsync sẽ serialize cái list 'changes' thành JSON
                 await LogActionAsync("UpdateDepartment", "Department", id, changes, userId);
             }
         }
