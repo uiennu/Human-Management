@@ -43,7 +43,7 @@ interface Employee {
 // --- DEPARTMENT CARD COMPONENT ---
 const DepartmentCard = ({ dept, isRoot, level = 0, readOnly = false, onAddClick, onEditClick, onDeleteClick, onAddEmployeeClick, onDeleteEmployee, onDragStart, onDrop }: any) => {
   const [isEmployeesOpen, setIsEmployeesOpen] = useState(false)
-  
+
   // Custom cursors
   const cursorGrabFinal = `url('/grab.png') 16 16, grab`
   const cursorPointerFinal = `url('/pointer.png') 10 0, pointer`
@@ -100,7 +100,7 @@ const DepartmentCard = ({ dept, isRoot, level = 0, readOnly = false, onAddClick,
             {dept.employees.map((emp: any) => (
               <div key={emp.id} draggable={!readOnly} onDragStart={(e) => !readOnly && onDragStart(e, emp, dept)} className="relative flex items-center gap-3 p-3 bg-gray-50 border border-gray-100 rounded-lg hover:bg-gray-100 transition-colors" style={{ cursor: readOnly ? 'default' : cursorGrabFinal }}>
                 <Avatar className="h-8 w-8 bg-gray-200">
-                  <AvatarFallback className="text-xs text-gray-600 font-medium">{emp.name.split(" ").map((n:any) => n[0]).join("")}</AvatarFallback>
+                  <AvatarFallback className="text-xs text-gray-600 font-medium">{emp.name.split(" ").map((n: any) => n[0]).join("")}</AvatarFallback>
                 </Avatar>
                 <div>
                   <p className="text-sm font-medium text-gray-700">{emp.name}</p>
@@ -193,14 +193,14 @@ const TreeNode = (props: any) => {
 // --- MAIN ORGANIZATION STRUCTURE COMPONENT ---
 export function OrganizationStructure() {
   const { hasAnyRole } = useAuth()
-  
+
   // LOGIC PHÂN QUYỀN: Chỉ Admin, HR mới được phép Add/Edit/Delete
   const canManageOrganization = hasAnyRole(['Admin', 'HR Manager', 'HR Employee'])
 
   // State Management
   const [departments, setDepartments] = useState<Department[]>([])
   const [loading, setLoading] = useState(true)
-  
+
   // Modals
   const [addDeptModalOpen, setAddDeptModalOpen] = useState(false)
   const [addTeamModalOpen, setAddTeamModalOpen] = useState(false) // Giữ lại nếu cần dùng sau này
@@ -209,7 +209,7 @@ export function OrganizationStructure() {
   const [editTeamModalOpen, setEditTeamModalOpen] = useState(false)
   const [addEmployeesModalOpen, setAddEmployeesModalOpen] = useState(false)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
-  
+
   // Selections
   const [selectedDept, setSelectedDept] = useState<Department | null>(null)
   const [deptToDelete, setDeptToDelete] = useState<Department | null>(null)
@@ -220,7 +220,7 @@ export function OrganizationStructure() {
   const [draggedEmployee, setDraggedEmployee] = useState<Employee | null>(null)
   const [sourceDept, setSourceDept] = useState<Department | null>(null)
   const [targetDept, setTargetDept] = useState<Department | null>(null)
-  
+
   // Remove Employee
   const [removeEmployeeModalOpen, setRemoveEmployeeModalOpen] = useState(false)
   const [employeeToRemove, setEmployeeToRemove] = useState<{ emp: Employee; dept: Department } | null>(null)
@@ -244,8 +244,8 @@ export function OrganizationStructure() {
       ])
 
       // Find Admin for Root Node
-      const adminUser = empData.find((e: any) => 
-          e.position === 'Admin' || e.Position === 'Admin' || e.roleName === 'Admin' || e.RoleName === 'Admin'
+      const adminUser = empData.find((e: any) =>
+        e.position === 'Admin' || e.Position === 'Admin' || e.roleName === 'Admin' || e.RoleName === 'Admin'
       );
 
       const rootNode: Department = {
@@ -356,12 +356,43 @@ export function OrganizationStructure() {
   }
 
   const handleEditDepartment = async (updated: any) => {
-      // Logic update của bạn (đã có trong code cũ, giữ nguyên hoặc gọi API update)
-      // Để ngắn gọn, mình giả định bạn giữ logic cũ hoặc gọi API updateDepartment/updateTeam
-      toast.info("Update logic executed");
-      setEditModalOpen(false);
-      setEditTeamModalOpen(false);
-      await fetchData();
+    if (!selectedDept) return
+
+    try {
+      // Determine if it's a department or team based on ID prefix
+      if (selectedDept.id.startsWith("dept-")) {
+        const deptId = parseInt(selectedDept.id.replace("dept-", ""))
+        // Transform to API format
+        const payload = {
+          name: updated.name,
+          departmentCode: updated.code,
+          description: updated.description,
+          managerId: updated.managerId ? parseInt(updated.managerId) : null
+        }
+        await organizationService.updateDepartment(deptId, payload)
+        toast.success("Department updated successfully")
+      } else if (selectedDept.id.startsWith("team-")) {
+        const teamId = parseInt(selectedDept.id.replace("team-", ""))
+        // Transform to API format
+        const payload = {
+          teamName: updated.name,
+          description: updated.description,
+          teamLeadId: updated.managerId ? parseInt(updated.managerId) : null
+        }
+        await organizationService.updateTeam(teamId, payload)
+        toast.success("Team updated successfully")
+      } else {
+        toast.error("Cannot update root department")
+        return
+      }
+
+      setEditModalOpen(false)
+      setEditTeamModalOpen(false)
+      await fetchData()
+    } catch (error: any) {
+      console.error("Failed to update:", error)
+      toast.error(error.message || "Failed to update")
+    }
   }
 
   const handleAddEmployeeClick = (dept: Department) => {
@@ -370,19 +401,51 @@ export function OrganizationStructure() {
   }
 
   const handleDeleteEmployee = (deptId: string, empId: string) => {
-     // Tìm employee để xóa
-     // ... logic tìm employee ...
-     // Giả định tìm thấy:
-     // setEmployeeToRemove(...)
-     // setRemoveEmployeeModalOpen(true)
-     toast.info("Remove Employee Clicked (Implement Find Logic)")
+    // Find the team/department
+    const findDeptRecursive = (depts: Department[]): Department | null => {
+      for (const dept of depts) {
+        if (dept.id === deptId) return dept
+        if (dept.subdepartments) {
+          const found = findDeptRecursive(dept.subdepartments)
+          if (found) return found
+        }
+      }
+      return null
+    }
+
+    const dept = findDeptRecursive(departments)
+    if (!dept) {
+      toast.error("Team not found")
+      return
+    }
+
+    const emp = dept.employees.find(e => e.id === empId)
+    if (!emp) {
+      toast.error("Employee not found")
+      return
+    }
+
+    setEmployeeToRemove({ emp, dept })
+    setRemoveEmployeeModalOpen(true)
   }
 
   const executeRemoveEmployee = async () => {
-      // Gọi API removeEmployeeFromTeam
-      // await organizationService.removeEmployeeFromTeam(...)
-      // await fetchData()
+    if (!employeeToRemove) return
+
+    try {
+      // Extract team ID from dept.id (format: "team-123")
+      const teamId = parseInt(employeeToRemove.dept.id.replace("team-", ""))
+      const employeeId = parseInt(employeeToRemove.emp.id)
+
+      await organizationService.removeEmployeeFromTeam(teamId, employeeId)
+      toast.success("Employee removed from team successfully")
+      await fetchData()
       setRemoveEmployeeModalOpen(false)
+      setEmployeeToRemove(null)
+    } catch (error: any) {
+      console.error("Failed to remove employee:", error)
+      toast.error(error.message || "Failed to remove employee")
+    }
   }
 
   // Drag & Drop Handlers
@@ -403,20 +466,20 @@ export function OrganizationStructure() {
   }
 
   const confirmMoveEmployee = async () => {
-      // Gọi API move (hoặc add rồi remove)
-      toast.success("Employee moved")
-      setMoveModalOpen(false)
-      await fetchData()
+    // Gọi API move (hoặc add rồi remove)
+    toast.success("Employee moved")
+    setMoveModalOpen(false)
+    await fetchData()
   }
 
   // Zoom Handlers
   const handleZoomIn = () => setZoom(p => Math.min(p + 0.1, 2))
   const handleZoomOut = () => setZoom(p => Math.max(p - 0.1, 0.5))
   const handleResetZoom = () => { setZoom(1); setPan({ x: 0, y: 0 }) }
-  
+
   // Pan Handlers
-  const handleMouseDown = (e: React.MouseEvent) => { if(e.button === 0 || e.button === 1) { setIsPanning(true); setLastMousePos({ x: e.clientX, y: e.clientY }) } }
-  const handleMouseMove = (e: React.MouseEvent) => { if(isPanning) { const dx = e.clientX - lastMousePos.x; const dy = e.clientY - lastMousePos.y; setPan(p => ({ x: p.x + dx, y: p.y + dy })); setLastMousePos({ x: e.clientX, y: e.clientY }) } }
+  const handleMouseDown = (e: React.MouseEvent) => { if (e.button === 0 || e.button === 1) { setIsPanning(true); setLastMousePos({ x: e.clientX, y: e.clientY }) } }
+  const handleMouseMove = (e: React.MouseEvent) => { if (isPanning) { const dx = e.clientX - lastMousePos.x; const dy = e.clientY - lastMousePos.y; setPan(p => ({ x: p.x + dx, y: p.y + dy })); setLastMousePos({ x: e.clientX, y: e.clientY }) } }
   const handleMouseUp = () => setIsPanning(false)
 
   return (
@@ -434,7 +497,7 @@ export function OrganizationStructure() {
             <button onClick={handleZoomIn} className="p-2 hover:bg-gray-100"><ChevronUp className="h-4 w-4" /></button>
             <button onClick={handleResetZoom} className="p-2 hover:bg-gray-100 border-l border-gray-200"><Eye className="h-4 w-4" /></button>
           </div>
-          
+
           <Button onClick={() => window.location.href = '/organization-logs'} variant="outline" className="shadow-sm">
             <FileJson className="mr-2 h-4 w-4" /> View Logs
           </Button>
@@ -449,10 +512,10 @@ export function OrganizationStructure() {
       </div>
 
       <div ref={containerRef} className="flex-1 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden relative touch-none"
-           style={{ cursor: isPanning ? 'grabbing' : 'grab' }}
-           onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+        style={{ cursor: isPanning ? 'grabbing' : 'grab' }}
+        onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
         <div ref={contentRef} className="flex justify-center min-w-max pt-4 origin-top"
-             style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}>
+          style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}>
           {departments.length > 0 && (
             <TreeNode
               dept={departments[0]}
@@ -473,20 +536,20 @@ export function OrganizationStructure() {
       </div>
 
       {/* --- MODALS --- */}
-      <AddDepartmentModal 
-        open={addDeptModalOpen} 
-        onOpenChange={setAddDeptModalOpen} 
-        parentId={parentDeptForAdd?.id} 
-        parentName={parentDeptForAdd?.name} 
-        onSubmit={() => fetchData()} 
+      <AddDepartmentModal
+        open={addDeptModalOpen}
+        onOpenChange={setAddDeptModalOpen}
+        parentId={parentDeptForAdd?.id}
+        parentName={parentDeptForAdd?.name}
+        onSubmit={() => fetchData()}
       />
-      
+
       {deptToDelete && (
-        <DeleteDepartmentModal 
-            open={deleteModalOpen} 
-            onOpenChange={setDeleteModalOpen} 
-            departmentName={deptToDelete.name} 
-            onConfirm={() => executeDeleteDepartment(deptToDelete.id)} 
+        <DeleteDepartmentModal
+          open={deleteModalOpen}
+          onOpenChange={setDeleteModalOpen}
+          departmentName={deptToDelete.name}
+          onConfirm={() => executeDeleteDepartment(deptToDelete.id)}
         />
       )}
 
