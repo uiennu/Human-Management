@@ -10,14 +10,15 @@ interface DeleteDepartmentModalProps {
     onOpenChange: (open: boolean) => void
     departmentName: string
     onConfirm: () => void
+    type?: "Department" | "Team"
 }
 
-export function DeleteDepartmentModal({ open, onOpenChange, departmentName, onConfirm }: DeleteDepartmentModalProps) {
+export function DeleteDepartmentModal({ open, onOpenChange, departmentName, onConfirm, type = "Department" }: DeleteDepartmentModalProps) {
     const handleConfirm = () => {
         onConfirm()
         onOpenChange(false)
     }
-
+    const typeText = type.toLowerCase();
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             {/* SỬA LỖI Ở ĐÂY:
@@ -37,9 +38,9 @@ export function DeleteDepartmentModal({ open, onOpenChange, departmentName, onCo
 
                     {/* Nội dung cảnh báo */}
                     <div className="text-sm text-gray-500 mb-6">
-                        Are you sure you want to delete the <span className="font-bold text-gray-900">{departmentName}</span> department?
+                        Are you sure you want to delete the <span className="font-bold text-gray-900">{departmentName}</span> {typeText}?
                         <br />
-                        This action cannot be undone. All employees in this department will be unassigned.
+                        This action cannot be undone. All employees in this {typeText} will be unassigned.
                     </div>
 
                     {/* Các nút hành động */}

@@ -550,6 +550,7 @@ export function OrganizationStructure() {
           onOpenChange={setDeleteModalOpen}
           departmentName={deptToDelete.name}
           onConfirm={() => executeDeleteDepartment(deptToDelete.id)}
+          type={deptToDelete.id.startsWith("dept-") ? "Department" : "Team"}
         />
       )}
 
