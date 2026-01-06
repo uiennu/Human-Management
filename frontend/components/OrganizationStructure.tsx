@@ -364,7 +364,7 @@ export function OrganizationStructure() {
         const deptId = parseInt(selectedDept.id.replace("dept-", ""))
         // Transform to API format
         const payload = {
-          name: updated.name,
+          DepartmentName: updated.name,
           departmentCode: updated.code,
           description: updated.description,
           managerId: updated.managerId ? parseInt(updated.managerId) : null
