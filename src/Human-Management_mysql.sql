@@ -170,7 +170,7 @@ CREATE TABLE LeaveRequests (
     RequestedDate DATETIME NOT NULL DEFAULT NOW(),
     AttachmentPath VARCHAR(255) NULL,
     ApprovalNote TEXT NULL,
-    ApprovedDate DATETIME NULL
+    ApprovedDate DATETIME NULL,
     
     CONSTRAINT FK_LeaveRequests_Employee FOREIGN KEY (EmployeeID) REFERENCES Employees(EmployeeID),
     CONSTRAINT FK_LeaveRequests_LeaveType FOREIGN KEY (LeaveTypeID) REFERENCES LeaveTypes(LeaveTypeID),
