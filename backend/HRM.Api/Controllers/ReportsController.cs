@@ -42,18 +42,40 @@ public class ReportsController : ControllerBase
     [HttpPost("employees/export")]
     public async Task<IActionResult> ExportReport([FromBody] EmployeeReportRequestDto request, [FromQuery] string format = "excel")
     {
-        var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        int.TryParse(userIdString, out int userId);
+        try
+        {
+            // Lấy User ID từ token
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdString, out int userId))
+            {
+                return Unauthorized("Invalid User ID");
+            }
 
-        var fileContent = await _reportService.ExportReportAsync(request, userId, format);
-        
-        string contentType = format == "excel" 
-            ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" 
-            : "application/pdf";
+            // Gọi service để lấy nội dung file
+            var fileContent = await _reportService.ExportReportAsync(request, userId, format);
             
-        string fileName = $"EmployeeReport_{DateTime.Now:yyyyMMdd}.{(format == "excel" ? "xlsx" : "pdf")}";
+            // Xác định ContentType và FileName
+            string contentType;
+            string fileName;
 
-        return File(fileContent, contentType, fileName);
+            if (format.ToLower() == "excel" || format.ToLower() == "csv")
+            {
+                contentType = "text/csv"; // <--- Đổi thành text/csv
+                fileName = $"EmployeeReport_{DateTime.Now:yyyyMMdd_HHmm}.csv"; // <--- Đuôi .csv
+            }
+            else // PDF
+            {
+                contentType = "application/pdf";
+                fileName = $"EmployeeReport_{DateTime.Now:yyyyMMdd_HHmm}.pdf";
+            }
+
+            // Trả về file trực tiếp
+            return File(fileContent, contentType, fileName);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Error exporting report", details = ex.Message });
+        }
     }
 
     [HttpGet("departments")] // API URL sẽ là: GET /api/reports/departments

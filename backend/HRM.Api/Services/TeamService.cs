@@ -3,6 +3,9 @@ using HRM.Api.Models;
 using HRM.Api.Repositories;
 using System.Linq;
 using System.Text.Json;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace HRM.Api.Services
 {
@@ -15,6 +18,20 @@ namespace HRM.Api.Services
         {
             _teamRepository = teamRepository;
             _organizationRepository = organizationRepository;
+        }
+
+        private async Task LogActionAsync(string eventType, string entity, int targetId, object data, int userId)
+        {
+            var logEntry = new OrganizationLogDto
+            {
+                EventType = eventType,
+                TargetEntity = entity,
+                TargetID = targetId,
+                EventData = data != null ? JsonSerializer.Serialize(data) : "{}",
+                PerformedBy = userId,
+                PerformedAt = DateTime.Now
+            };
+            await _organizationRepository.AddLogAsync(logEntry);
         }
 
         public async Task<(bool Success, string Message, int? EmployeeId)> AddEmployeeToTeamAsync(int teamId, int employeeId)
@@ -269,9 +286,10 @@ namespace HRM.Api.Services
                 IsActive = e.IsActive
             }).ToList();
         }
-        public async Task<(bool Success, string Message, int? TeamId)> CreateTeamAsync(int departmentId, CreateSubTeamDto dto)
+        // --- HÀM TẠO TEAM (ĐÃ SỬA: Thêm tham số int userId) ---
+        public async Task<(bool Success, string Message, int? TeamId)> CreateTeamAsync(int departmentId, CreateSubTeamDto dto, int userId)
         {
-            // 1. Verify Department exists
+            // 1. Kiểm tra Department có tồn tại không
             var departments = await _teamRepository.GetAllDepartmentsAsync();
             var department = departments.FirstOrDefault(d => d.DepartmentID == departmentId);
             if (department == null)
@@ -279,7 +297,7 @@ namespace HRM.Api.Services
                 return (false, "Department not found", null);
             }
 
-            // 2. Validate Team Lead (if provided)
+            // 2. Validate Team Lead (nếu có chọn)
             if (dto.TeamLeadId.HasValue)
             {
                 var employee = await _teamRepository.GetEmployeeByIdAsync(dto.TeamLeadId.Value);
@@ -288,15 +306,14 @@ namespace HRM.Api.Services
                     return (false, "Team Lead employee not found", null);
                 }
                 
-                // Optional: Check if employee belongs to the same department?
-                // For now, let's just ensure they exist. Business logic might vary.
+                // Logic: Team Lead phải thuộc cùng Department
                 if (employee.DepartmentID != departmentId)
                 {
                     return (false, "Team Lead must belong to the same department", null);
                 }
             }
 
-            // 3. Create SubTeam
+            // 3. Tạo SubTeam (Team)
             var subTeam = new SubTeam
             {
                 TeamName = dto.TeamName,
@@ -307,7 +324,7 @@ namespace HRM.Api.Services
 
             var createdTeam = await _teamRepository.AddSubTeamAsync(subTeam);
 
-            // 4. Automatically add Team Lead to SubTeamMembers (if provided)
+            // 4. Tự động thêm Team Lead vào thành viên của Team
             if (dto.TeamLeadId.HasValue)
             {
                 try
@@ -321,30 +338,18 @@ namespace HRM.Api.Services
                 }
                 catch (Exception ex)
                 {
-                    // Log but don't fail team creation if team lead is already in another team
+                    // Log lỗi nhẹ (warning) nhưng không làm fail quy trình tạo team
                     Console.WriteLine($"Warning: Could not add team lead to members: {ex.Message}");
-                    // Team creation still succeeds
                 }
             }
 
-            // 5. Log team creation action
-            try
+            // --- 5. GHI LOG SỬ DỤNG HÀM CHUẨN EVENT SOURCING ---
+            await LogActionAsync("CreateSubTeam", "SubTeam", createdTeam.SubTeamID, new 
             {
-                await _teamRepository.LogTeamCreationAsync(
-                    teamId: createdTeam.SubTeamID,
-                    teamName: createdTeam.TeamName,
-                    description: createdTeam.Description ?? "",
-                    departmentId: departmentId,
-                    departmentCode: department.DepartmentCode ?? "",
-                    teamLeadId: dto.TeamLeadId,
-                    performedBy: 1 // TODO: Get from HttpContext/JWT token
-                );
-            }
-            catch (Exception ex)
-            {
-                // Log error but don't fail team creation
-                Console.WriteLine($"Warning: Could not log team creation: {ex.Message}");
-            }
+                Name = createdTeam.TeamName,
+                DeptID = departmentId,
+                LeadID = dto.TeamLeadId
+            }, userId);
 
             return (true, "Team created successfully", createdTeam.SubTeamID);
         }

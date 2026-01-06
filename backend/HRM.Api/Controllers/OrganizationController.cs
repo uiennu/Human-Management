@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Security.Claims;
 
 namespace HRM.Api.Controllers
 {
@@ -18,6 +19,20 @@ namespace HRM.Api.Controllers
         {
             _service = service;
             _teamService = teamService;
+        }
+
+        private int GetCurrentUserId()
+        {
+            var identity = HttpContext.User.Identity as ClaimsIdentity;
+            if (identity != null)
+            {
+                var userClaim = identity.FindFirst(ClaimTypes.NameIdentifier) ?? identity.FindFirst("EmployeeID");
+                if (userClaim != null && int.TryParse(userClaim.Value, out int userId))
+                {
+                    return userId;
+                }
+            }
+            return 1; // Default fallback (hoặc xử lý lỗi)
         }
 
         // Endpoint: GET /api/organization/departments
@@ -85,10 +100,12 @@ namespace HRM.Api.Controllers
         public async Task<IActionResult> AddDepartment([FromBody] CreateDepartmentDto request)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
-            var result = await _service.AddDepartmentAsync(request);
+            int userId = GetCurrentUserId();
+            var result = await _service.AddDepartmentAsync(request, userId); // Truyền userId
+
             if (result.Success) return StatusCode(201, new { success = true, message = result.Message, data = result.Data });
             
-            if (result.Message.Contains("required") || result.Message.Contains("exists"))
+            if (result.Message.Contains("required") || result.Message.Contains("exists") || result.Message.Contains("already"))
                 return BadRequest(new { success = false, message = result.Message });
 
             return StatusCode(500, new { success = false, message = result.Message });
@@ -98,10 +115,11 @@ namespace HRM.Api.Controllers
         [HttpDelete("deletedepartment/{id}")]
         public async Task<IActionResult> DeleteDepartment(int id)
         {
-            var result = await _service.DeleteDepartmentAsync(id);
+            int userId = GetCurrentUserId();
+            var result = await _service.DeleteDepartmentAsync(id, userId); // Truyền userId
+
             if (result.Success) return Ok(new { success = true, message = result.Message });
             if (result.Message == "Department not found.") return NotFound(new { success = false, message = result.Message });
-            if (result.Message.StartsWith("Conflict")) return Conflict(new { success = false, message = result.Message });
             return StatusCode(500, new { success = false, message = result.Message });
         }
 
@@ -109,10 +127,11 @@ namespace HRM.Api.Controllers
         [HttpDelete("deleteteam/{id}")]
         public async Task<IActionResult> DeleteTeam(int id)
         {
-            var result = await _service.DeleteTeamAsync(id);
+            int userId = GetCurrentUserId();
+            var result = await _service.DeleteTeamAsync(id, userId); // Truyền userId
+
             if (result.Success) return Ok(new { success = true, message = result.Message, teamId = result.TeamId });
             if (result.Message == "Team not found.") return NotFound(new { success = false, message = result.Message });
-            if (result.Message.StartsWith("Conflict")) return Conflict(new { success = false, message = result.Message });
             return StatusCode(500, new { success = false, message = result.Message });
         }
 
@@ -121,9 +140,11 @@ namespace HRM.Api.Controllers
         public async Task<IActionResult> AddTeam(int departmentId, [FromBody] CreateSubTeamDto request)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
-            var result = await _teamService.CreateTeamAsync(departmentId, request);
-            if (result.Success) return StatusCode(201, new { success = true, message = result.Message, teamId = result.TeamId });
+            int userId = GetCurrentUserId();
             
+            var result = await _teamService.CreateTeamAsync(departmentId, request, userId);
+
+            if (result.Success) return StatusCode(201, new { success = true, message = result.Message, teamId = result.TeamId });
             if (result.Message.Contains("not found")) return NotFound(new { success = false, message = result.Message });
             
             return StatusCode(500, new { success = false, message = result.Message });
@@ -148,33 +169,15 @@ namespace HRM.Api.Controllers
         public async Task<IActionResult> RemoveEmployeeFromTeam(int teamId, int employeeId)
         {
             var result = await _teamService.RemoveEmployeeFromTeamAsync(teamId, employeeId);
-            
-            if (result.Success)
-            {
-                return Ok(new { success = true, message = result.Message, data = result.Data });
-            }
-            
-            if (result.Message.Contains("not found"))
-            {
-                return NotFound(new { success = false, message = result.Message });
-            }
-            
-            return StatusCode(500, new { success = false, message = result.Message });
+            return result.Success ? Ok(new { success = true, message = result.Message }) : BadRequest(new { success = false, message = result.Message });
         }
 
         [Authorize(Roles = "Admin,HR Manager,HR Employee")]
         [HttpPost("teams/{teamId}/add-employee")]
         public async Task<IActionResult> AddEmployeeToTeam(int teamId, [FromBody] AddEmployeeToTeamDto request)
         {
-            if (request == null || request.EmployeeId <= 0)
-                return BadRequest(new { success = false, message = "Invalid employee ID" });
-
             var result = await _teamService.AddEmployeeToTeamAsync(teamId, request.EmployeeId);
-            
-            if (result.Success)
-                return Ok(new { success = true, message = result.Message, employeeId = result.EmployeeId });
-            
-            return BadRequest(new { success = false, message = result.Message });
+            return result.Success ? Ok(new { success = true, message = result.Message, employeeId = result.EmployeeId }) : BadRequest(new { success = false, message = result.Message });
         }
 
         [Authorize(Roles = "Admin,HR Manager,HR Employee")]
@@ -193,9 +196,7 @@ namespace HRM.Api.Controllers
         [HttpPut("departments/{id}")]
         public async Task<IActionResult> UpdateDepartment(int id, [FromBody] UpdateDepartmentDto request)
         {
-            if (request == null)
-                return BadRequest("Invalid data");
-            int userId = 1;
+            int userId = GetCurrentUserId();
             await _service.UpdateDepartmentAsync(id, request, userId);
             return Ok(new { message = "Update successful" });
         }

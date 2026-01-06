@@ -38,6 +38,10 @@ target/
 *.ear
 *.iml
 pom.xml.tag
+
+# Bỏ qua file tạm của Word
+~$*.docx
+*.tmp
 pom.xml.releaseBackup
 pom.xml.versionsBackup
 dependency-reduced-pom.xml

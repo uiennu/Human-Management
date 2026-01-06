@@ -34,13 +34,13 @@ export default function LeaveHistoryPage() {
   const [activeTab, setActiveTab] = useState<"my-request" | "my-approval">("my-request")
   const [showBalanceDropdown, setShowBalanceDropdown] = useState(false)
   const [showCreateForm, setShowCreateForm] = useState(false)
-
+  
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [dateRangeFilter, setDateRangeFilter] = useState<string>("last-30-days")
   const [leaveTypeFilter, setLeaveTypeFilter] = useState<string>("all")
   const [currentPage, setCurrentPage] = useState(1)
-
+  
   // Dialogs
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
   const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null)
@@ -60,7 +60,7 @@ export default function LeaveHistoryPage() {
   // Approval Data
   const [approvalRequests, setApprovalRequests] = useState<any[]>([]);
   const [loadingApprovals, setLoadingApprovals] = useState(false);
-
+  
   // Approval Filters & Stats
   const [approvalStats, setApprovalStats] = useState({ all: 0, pending: 0, complete: 0 })
   const [approvalStatusFilter, setApprovalStatusFilter] = useState<string>("all")
@@ -86,7 +86,7 @@ export default function LeaveHistoryPage() {
 
         if (id) setEmployeeId(Number(id));
         if (role) setUserRole(role);
-
+        
       } catch (e) {
         console.error("Lỗi khi giải mã token:", e);
       }
@@ -133,57 +133,54 @@ export default function LeaveHistoryPage() {
     };
   }, [employeeId, statusFilter, dateRangeFilter, leaveTypeFilter, currentPage, activeTab]);
 
-  // --- 3. useEffect MỚI: Load Approvals (ĐÃ SỬA: Chạy ngay khi có ID, không chờ chuyển tab) ---
+  // --- 3. useEffect MỚI: Load Approvals (Chạy ngay khi có ID) ---
   useEffect(() => {
-    // SỬA: Bỏ điều kiện activeTab === "my-approval" để nó load ngầm luôn
-    // Thêm check userRole để chỉ Manager/Admin mới gọi API này cho đỡ tốn tài nguyên
     const isManagerOrAdmin = ["HR Manager", "IT Manager", "Admin", "Sales Manager", "Finance Manager", "BOD Assistant"].includes(userRole);
 
     if (employeeId && isManagerOrAdmin) {
-      const fetchApprovals = async () => {
-        setLoadingApprovals(true);
-        try {
-          // Changed from /pending to /all to get ALL approval requests
-          const response = await fetch(`http://localhost:8081/api/approvals/all?managerId=${employeeId}`);
+        const fetchApprovals = async () => {
+            setLoadingApprovals(true);
+            try {
+                // Fetch ALL để có thể filter ở client
+                const response = await fetch(`http://localhost:8081/api/approvals/all?managerId=${employeeId}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    setApprovalRequests(data);
+                } else {
+                    console.error("Failed to fetch approvals");
+                }
+            } catch (error) {
+                console.error("Error fetching approvals:", error);
+            } finally {
+                setLoadingApprovals(false);
+            }
+        };
 
-          if (response.ok) {
-            const data = await response.json();
-            setApprovalRequests(data);
-          } else {
-            console.error("Failed to fetch approvals");
-          }
-        } catch (error) {
-          console.error("Error fetching approvals:", error);
-        } finally {
-          setLoadingApprovals(false);
-        }
-      };
-
-      fetchApprovals();
-
-      // (Tùy chọn) Auto refresh danh sách duyệt mỗi 30s để cập nhật real-time
-      const interval = setInterval(fetchApprovals, 30000);
-      return () => clearInterval(interval);
+        fetchApprovals();
+        
+        const interval = setInterval(fetchApprovals, 30000);
+        return () => clearInterval(interval);
     }
-  }, [employeeId, userRole]); // Bỏ activeTab ra khỏi dependencies
+  }, [employeeId, userRole]); 
 
   // Calculate Approval Stats
   useEffect(() => {
     if (approvalRequests.length > 0) {
       const pending = approvalRequests.filter((r: any) => r.status === 'Pending').length
       const complete = approvalRequests.filter((r: any) => r.status === 'Approved' || r.status === 'Rejected').length
-
+      
       setApprovalStats({
         all: approvalRequests.length,
         pending,
         complete
       })
     } else {
-      setApprovalStats({ all: 0, pending: 0, complete: 0 })
+        setApprovalStats({ all: 0, pending: 0, complete: 0 })
     }
   }, [approvalRequests])
 
-  // Stats logic
+  // Stats logic for My Request
   const [stats, setStats] = useState({ all: 0, pending: 0, approved: 0, rejected: 0, draft: 0 })
 
   useEffect(() => {
@@ -195,7 +192,7 @@ export default function LeaveHistoryPage() {
             dateRange: dateRangeFilter,
             leaveTypeId: leaveTypeFilter,
             page: 1,
-            pageSize: 1000
+            pageSize: 1000 
           });
 
           const allReqs = data.data || [];
@@ -212,7 +209,7 @@ export default function LeaveHistoryPage() {
       }
       fetchStats();
     }
-  }, [employeeId, statusFilter, dateRangeFilter, leaveTypeFilter]);
+  }, [employeeId, statusFilter, dateRangeFilter, leaveTypeFilter]); 
 
   const loadLeaveTypes = async () => {
     try {
@@ -242,7 +239,7 @@ export default function LeaveHistoryPage() {
     if (!selectedRequestId) return;
     try {
       await leaveService.cancelLeaveRequest(selectedRequestId);
-      window.location.reload();
+      window.location.reload(); 
     } catch (error) {
       console.error("Failed to cancel request", error);
       alert("Failed to cancel request");
@@ -267,52 +264,47 @@ export default function LeaveHistoryPage() {
   }
 
   const handleApprove = (id: number) => {
-    alert(`Approving request ${id} (Integrate API later)`);
+      alert(`Approving request ${id} (Integrate API later)`);
   }
 
   const handleReject = (id: number) => {
-    alert(`Rejecting request ${id} (Integrate API later)`);
+      alert(`Rejecting request ${id} (Integrate API later)`);
   }
 
   const handleRequestCreated = async (requestId: number) => {
-    // Close the form
     setShowCreateForm(false);
-
-    // Fetch the newly created request details and show detail view
     try {
       const requestDetail = await leaveService.getLeaveRequestDetail(requestId);
       setViewingRequest(requestDetail);
     } catch (error) {
       console.error("Failed to load request details", error);
-      // If failed to load details, just close the form
     }
   }
 
-  // Filter approval requests
+  // Filter approval requests for table view
   const filteredApprovalRequests = approvalRequests.filter((req: any) => {
-    // Status filter
     if (approvalStatusFilter === 'Pending' && req.status !== 'Pending') return false
     if (approvalStatusFilter === 'Complete' && req.status !== 'Approved' && req.status !== 'Rejected') return false
-
-    // Leave type filter
     if (approvalLeaveTypeFilter !== 'all' && req.leaveTypeID?.toString() !== approvalLeaveTypeFilter) return false
-
-    // Date range filter (based on requestedDate)
+    
     if (approvalDateRangeFilter !== 'all-time') {
-      const requestDate = new Date(req.requestedDate)
-      const now = new Date()
-      const daysDiff = Math.floor((now.getTime() - requestDate.getTime()) / (1000 * 60 * 60 * 24))
-
-      if (approvalDateRangeFilter === 'last-7-days' && daysDiff > 7) return false
-      if (approvalDateRangeFilter === 'last-30-days' && daysDiff > 30) return false
-      if (approvalDateRangeFilter === 'last-90-days' && daysDiff > 90) return false
-      if (approvalDateRangeFilter === 'this-year') {
-        if (requestDate.getFullYear() !== now.getFullYear()) return false
-      }
+        const requestDate = new Date(req.requestedDate)
+        const now = new Date()
+        const daysDiff = Math.floor((now.getTime() - requestDate.getTime()) / (1000 * 60 * 60 * 24))
+        
+        if (approvalDateRangeFilter === 'last-7-days' && daysDiff > 7) return false
+        if (approvalDateRangeFilter === 'last-30-days' && daysDiff > 30) return false
+        if (approvalDateRangeFilter === 'last-90-days' && daysDiff > 90) return false
+        if (approvalDateRangeFilter === 'this-year') {
+            if (requestDate.getFullYear() !== now.getFullYear()) return false
+        }
     }
-
     return true
   })
+
+  // --- TÍNH SỐ LƯỢNG PENDING ĐỂ HIỂN THỊ TRÊN BADGE ---
+  // Lọc ra các request có status là 'Pending'
+  const pendingCount = approvalRequests.filter(req => req.status === 'Pending').length;
 
   if (viewingRequest) {
     return (
@@ -362,8 +354,8 @@ export default function LeaveHistoryPage() {
           >
             My Request
           </button>
-
-          {(userRole === "HR Manager" || userRole === "IT Manager" || userRole === "Admin" || userRole === "Sales Manager" || userRole === "Finance Manager" || userRole === "BOD Assistant") && (
+          
+          {(userRole === "HR Manager" || userRole === "IT Manager" || userRole==="Admin" || userRole==="Sales Manager" || userRole==="Finance Manager" || userRole==="BOD Assistant") && (
             <button
               onClick={() => setActiveTab("my-approval")}
               className={`px-4 py-2 font-semibold text-sm transition-colors relative ${activeTab === "my-approval"
@@ -371,11 +363,12 @@ export default function LeaveHistoryPage() {
                 : "text-slate-600 hover:text-slate-900"
                 }`}
             >
-              My Approval
-              {approvalRequests.length > 0 && (
-                <span className="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full animate-in fade-in zoom-in duration-300">
-                  {approvalRequests.length}
-                </span>
+              My Approval 
+              {/* --- ĐÃ SỬA: CHỈ HIỂN THỊ SỐ PENDING --- */}
+              {pendingCount > 0 && (
+                  <span className="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full animate-in fade-in zoom-in duration-300">
+                      {pendingCount}
+                  </span>
               )}
             </button>
           )}
@@ -519,7 +512,7 @@ export default function LeaveHistoryPage() {
                           <tr key={request.leaveRequestID} className="hover:bg-slate-50 cursor-pointer" onClick={() => handleViewDetails(request)}>
                             <td className="py-2 text-sm text-slate-900">{request.leaveTypeName || 'Unknown'}</td>
                             <td className="py-2 text-sm text-slate-600">
-                              {new Date(request.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })} -
+                              {new Date(request.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })} - 
                               {new Date(request.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                             </td>
                             <td className="py-2 text-center text-sm text-slate-900">{request.totalDays}</td>
@@ -623,11 +616,7 @@ export default function LeaveHistoryPage() {
             <Card>
               <CardContent className="p-3">
                 <h2 className="mb-3 text-sm font-semibold text-slate-900">Approval Requests</h2>
-                {loadingApprovals ? (
-                  <p className="text-center py-8 text-gray-500">Loading requests...</p>
-                ) : filteredApprovalRequests.length === 0 ? (
-                  <p className="text-center py-8 text-gray-500">No requests found matching your filters.</p>
-                ) : (
+                {loadingApprovals ? <p className="text-center py-8 text-gray-500">Loading requests...</p> : filteredApprovalRequests.length === 0 ? <p className="text-center py-8 text-gray-500">No requests found matching your filters.</p> : (
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
@@ -640,37 +629,19 @@ export default function LeaveHistoryPage() {
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {filteredApprovalRequests.map((req: any) => (
-                          <tr
-                            key={req.leaveRequestID}
-                            className="hover:bg-slate-50 cursor-pointer transition-colors"
-                            onClick={() => handleViewDetails(req)}
-                          >
+                          <tr key={req.leaveRequestID} className="hover:bg-slate-50 cursor-pointer transition-colors" onClick={() => handleViewDetails(req)}>
                             <td className="py-2">
                               <div className="flex items-center gap-3">
                                 <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden border border-blue-200">
-                                  {req.avatarUrl ? (
-                                    <img src={req.avatarUrl} alt="avatar" className="h-full w-full object-cover" />
-                                  ) : (
-                                    <span className="text-xs font-bold text-blue-600">
-                                      {req.employeeName ? req.employeeName.charAt(0) : 'U'}
-                                    </span>
-                                  )}
+                                  {req.avatarUrl ? <img src={req.avatarUrl} alt="avatar" className="h-full w-full object-cover" /> : <span className="text-xs font-bold text-blue-600">{req.employeeName ? req.employeeName.charAt(0) : 'U'}</span>}
                                 </div>
                                 <span className="text-sm font-medium text-slate-900">{req.employeeName || 'Unknown'}</span>
                               </div>
                             </td>
                             <td className="py-2 text-sm text-slate-900">{req.leaveTypeName}</td>
-                            <td className="py-2 text-sm text-slate-600">
-                              {new Date(req.requestedDate).toLocaleDateString("en-US", {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric"
-                              })}
-                            </td>
+                            <td className="py-2 text-sm text-slate-600">{new Date(req.requestedDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
                             <td className="py-2">
-                              <Badge variant="outline" className={`${statusColors[req.status as LeaveStatus] || 'bg-gray-100'} font-medium`}>
-                                {req.status}
-                              </Badge>
+                              <Badge variant="outline" className={`${statusColors[req.status as LeaveStatus] || 'bg-gray-100'} font-medium`}>{req.status}</Badge>
                             </td>
                           </tr>
                         ))}

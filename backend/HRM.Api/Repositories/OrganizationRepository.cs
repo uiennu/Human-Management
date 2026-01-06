@@ -9,6 +9,7 @@ using HRM.Api.Data;
 using HRM.Api.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
+using System;
 
 namespace HRM.Api.Repositories
 {
@@ -172,6 +173,44 @@ namespace HRM.Api.Repositories
                 Departments = deptDtos,
                 UnassignedEmployees = unassigned
             };
+        }
+
+        public async Task<Employee?> GetEmployeeByIdAsync(int id)
+        {
+            return await _context.Employees.FirstOrDefaultAsync(e => e.EmployeeID == id);
+        }
+
+        public async Task<(bool Success, string Message, int? TeamId)> DeleteTeamAsync(int id)
+        {
+            var team = await _context.SubTeams.FindAsync(id);
+            if (team == null) return (false, "Team not found", null);
+
+            try
+            {
+                // Bước 1: Xóa Log liên quan đến Team này trước (Tránh lỗi khóa ngoại)
+                // Sử dụng SQL Raw để xóa nhanh
+                const string deleteLogsSql = "DELETE FROM OrganizationStructureLogs WHERE TargetEntity = 'SubTeam' AND TargetID = {0}";
+                await _context.Database.ExecuteSqlRawAsync(deleteLogsSql, id);
+
+                // Bước 2: Gỡ TeamLead (set null) để tránh ràng buộc
+                team.TeamLeadID = null;
+                await _context.SaveChangesAsync();
+
+                // Bước 3: Xóa thành viên trong team (Cascade thường tự làm, nhưng làm thủ công cho chắc)
+                var members = await _context.SubTeamMembers.Where(m => m.SubTeamID == id).ToListAsync();
+                _context.SubTeamMembers.RemoveRange(members);
+                await _context.SaveChangesAsync();
+
+                // Bước 4: Xóa Team
+                _context.SubTeams.Remove(team);
+                await _context.SaveChangesAsync();
+
+                return (true, "Team deleted successfully", id);
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Error deleting team: {ex.Message}", null);
+            }
         }
 
         public async Task<bool> DepartmentNameExistsAsync(string name)
