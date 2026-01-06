@@ -60,7 +60,7 @@ export function EmployeeProfileReport() {
   const [departmentOptions, setDepartmentOptions] = useState<string[]>(["All under me"])
   const [subTeamOptions, setSubTeamOptions] = useState<string[]>(["All Teams"])
   
-  const { user } = useAuth() // Chỉ cần user, token đã có axios-instance lo
+  const { user } = useAuth() 
   const itemsPerPage = 5
 
   const realUserRole = user?.role || user?.['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || user?.['Role'];
@@ -86,7 +86,6 @@ export function EmployeeProfileReport() {
     const fetchSubTeams = async () => {
       if (!canFilterTeam) return;
       try {
-        // Nếu chọn "All under me", gửi undefined để service xử lý
         const deptParam = (department && department !== "All under me") ? department : undefined;
         const data = await reportService.getSubTeams(deptParam);
         setSubTeamOptions(["All Teams", ...data]);
@@ -191,41 +190,81 @@ export function EmployeeProfileReport() {
 
   return (
     <div className="space-y-6">
-      {/* ... (Phần Header, Chart, Filter giữ nguyên code cũ của bạn vì UI không đổi) ... */}
       <div>
         <h1 className="text-2xl font-bold text-foreground">Employee Profile Report</h1>
         <p className="text-sm text-muted-foreground mt-1">Generate reports for employees under your management.</p>
       </div>
 
-      {/* Summary Chart Card (Copy từ code cũ của bạn) */}
+      {/* --- SUMMARY SECTION (Đã bổ sung đầy đủ) --- */}
       <Card className="bg-white">
-        {/* ... Paste lại nội dung Card Header Chart của bạn ... */}
         <CardHeader>
           <div className="flex flex-col md:flex-row items-start justify-between gap-6">
+            
+            {/* 1. Total Employees (Trái) */}
             <div>
               <p className="text-sm text-muted-foreground">Total Employees</p>
               <p className="text-4xl font-bold text-foreground mt-1">{totalRecords}</p>
             </div>
+
+            {/* 2. Chart & Legend (Giữa) */}
             <div className="flex flex-col md:flex-row items-center gap-6 w-full md:w-auto">
+              {/* Donut Chart */}
               <div className="relative w-40 h-40 shrink-0">
                 <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
-                  <circle cx="50" cy="50" r="40" fill="none" stroke="#22c55e" strokeWidth="8" strokeDasharray={`${(activePercentage / 100) * 251.2} 251.2`} />
-                  <circle cx="50" cy="50" r="40" fill="none" stroke="#eab308" strokeWidth="8" strokeDasharray={`${(onLeavePercentage / 100) * 251.2} 251.2`} strokeDashoffset={-((activePercentage / 100) * 251.2)} />
-                  <circle cx="50" cy="50" r="40" fill="none" stroke="#ef4444" strokeWidth="8" strokeDasharray={`${(terminatedPercentage / 100) * 251.2} 251.2`} strokeDashoffset={-(((activePercentage + onLeavePercentage) / 100) * 251.2)} />
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="#22c55e" strokeWidth="8"
+                    strokeDasharray={`${(activePercentage / 100) * 251.2} 251.2`} />
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="#eab308" strokeWidth="8"
+                    strokeDasharray={`${(onLeavePercentage / 100) * 251.2} 251.2`}
+                    strokeDashoffset={-((activePercentage / 100) * 251.2)} />
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="#ef4444" strokeWidth="8"
+                    strokeDasharray={`${(terminatedPercentage / 100) * 251.2} 251.2`}
+                    strokeDashoffset={-(((activePercentage + onLeavePercentage) / 100) * 251.2)} />
                 </svg>
               </div>
-              {/* Legend ... */}
+              
+              {/* Legend (Phần bị thiếu đã được thêm lại) */}
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                  <span>Active</span><span className="font-semibold">{activePercentage}%</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                  <span>On Leave</span><span className="font-semibold">{onLeavePercentage}%</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  <span>Terminated</span><span className="font-semibold">{terminatedPercentage}%</span>
+                </div>
+              </div>
             </div>
+
+            {/* 3. Active Filters (Phải - Phần bị thiếu đã được thêm lại) */}
+            <div className="text-left md:text-right w-full md:w-auto">
+              <p className="text-xs text-muted-foreground mb-2">Active Filters:</p>
+              <div className="flex gap-2 flex-wrap md:justify-end">
+                <Badge variant="secondary" className="bg-gray-100">{department}</Badge>
+                {subTeam !== "All Teams" && <Badge variant="secondary" className="bg-blue-100">{subTeam}</Badge>}
+                {selectedStatuses.map((status) => (
+                  <Badge key={status} className={`${
+                        status === "Active" ? "bg-green-100 text-green-700" :
+                        status === "On Leave" ? "bg-yellow-100 text-yellow-700" :
+                        "bg-red-100 text-red-700"
+                      }`}>
+                    Status: {status}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
           </div>
         </CardHeader>
       </Card>
 
-      {/* Filters Card (Copy từ code cũ, chỉ thay đổi input binding nếu cần, ở đây state giống hệt nên giữ nguyên) */}
+      {/* --- FILTERS SECTION --- */}
       <Card className="bg-white">
         <CardHeader><h3 className="font-semibold">Filters</h3></CardHeader>
         <CardContent className="space-y-4">
-           {/* ... Paste lại toàn bộ nội dung Filters của bạn ... */}
-           {/* Nút Generate Report gọi handleSearchClick */}
            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                 {/* Department */}
                 {canFilterDepartment ? (
@@ -268,7 +307,7 @@ export function EmployeeProfileReport() {
         </CardContent>
       </Card>
 
-      {/* Report Table & Export Buttons */}
+      {/* --- REPORT TABLE SECTION --- */}
       {reportGenerated && (
         <Card className="bg-white">
           <CardContent className="pt-6">
