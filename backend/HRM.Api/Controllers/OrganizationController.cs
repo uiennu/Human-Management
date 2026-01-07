@@ -200,7 +200,7 @@ namespace HRM.Api.Controllers
             await _service.UpdateDepartmentAsync(id, request, userId);
             return Ok(new { message = "Update successful" });
         }
-
+        [Authorize(Roles = "Admin,HR Manager,HR Employee")]
         [HttpGet("logs")]
         public async Task<IActionResult> GetOrganizationLogs()
         {

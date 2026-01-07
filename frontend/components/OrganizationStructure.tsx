@@ -498,9 +498,12 @@ export function OrganizationStructure() {
             <button onClick={handleResetZoom} className="p-2 hover:bg-gray-100 border-l border-gray-200"><Eye className="h-4 w-4" /></button>
           </div>
 
-          <Button onClick={() => window.location.href = '/organization-logs'} variant="outline" className="shadow-sm">
-            <FileJson className="mr-2 h-4 w-4" /> View Logs
-          </Button>
+          {/* CHỈ ADMIN/HR MỚI ĐƯỢC XEM LOG */}
+          {canManageOrganization && (
+            <Button onClick={() => window.location.href = '/organization-logs'} variant="outline" className="shadow-sm">
+              <FileJson className="mr-2 h-4 w-4" /> View Logs
+            </Button>
+          )}
 
           {/* ADD DEPARTMENT BUTTON - CHỈ HIỆN VỚI QUYỀN QUẢN LÝ */}
           {canManageOrganization && (
