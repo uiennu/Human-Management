@@ -4,6 +4,7 @@ using HRM.Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using DotNetEnv;
+using Microsoft.Extensions.FileProviders;
 
 Env.Load();
 
@@ -137,6 +138,18 @@ app.UseCors("AllowLocalhost3000");
 
 // Serve static files (uploads, etc.) - MUST be before auth to allow public access
 app.UseStaticFiles();
+var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads");
+
+// Kiểm tra nếu chưa có thư mục thì tạo mới để tránh lỗi
+if (!Directory.Exists(uploadsPath)) {
+    Directory.CreateDirectory(uploadsPath);
+}
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(uploadsPath),
+    RequestPath = "/uploads"
+});
 
 // Add authentication and authorization middleware
 app.UseAuthentication();
