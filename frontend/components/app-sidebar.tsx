@@ -156,7 +156,7 @@ export function AppSidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 px-3 py-4">
+      <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto custom-scrollbar">
         {navigation.map((item) => {
           const isActive = pathname === item.href;
           return (
