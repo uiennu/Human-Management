@@ -6,7 +6,7 @@ import { utilityApi } from "@/lib/api/utility"
 import { X, FileText, Check, Upload, Download, Loader2 } from "lucide-react"
 
 interface LeaveRequestDetailProps {
-  request: any; // Selected request (contains at least leaveRequestID and status)
+  request: any;
   onBack: () => void;
   isManagerView?: boolean;
 }
@@ -27,14 +27,12 @@ export default function LeaveRequestDetail({ request, onBack, isManagerView = fa
 
   const [downloading, setDownloading] = useState(false);
 
-  // Approval/Decline modal state
   const [showApproveModal, setShowApproveModal] = useState(false)
   const [showDeclineModal, setShowDeclineModal] = useState(false)
   const [comment, setComment] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [commentError, setCommentError] = useState("")
 
-  // Success modal state
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [successMessage, setSuccessMessage] = useState("")
 
@@ -42,10 +40,8 @@ export default function LeaveRequestDetail({ request, onBack, isManagerView = fa
   useEffect(() => {
     const loadDetails = async () => {
       try {
-        // --- SỬA LỖI Ở ĐÂY: Thêm ": any" để TypeScript không báo đỏ ---
         const data: any = await leaveService.getLeaveRequestDetail(request.leaveRequestID);
 
-        // Nếu API trả về thiếu employeeName nhưng request cha có, ta merge vào
         if (!data.employeeName && request.employeeName) {
           data.employeeName = request.employeeName;
         }
@@ -67,7 +63,6 @@ export default function LeaveRequestDetail({ request, onBack, isManagerView = fa
     return <div className="p-8 text-center text-red-500">Failed to load details</div>;
   }
 
-  // Normalize API base: remove trailing /api if NEXT_PUBLIC_API_URL includes it
   const rawApi = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5204";
   const API_BASE = rawApi.replace(/\/api\/?$/, "");
 
@@ -86,10 +81,6 @@ export default function LeaveRequestDetail({ request, onBack, isManagerView = fa
   const hasApproval = !!details.approvalInfo;
   const getImageUrl = (path: string) => {
     if (!path) return "";
-
-    // 1. Xóa chữ "api/" ở đầu nếu lỡ có
-    // 2. Xóa các dấu gạch chéo thừa ở đầu chuỗi (ví dụ /uploads -> uploads)
-    // 3. Đổi tất cả dấu gạch chéo ngược "\" (Windows) thành "/" (Web)
     const cleanPath = path
       .replace(/^api\//i, "")
       .replace(/^[\\/]+/, "")
@@ -99,7 +90,6 @@ export default function LeaveRequestDetail({ request, onBack, isManagerView = fa
   };
   const openAttachment = (path: string) => {
     const url = getImageUrl(path);
-    console.log("Opening URL:", url); // Log để kiểm tra nếu còn lỗi
     const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(path);
     if (isImage) {
       setSelectedImage(url);
@@ -108,7 +98,6 @@ export default function LeaveRequestDetail({ request, onBack, isManagerView = fa
     }
   };
 
-  // Action handlers
   const handleApprove = () => {
     setComment("")
     setCommentError("")
@@ -127,11 +116,9 @@ export default function LeaveRequestDetail({ request, onBack, isManagerView = fa
       await leaveService.approveRequest(details.leaveRequestID, comment)
       setShowApproveModal(false)
 
-      // Show success modal
       setSuccessMessage("Request approved successfully!")
       setShowSuccessModal(true)
 
-      // Wait 2 seconds then go back
       setTimeout(() => {
         setShowSuccessModal(false)
         onBack()
@@ -145,7 +132,6 @@ export default function LeaveRequestDetail({ request, onBack, isManagerView = fa
   }
 
   const submitDecline = async () => {
-    // Validate comment is required
     if (!comment.trim()) {
       setCommentError("Comment is required for declining a request")
       return
@@ -156,11 +142,9 @@ export default function LeaveRequestDetail({ request, onBack, isManagerView = fa
       await leaveService.declineRequest(details.leaveRequestID, comment)
       setShowDeclineModal(false)
 
-      // Show success modal
       setSuccessMessage("Request declined successfully!")
       setShowSuccessModal(true)
 
-      // Wait 2 seconds then go back
       setTimeout(() => {
         setShowSuccessModal(false)
         onBack()
@@ -182,9 +166,11 @@ export default function LeaveRequestDetail({ request, onBack, isManagerView = fa
             {/* Header */}
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 p-4 sm:p-6">
               <div className="flex items-center gap-4">
-                <p className="text-2xl font-black tracking-[-0.033em] text-[#111418] sm:text-3xl">
+                {/* --- SỬA 1: Font giống hình mẫu --- */}
+                <h1 className="text-2xl font-bold text-slate-900">
                   Leave Request Details
-                </p>
+                </h1>
+                
                 <div
                   className={`flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-lg px-4 ${statusStyle.bg}`}
                 >
@@ -333,18 +319,19 @@ export default function LeaveRequestDetail({ request, onBack, isManagerView = fa
                         );
                       })
                     ) : (
-                      <p className="text-sm text-gray-400 italic">No attachments</p>
+                      /* --- SỬA 3: Thêm pt-2 để thẳng hàng với label bên trái --- */
+                      <p className="text-sm text-gray-400 italic pt-2">No attachments</p>
                     )}
                   </div>
                 </div>
               </div>
 
               {/* Activity Log */}
-              <h2 className="px-4 pb-3 pt-5 text-xl font-bold tracking-[-0.015em] text-[#111418]">
+              {/* --- SỬA 2: Xóa px-4 để thẳng hàng với tiêu đề trên --- */}
+              <h2 className="pb-3 pt-5 text-xl font-bold tracking-[-0.015em] text-[#111418]">
                 Activity Log
               </h2>
               <div className="flex flex-col gap-4 p-4">
-                {/* Approval item (if exists) */}
                 {hasApproval && (
                   <div className="flex gap-4">
                     <div className="flex flex-col items-center">
@@ -370,7 +357,6 @@ export default function LeaveRequestDetail({ request, onBack, isManagerView = fa
                   </div>
                 )}
 
-                {/* Submitted item */}
                 <div className="flex gap-4">
                   <div className="flex flex-col items-center">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#137fec]/20">
@@ -379,7 +365,6 @@ export default function LeaveRequestDetail({ request, onBack, isManagerView = fa
                     <div className="h-full w-px bg-transparent"></div>
                   </div>
                   <div className="pb-8">
-                    {/* --- ĐÃ SỬA: Hiển thị tên nhân viên nếu là quản lý xem --- */}
                     <p className="font-medium text-[#111418]">
                       Submitted by {isManagerView ? (request.employeeName || details.employeeName || 'Employee') : 'You'}
                     </p>
@@ -390,19 +375,18 @@ export default function LeaveRequestDetail({ request, onBack, isManagerView = fa
                 </div>
               </div>
 
-              {/* Action Buttons - Only show for managers viewing pending requests */}
               {isManagerView && status === "Pending" && (
                 <div className="flex gap-3 px-4 pb-6 pt-4">
                   <button
                     onClick={handleApprove}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 transition-colors"
+                    className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
                   >
                     <Check className="h-5 w-5" />
                     Approve Request
                   </button>
                   <button
                     onClick={handleDecline}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-rose-600 px-4 py-3 text-sm font-bold text-white hover:bg-rose-700 transition-colors"
+                    className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-rose-600 px-4 py-3 text-sm font-medium text-white hover:bg-rose-700 transition-colors"
                   >
                     <X className="h-5 w-5" />
                     Decline Request
@@ -414,7 +398,6 @@ export default function LeaveRequestDetail({ request, onBack, isManagerView = fa
         </div>
       </div>
 
-      {/* Approve Modal */}
       {showApproveModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
@@ -445,7 +428,7 @@ export default function LeaveRequestDetail({ request, onBack, isManagerView = fa
               <button
                 onClick={submitApproval}
                 disabled={submitting}
-                className="flex-1 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                className="flex-1 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
               >
                 {submitting ? "Approving..." : "Confirm Approve"}
               </button>
@@ -454,7 +437,6 @@ export default function LeaveRequestDetail({ request, onBack, isManagerView = fa
         </div>
       )}
 
-      {/* Decline Modal */}
       {showDeclineModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
@@ -497,7 +479,7 @@ export default function LeaveRequestDetail({ request, onBack, isManagerView = fa
               <button
                 onClick={submitDecline}
                 disabled={submitting}
-                className="flex-1 rounded-lg bg-rose-600 px-4 py-2 text-sm font-bold text-white hover:bg-rose-700 disabled:opacity-50 transition-colors"
+                className="flex-1 rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50 transition-colors"
               >
                 {submitting ? "Declining..." : "Confirm Decline"}
               </button>
@@ -506,7 +488,6 @@ export default function LeaveRequestDetail({ request, onBack, isManagerView = fa
         </div>
       )}
 
-      {/* Image Modal */}
       {selectedImage && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
@@ -531,7 +512,6 @@ export default function LeaveRequestDetail({ request, onBack, isManagerView = fa
         </div>
       )}
 
-      {/* Success Modal */}
       {showSuccessModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-8 text-center">

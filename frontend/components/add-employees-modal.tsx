@@ -54,8 +54,10 @@ export function AddEmployeesModal({ open, onOpenChange, department }: AddEmploye
           const filtered = allEmployees.filter(e => {
             const empId = e.employeeID.toString()
 
-            // Must be in same department
-            const inSameDepartment = e.departmentName === department.parentDepartmentName || !e.departmentName
+            // Must be in same department (strict check - no null/undefined departments allowed)
+            const inSameDepartment = e.departmentName &&
+              department.parentDepartmentName &&
+              e.departmentName === department.parentDepartmentName
 
             // Not already a member
             const notAlreadyMember = !existingMemberIds.includes(empId)
