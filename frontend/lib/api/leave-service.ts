@@ -40,14 +40,13 @@ export const leaveService = {
       })
       if (!res.ok) {
         console.warn('Failed to fetch leave balances:', res.status, res.statusText)
-        return [] // Return empty array instead of throwing
+        return []
       }
       const data = await res.json()
-      // Backend returns { employeeID, data: [...] } structure
       return data.data || data.Data || []
     } catch (error) {
       console.error('Error fetching leave balances:', error)
-      return [] // Return empty array on error
+      return []
     }
   },
 
@@ -145,8 +144,9 @@ export const leaveService = {
     return res.json()
   },
 
+  // --- SỬA 2 HÀM NÀY GỌI VỀ .NET (API_URL) THAY VÌ JAVA ---
   async approveRequest(requestId: number, comment?: string) {
-    const res = await fetch(`http://localhost:8081/api/approvals/${requestId}/approve`, {
+    const res = await fetch(`${API_URL}/leave/leave-requests/${requestId}/approve`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({ note: comment || '' }),
@@ -159,7 +159,7 @@ export const leaveService = {
   },
 
   async declineRequest(requestId: number, comment: string) {
-    const res = await fetch(`http://localhost:8081/api/approvals/${requestId}/reject`, {
+    const res = await fetch(`${API_URL}/leave/leave-requests/${requestId}/reject`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({ note: comment }),

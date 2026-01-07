@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -9,6 +9,7 @@ import { Eye, X, Plus, TriangleAlert, ChevronDown, ChevronUp, Check } from "luci
 import LeaveRequestForm from "./LeaveRequestForm"
 import LeaveRequestDetail from "./LeaveRequestDetail"
 import { leaveService } from "@/lib/api/leave-service"
+import { toast } from "sonner" // Thêm toast để thông báo đẹp hơn
 import {
   AlertDialog,
   AlertDialogAction,
@@ -66,6 +67,9 @@ export default function LeaveHistoryPage() {
   const [approvalStatusFilter, setApprovalStatusFilter] = useState<string>("all")
   const [approvalDateRangeFilter, setApprovalDateRangeFilter] = useState<string>("last-30-days")
   const [approvalLeaveTypeFilter, setApprovalLeaveTypeFilter] = useState<string>("all")
+  
+  // Stats logic for My Request
+  const [stats, setStats] = useState({ all: 0, pending: 0, approved: 0, rejected: 0, draft: 0 })
 
   // 1. useEffect: Lấy ID và Role từ Token
   useEffect(() => {
@@ -93,76 +97,118 @@ export default function LeaveHistoryPage() {
     }
   }, []);
 
+  // --- REFACTORED: Tách các hàm fetch ra ngoài useEffect để gọi lại được ---
 
-  // 2. useEffect: Load My Requests
-  useEffect(() => {
-    let ignore = false;
-
-    if (employeeId && employeeId > 0 && activeTab === 'my-request') {
-      const fetchRequests = async () => {
-        setLoading(true);
-        try {
-          const data = await leaveService.getMyRequests(employeeId, {
-            status: statusFilter,
-            dateRange: dateRangeFilter,
-            leaveTypeId: leaveTypeFilter,
-            page: currentPage
-          });
-          if (!ignore) {
-            setRequests(data.data || []);
-          }
-        } catch (err) {
-          if (!ignore) {
-            console.error(err);
-            setError("Failed to load leave history");
-          }
-        } finally {
-          if (!ignore) {
-            setLoading(false);
-          }
-        }
-      };
-
-      fetchRequests();
-      loadBalances();
-      loadLeaveTypes();
+  const fetchMyRequests = useCallback(async () => {
+    if (!employeeId || employeeId <= 0) return;
+    setLoading(true);
+    try {
+      const data = await leaveService.getMyRequests(employeeId, {
+        status: statusFilter,
+        dateRange: dateRangeFilter,
+        leaveTypeId: leaveTypeFilter,
+        page: currentPage
+      });
+      setRequests(data.data || []);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load leave history");
+    } finally {
+      setLoading(false);
     }
+  }, [employeeId, statusFilter, dateRangeFilter, leaveTypeFilter, currentPage]);
 
-    return () => {
-      ignore = true;
-    };
-  }, [employeeId, statusFilter, dateRangeFilter, leaveTypeFilter, currentPage, activeTab]);
+  const fetchMyStats = useCallback(async () => {
+    if (!employeeId || employeeId <= 0) return;
+    try {
+      const data = await leaveService.getMyRequests(employeeId, {
+        status: 'all',
+        dateRange: dateRangeFilter,
+        leaveTypeId: leaveTypeFilter,
+        page: 1,
+        pageSize: 1000 
+      });
 
-  // --- 3. useEffect MỚI: Load Approvals (Chạy ngay khi có ID) ---
-  useEffect(() => {
+      const allReqs = data.data || [];
+      setStats({
+        all: allReqs.length,
+        pending: allReqs.filter((r: any) => r.status === 'Pending').length,
+        approved: allReqs.filter((r: any) => r.status === 'Approved').length,
+        rejected: allReqs.filter((r: any) => r.status === 'Rejected').length,
+        draft: allReqs.filter((r: any) => r.status === 'Draft').length
+      })
+    } catch (err) {
+      console.error("Failed to load stats", err);
+    }
+  }, [employeeId, dateRangeFilter, leaveTypeFilter]);
+
+  const fetchApprovals = useCallback(async () => {
     const isManagerOrAdmin = ["HR Manager", "IT Manager", "Admin", "Sales Manager", "Finance Manager", "BOD Assistant"].includes(userRole);
-
     if (employeeId && isManagerOrAdmin) {
-        const fetchApprovals = async () => {
-            setLoadingApprovals(true);
-            try {
-                // Fetch ALL để có thể filter ở client
-                const response = await fetch(`http://localhost:8081/api/approvals/all?managerId=${employeeId}`);
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    setApprovalRequests(data);
-                } else {
-                    console.error("Failed to fetch approvals");
-                }
-            } catch (error) {
-                console.error("Error fetching approvals:", error);
-            } finally {
-                setLoadingApprovals(false);
+        setLoadingApprovals(true);
+        try {
+            // Fetch ALL để có thể filter ở client
+            const response = await fetch(`http://localhost:8081/api/approvals/all?managerId=${employeeId}`);
+            
+            if (response.ok) {
+                const data = await response.json();
+                setApprovalRequests(data);
+            } else {
+                console.error("Failed to fetch approvals");
             }
-        };
-
-        fetchApprovals();
-        
-        const interval = setInterval(fetchApprovals, 30000);
-        return () => clearInterval(interval);
+        } catch (error) {
+            console.error("Error fetching approvals:", error);
+        } finally {
+            setLoadingApprovals(false);
+        }
     }
-  }, [employeeId, userRole]); 
+  }, [employeeId, userRole]);
+
+  const loadBalances = useCallback(async () => {
+    if (!employeeId) return;
+    try {
+      const data = await leaveService.getMyBalances(employeeId);
+      setBalances(data || []);
+    } catch (err) {
+      console.error("Failed to load balances", err);
+    }
+  }, [employeeId]);
+
+  const loadLeaveTypes = async () => {
+    try {
+      const types = await leaveService.getLeaveTypes();
+      setLeaveTypes(types);
+    } catch (err) {
+      console.error("Failed to load leave types", err);
+    }
+  };
+
+  // --- REFACTORED: Hàm refresh toàn bộ data ---
+  const refreshAllData = async () => {
+      await Promise.all([
+          fetchMyRequests(),
+          fetchMyStats(),
+          loadBalances(),
+          fetchApprovals()
+      ]);
+  };
+
+  // 2. useEffect: Load My Requests & Stats
+  useEffect(() => {
+    if (activeTab === 'my-request') {
+        fetchMyRequests();
+        fetchMyStats();
+        loadBalances();
+        loadLeaveTypes();
+    }
+  }, [fetchMyRequests, fetchMyStats, loadBalances, activeTab]);
+
+  // 3. useEffect: Load Approvals (Auto refresh interval)
+  useEffect(() => {
+    fetchApprovals();
+    const interval = setInterval(fetchApprovals, 30000);
+    return () => clearInterval(interval);
+  }, [fetchApprovals]); 
 
   // Calculate Approval Stats
   useEffect(() => {
@@ -180,55 +226,7 @@ export default function LeaveHistoryPage() {
     }
   }, [approvalRequests])
 
-  // Stats logic for My Request
-  const [stats, setStats] = useState({ all: 0, pending: 0, approved: 0, rejected: 0, draft: 0 })
-
-  useEffect(() => {
-    if (employeeId && employeeId > 0) {
-      const fetchStats = async () => {
-        try {
-          const data = await leaveService.getMyRequests(employeeId, {
-            status: 'all',
-            dateRange: dateRangeFilter,
-            leaveTypeId: leaveTypeFilter,
-            page: 1,
-            pageSize: 1000 
-          });
-
-          const allReqs = data.data || [];
-          setStats({
-            all: allReqs.length,
-            pending: allReqs.filter((r: any) => r.status === 'Pending').length,
-            approved: allReqs.filter((r: any) => r.status === 'Approved').length,
-            rejected: allReqs.filter((r: any) => r.status === 'Rejected').length,
-            draft: allReqs.filter((r: any) => r.status === 'Draft').length
-          })
-        } catch (err) {
-          console.error("Failed to load stats", err);
-        }
-      }
-      fetchStats();
-    }
-  }, [employeeId, statusFilter, dateRangeFilter, leaveTypeFilter]); 
-
-  const loadLeaveTypes = async () => {
-    try {
-      const types = await leaveService.getLeaveTypes();
-      setLeaveTypes(types);
-    } catch (err) {
-      console.error("Failed to load leave types", err);
-    }
-  };
-
-  const loadBalances = async () => {
-    if (!employeeId) return;
-    try {
-      const data = await leaveService.getMyBalances(employeeId);
-      setBalances(data || []);
-    } catch (err) {
-      console.error("Failed to load balances", err);
-    }
-  };
+  // --- HANDLERS ---
 
   const handleCancelRequest = (id: number) => {
     setSelectedRequestId(id)
@@ -239,7 +237,9 @@ export default function LeaveHistoryPage() {
     if (!selectedRequestId) return;
     try {
       await leaveService.cancelLeaveRequest(selectedRequestId);
-      window.location.reload(); 
+      setCancelDialogOpen(false);
+      refreshAllData(); // Refresh data instead of reload
+      toast.success("Request cancelled successfully");
     } catch (error) {
       console.error("Failed to cancel request", error);
       alert("Failed to cancel request");
@@ -263,55 +263,88 @@ export default function LeaveHistoryPage() {
     setApprovalLeaveTypeFilter("all")
   }
 
-  const handleApprove = (id: number) => {
-      alert(`Approving request ${id} (Integrate API later)`);
-  }
-
-  const handleReject = (id: number) => {
-      alert(`Rejecting request ${id} (Integrate API later)`);
-  }
-
+  // --- FIX: Hàm xử lý tạo đơn thành công ---
   const handleRequestCreated = async (requestId: number) => {
     setShowCreateForm(false);
     try {
+      // 1. Tải chi tiết đơn vừa tạo để hiển thị
       const requestDetail = await leaveService.getLeaveRequestDetail(requestId);
       setViewingRequest(requestDetail);
+      
+      // 2. QUAN TRỌNG: Refresh lại toàn bộ danh sách và balance
+      await refreshAllData(); 
+      
     } catch (error) {
       console.error("Failed to load request details", error);
     }
   }
 
-  // Filter approval requests for table view
-  const filteredApprovalRequests = approvalRequests.filter((req: any) => {
-    if (approvalStatusFilter === 'Pending' && req.status !== 'Pending') return false
-    if (approvalStatusFilter === 'Complete' && req.status !== 'Approved' && req.status !== 'Rejected') return false
-    if (approvalLeaveTypeFilter !== 'all' && req.leaveTypeID?.toString() !== approvalLeaveTypeFilter) return false
-    
-    if (approvalDateRangeFilter !== 'all-time') {
-        const requestDate = new Date(req.requestedDate)
-        const now = new Date()
-        const daysDiff = Math.floor((now.getTime() - requestDate.getTime()) / (1000 * 60 * 60 * 24))
-        
-        if (approvalDateRangeFilter === 'last-7-days' && daysDiff > 7) return false
-        if (approvalDateRangeFilter === 'last-30-days' && daysDiff > 30) return false
-        if (approvalDateRangeFilter === 'last-90-days' && daysDiff > 90) return false
-        if (approvalDateRangeFilter === 'this-year') {
-            if (requestDate.getFullYear() !== now.getFullYear()) return false
-        }
-    }
-    return true
-  })
+  // --- FIX: Hàm xử lý Approve/Reject từ danh sách (nếu có nút quick action) ---
+  // Lưu ý: Hiện tại danh sách chưa có nút, nhưng nếu có thì dùng hàm này
+  const handleApprove = async (id: number) => {
+      try {
+          await leaveService.approveRequest(id);
+          refreshAllData();
+          toast.success("Request approved");
+      } catch (error) {
+          console.error(error);
+          toast.error("Failed to approve");
+      }
+  }
 
-  // --- TÍNH SỐ LƯỢNG PENDING ĐỂ HIỂN THỊ TRÊN BADGE ---
-  // Lọc ra các request có status là 'Pending'
+  // Filter approval requests for table view
+  const filteredApprovalRequests = approvalRequests
+    .filter((req: any) => {
+        if (approvalStatusFilter === 'Pending' && req.status !== 'Pending') return false
+        if (approvalStatusFilter === 'Complete' && req.status !== 'Approved' && req.status !== 'Rejected') return false
+        if (approvalLeaveTypeFilter !== 'all' && req.leaveTypeID?.toString() !== approvalLeaveTypeFilter) return false
+        
+        if (approvalDateRangeFilter !== 'all-time') {
+            const requestDate = new Date(req.requestedDate)
+            const now = new Date()
+            const daysDiff = Math.floor((now.getTime() - requestDate.getTime()) / (1000 * 60 * 60 * 24))
+            
+            if (approvalDateRangeFilter === 'last-7-days' && daysDiff > 7) return false
+            if (approvalDateRangeFilter === 'last-30-days' && daysDiff > 30) return false
+            if (approvalDateRangeFilter === 'last-90-days' && daysDiff > 90) return false
+            if (approvalDateRangeFilter === 'this-year') {
+                if (requestDate.getFullYear() !== now.getFullYear()) return false
+            }
+        }
+        return true
+    })
+    // Sort: Pending lên đầu
+    .sort((a: any, b: any) => {
+        const getPriority = (status: string) => {
+            if (status === 'Pending') return 1;
+            if (status === 'Approved') return 2;
+            if (status === 'Rejected') return 3;
+            if (status === 'Cancelled') return 4;
+            return 5;
+        };
+
+        const priorityA = getPriority(a.status);
+        const priorityB = getPriority(b.status);
+
+        if (priorityA !== priorityB) {
+            return priorityA - priorityB;
+        }
+        return new Date(b.requestedDate).getTime() - new Date(a.requestedDate).getTime();
+    });
+
   const pendingCount = approvalRequests.filter(req => req.status === 'Pending').length;
 
+  // View Detail Component
   if (viewingRequest) {
     return (
       <LeaveRequestDetail
         request={viewingRequest}
         isManagerView={activeTab === "my-approval"}
-        onBack={() => setViewingRequest(null)}
+        // Khi quay lại từ Detail -> Reset viewingRequest VÀ Refresh data
+        onBack={() => {
+            setViewingRequest(null);
+            refreshAllData(); // Refresh data khi đóng popup chi tiết
+        }}
       />
     )
   }
@@ -364,7 +397,6 @@ export default function LeaveHistoryPage() {
                 }`}
             >
               My Approval 
-              {/* --- ĐÃ SỬA: CHỈ HIỂN THỊ SỐ PENDING --- */}
               {pendingCount > 0 && (
                   <span className="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full animate-in fade-in zoom-in duration-300">
                       {pendingCount}
