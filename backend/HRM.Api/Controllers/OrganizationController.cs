@@ -29,9 +29,19 @@ namespace HRM.Api.Controllers
                 var userClaim = identity.FindFirst(ClaimTypes.NameIdentifier) ?? identity.FindFirst("EmployeeID");
                 if (userClaim != null && int.TryParse(userClaim.Value, out int userId))
                 {
+                    Console.WriteLine($"[DEBUG] GetCurrentUserId: Found user ID = {userId}");
                     return userId;
                 }
+                else
+                {
+                    Console.WriteLine($"[DEBUG] GetCurrentUserId: userClaim is null or invalid");
+                }
             }
+            else
+            {
+                Console.WriteLine($"[DEBUG] GetCurrentUserId: identity is null");
+            }
+            Console.WriteLine($"[DEBUG] GetCurrentUserId: Falling back to default user ID = 1");
             return 1; // Default fallback (hoặc xử lý lỗi)
         }
 
@@ -155,8 +165,9 @@ namespace HRM.Api.Controllers
         public async Task<IActionResult> UpdateTeam(int teamId, [FromBody] UpdateSubTeamDto request)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
+            int userId = GetCurrentUserId();
 
-            var result = await _teamService.UpdateTeamAsync(teamId, request);
+            var result = await _teamService.UpdateTeamAsync(teamId, request, userId);
             if (result.Success) return Ok(new { success = true, message = result.Message });
 
             if (result.Message.Contains("not found")) return NotFound(new { success = false, message = result.Message });
@@ -168,7 +179,8 @@ namespace HRM.Api.Controllers
         [HttpDelete("teams/{teamId}/employees/{employeeId}")]
         public async Task<IActionResult> RemoveEmployeeFromTeam(int teamId, int employeeId)
         {
-            var result = await _teamService.RemoveEmployeeFromTeamAsync(teamId, employeeId);
+            int userId = GetCurrentUserId();
+            var result = await _teamService.RemoveEmployeeFromTeamAsync(teamId, employeeId, userId);
             return result.Success ? Ok(new { success = true, message = result.Message }) : BadRequest(new { success = false, message = result.Message });
         }
 
@@ -176,7 +188,8 @@ namespace HRM.Api.Controllers
         [HttpPost("teams/{teamId}/add-employee")]
         public async Task<IActionResult> AddEmployeeToTeam(int teamId, [FromBody] AddEmployeeToTeamDto request)
         {
-            var result = await _teamService.AddEmployeeToTeamAsync(teamId, request.EmployeeId);
+            int userId = GetCurrentUserId();
+            var result = await _teamService.AddEmployeeToTeamAsync(teamId, request.EmployeeId, userId);
             return result.Success ? Ok(new { success = true, message = result.Message, employeeId = result.EmployeeId }) : BadRequest(new { success = false, message = result.Message });
         }
 

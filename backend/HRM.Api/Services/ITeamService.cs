@@ -10,13 +10,13 @@ namespace HRM.Api.Services
         /// Add an employee to a team
         /// </summary>
         /// <returns>Tuple with (Success, Message, EmployeeId)</returns>
-        Task<(bool Success, string Message, int? EmployeeId)> AddEmployeeToTeamAsync(int teamId, int employeeId);
+        Task<(bool Success, string Message, int? EmployeeId)> AddEmployeeToTeamAsync(int teamId, int employeeId, int userId);
 
         /// <summary>
         /// Remove an employee from a team
         /// </summary>
         /// <returns>Tuple with (Success, Message, Data)</returns>
-        Task<(bool Success, string Message, RemoveEmployeeDataDto? Data)> RemoveEmployeeFromTeamAsync(int teamId, int employeeId);
+        Task<(bool Success, string Message, RemoveEmployeeDataDto? Data)> RemoveEmployeeFromTeamAsync(int teamId, int employeeId, int userId);
 
         /// <summary>
         /// Get all teams with members
@@ -54,7 +54,7 @@ namespace HRM.Api.Services
         /// <summary>
         /// Update an existing team
         /// </summary>
-        Task<(bool Success, string Message)> UpdateTeamAsync(int teamId, UpdateSubTeamDto dto);
+        Task<(bool Success, string Message)> UpdateTeamAsync(int teamId, UpdateSubTeamDto dto, int userId);
 
         /// <summary>
         /// Move an employee from their current team (if any) to a target team (atomic)

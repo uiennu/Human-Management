@@ -34,7 +34,7 @@ namespace HRM.Api.Services
             await _organizationRepository.AddLogAsync(logEntry);
         }
 
-        public async Task<(bool Success, string Message, int? EmployeeId)> AddEmployeeToTeamAsync(int teamId, int employeeId)
+        public async Task<(bool Success, string Message, int? EmployeeId)> AddEmployeeToTeamAsync(int teamId, int employeeId, int userId)
         {
             try
             {
@@ -100,7 +100,7 @@ namespace HRM.Api.Services
                         NewSubTeamID = teamId,
                         Description = $"Added {employeeName} to team {team.TeamName}"
                     }),
-                    PerformedBy = 1, // TODO: Get from HttpContext/JWT token
+                    PerformedBy = userId,
                     PerformedAt = DateTime.Now
                 });
 
@@ -114,7 +114,7 @@ namespace HRM.Api.Services
             }
         }
 
-        public async Task<(bool Success, string Message, RemoveEmployeeDataDto? Data)> RemoveEmployeeFromTeamAsync(int teamId, int employeeId)
+        public async Task<(bool Success, string Message, RemoveEmployeeDataDto? Data)> RemoveEmployeeFromTeamAsync(int teamId, int employeeId, int userId)
         {
             try
             {
@@ -165,7 +165,7 @@ namespace HRM.Api.Services
                     team.DepartmentID, 
                     employeeName, 
                     teamName, 
-                    employeeId // TODO: Replace with current logged-in user ID from HttpContext
+                    userId
                 );
 
                 var data = new RemoveEmployeeDataDto
@@ -354,7 +354,7 @@ namespace HRM.Api.Services
             return (true, "Team created successfully", createdTeam.SubTeamID);
         }
 
-        public async Task<(bool Success, string Message)> UpdateTeamAsync(int teamId, UpdateSubTeamDto dto)
+        public async Task<(bool Success, string Message)> UpdateTeamAsync(int teamId, UpdateSubTeamDto dto, int userId)
         {
             try
             {
@@ -406,7 +406,7 @@ namespace HRM.Api.Services
                         newDescription: dto.Description ?? "",
                         oldTeamLeadId: oldLead,
                         newTeamLeadId: dto.TeamLeadId,
-                        performedBy: 1 // TODO: replace with current user id
+                        performedBy: userId
                     );
                 }
                 catch { }
