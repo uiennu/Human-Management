@@ -80,8 +80,6 @@ dotnet watch run
 
 ---
 
----
-
 ## ⚠️ OPTION 2: RUN MANUALLY (No Docker)
 Dành cho trường hợp bạn muốn dùng MySQL Workbench và chạy Java + .NET thủ công.
 
@@ -128,8 +126,6 @@ Lưu ý cấu hình: Mặc định Java Service dùng password 123456. Nếu m�
 
 ---
 
----
-
 ## 💻 FRONTEND SETUP (Next.js)
 Sau khi Backend đã chạy (bằng Docker hoặc No Docker), hãy khởi động Frontend.
 
@@ -153,8 +149,6 @@ Sau khi Backend đã chạy (bằng Docker hoặc No Docker), hãy khởi độn
    ```
 
 4. **Truy cập Web App:** Mở trình duyệt tại: http://localhost:3000
-
----
 
 ---
 
