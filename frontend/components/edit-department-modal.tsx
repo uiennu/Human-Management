@@ -64,13 +64,13 @@ export function EditDepartmentModal({ open, onOpenChange, department, onSubmit }
 
     // 1. Validate Name
     if (!formData.name || formData.name.trim() === "") {
-        newErrors.name = "Department Name không được để trống!";
+        newErrors.name = "Department Name is required!";
         hasError = true;
     }
 
     // 2. Validate Code (Thay alert bằng state)
     if (!formData.code || formData.code.trim() === "") {
-        newErrors.code = "Department Code không được để trống!";
+        newErrors.code = "Department Code is required!";
         hasError = true;
     }
 
@@ -109,9 +109,26 @@ export function EditDepartmentModal({ open, onOpenChange, department, onSubmit }
              </div>
 
              <div className="space-y-2">
-               <Label>Code</Label>
-               <Input value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                 placeholder="e.g. HR-REC" />
+               <Label>Code <span className="text-red-500">*</span></Label>
+               <Input 
+                 value={formData.code} 
+                 
+                 // 1. Thêm logic đổi màu viền đỏ nếu có lỗi errors.code
+                 className={errors.code ? "border-red-500 focus-visible:ring-red-500" : ""}
+                 
+                 onChange={(e) => {
+                    setFormData({ ...formData, code: e.target.value });
+                    
+                    // 2. Thêm logic: Nếu người dùng nhập gì đó, xóa lỗi 'code' đi ngay
+                    if (e.target.value.trim() !== "") {
+                        setErrors({ ...errors, code: "" });
+                    }
+                 }}
+                 placeholder="e.g. HR-REC" 
+               />
+               
+               {/* 3. Hiển thị dòng thông báo lỗi đỏ bên dưới */}
+               {errors.code && <p className="text-xs text-red-500 font-medium">{errors.code}</p>}
              </div>
           </div>
           
