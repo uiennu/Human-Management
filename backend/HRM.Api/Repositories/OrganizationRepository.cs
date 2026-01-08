@@ -447,6 +447,19 @@ namespace HRM.Api.Repositories
             var count = await conn.ExecuteScalarAsync<int>(sql, new { Code = code });
             return count > 0;
         }
+        public async Task<bool> IsDepartmentNameExistAsync(string name, int excludeId)
+        {
+            // Đếm số lượng phòng ban có cùng tên NHƯNG khác ID
+            const string sql = @"
+                SELECT COUNT(1) 
+                FROM Departments 
+                WHERE DepartmentName = @Name 
+                AND DepartmentID != @ExcludeId";
+
+            using var conn = CreateConnection();
+            var count = await conn.ExecuteScalarAsync<int>(sql, new { Name = name, ExcludeId = excludeId });
+            return count > 0;
+        }
     }
 }
 

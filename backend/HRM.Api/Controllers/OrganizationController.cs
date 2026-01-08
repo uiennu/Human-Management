@@ -200,8 +200,12 @@ namespace HRM.Api.Controllers
         public async Task<IActionResult> UpdateDepartment(int id, [FromBody] UpdateDepartmentDto request)
         {
             int userId = GetCurrentUserId();
-            await _service.UpdateDepartmentAsync(id, request, userId);
-            return Ok(new { message = "Update successful" });
+            var results=await _service.UpdateDepartmentAsync(id, request, userId);
+            if (!results.Success) 
+            {
+                return BadRequest(new { success = false, message = results.Message });
+            }
+            return Ok(new { success = true, message = results.Message });
         }
         [Authorize(Roles = "Admin,HR Manager,HR Employee")]
         [HttpGet("logs")]

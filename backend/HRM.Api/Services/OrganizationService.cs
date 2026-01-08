@@ -181,20 +181,30 @@ namespace HRM.Api.Services
             await _repository.AddLogAsync(logEntry);
         }
 
-        public async Task UpdateDepartmentAsync(int id, UpdateDepartmentDto request, int userId)
+        public async Task<(bool Success, string Message)> UpdateDepartmentAsync(int id, UpdateDepartmentDto request, int userId)
         {
             var oldDept = await _repository.GetDepartmentByIdAsync(id);
-            if (oldDept == null) return; // Hoặc throw Exception("Department not found")
+            if (oldDept == null) return(false, "Department not found"); // Hoặc throw Exception("Department not found")
+
+            if (!string.IsNullOrWhiteSpace(request.DepartmentName) 
+                    && request.DepartmentName != oldDept.DepartmentName) // Chỉ check khi tên có thay đổi
+                {
+                    bool isNameDuplicate = await _repository.IsDepartmentNameExistAsync(request.DepartmentName, id);
+                    if (isNameDuplicate)
+                    {
+                       return (false, $"Department Name '{request.DepartmentName}' already exists.");
+                    }
+                }
 
             // --- LOGIC MỚI: KIỂM TRA TRÙNG CODE ---
-    // Nếu có yêu cầu đổi Code và Code mới khác Code cũ
+            // Nếu có yêu cầu đổi Code và Code mới khác Code cũ
             if (!string.IsNullOrWhiteSpace(request.DepartmentCode) && request.DepartmentCode != oldDept.DepartmentCode)
             {
                 // Gọi Repository kiểm tra xem Code mới đã tồn tại chưa
                 bool isDuplicate = await _repository.IsDepartmentCodeExistAsync(request.DepartmentCode);
                 if (isDuplicate)
                 {
-                    throw new Exception($"Department Code '{request.DepartmentCode}' already exists. Please choose another one.");
+                    return (false, $"Department Code '{request.DepartmentCode}' already exists.");
                 }
             }
 
@@ -227,13 +237,23 @@ namespace HRM.Api.Services
                 changes.Add(new { Field = "ManagerID", Old = oldDept.ManagerID, New = request.ManagerID });
 
             // Cập nhật thông tin phòng ban
-            await _repository.UpdateDepartmentAsync(id, request, userId);
+            try
+            {
+                await _repository.UpdateDepartmentAsync(id, request, userId);
+                if (changes.Count > 0)
+                {
+                    await LogActionAsync("UpdateDepartment", "Department", id, changes, userId);
+                }
+                return (true, "Department updated successfully");
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Internal Error: {ex.Message}");
+            }
+            
 
             // Ghi log
-            if (changes.Count > 0)
-            {
-                await LogActionAsync("UpdateDepartment", "Department", id, changes, userId);
-            }
+            
         }
 
         public async Task<IEnumerable<OrganizationLogDto>> GetOrganizationLogsAsync()
