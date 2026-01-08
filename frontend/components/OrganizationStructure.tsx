@@ -466,10 +466,43 @@ export function OrganizationStructure() {
   }
 
   const confirmMoveEmployee = async () => {
-    // Gọi API move (hoặc add rồi remove)
-    toast.success("Employee moved")
-    setMoveModalOpen(false)
-    await fetchData()
+    // 1. Kiểm tra an toàn
+    if (!draggedEmployee || !targetDept) return;
+
+    try {
+      // 2. Xử lý ID nhân viên
+      const empId = parseInt(draggedEmployee.id);
+
+      // 3. Xử lý ID Team đích
+      let targetTeamId = 0;
+      if (targetDept.id.startsWith("team-")) {
+        targetTeamId = parseInt(targetDept.id.replace("team-", ""));
+      } else {
+        // [EN] Only allow moving to a Team, not a Department
+        toast.error("Employees can only be moved to a Team.");
+        return;
+      }
+
+      // 4. Gọi API
+      await organizationService.moveEmployee(empId, targetTeamId);
+
+      // 5. Thông báo thành công
+      // [EN] Success message with dynamic names
+      toast.success(`Successfully moved ${draggedEmployee.name} to ${targetDept.name}`);
+
+      // 6. Reset và reload
+      setMoveModalOpen(false);
+      setDraggedEmployee(null);
+      setSourceDept(null);
+      setTargetDept(null);
+      
+      await fetchData(); 
+
+    } catch (error: any) {
+      console.error("Move failed:", error);
+      // [EN] Generic error message
+      toast.error(error.message || "Failed to move employee.");
+    }
   }
 
   // Zoom Handlers

@@ -38,5 +38,6 @@ namespace HRM.Api.Repositories
         Task UpdateDepartmentAsync(int id, UpdateDepartmentDto department, int userId);
         Task AddLogAsync(OrganizationLogDto log);
         Task<IEnumerable<OrganizationLogDto>> GetOrganizationLogsAsync();
+        Task MoveEmployeeToTeamAsync(int employeeId, int targetTeamId);
     }
 }
