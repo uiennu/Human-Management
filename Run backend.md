@@ -1,4 +1,6 @@
-🟢 Backend Setup Guide (.NET 8 API + MySQL Docker)
+🟢 HRM System - Setup Guide (.NET 8 API + MySQL Docker)
+
+Hướng dẫn cài đặt và triển khai hệ thống (Backend, Database, Frontend).
 
 ## 1. Prerequisites
 
@@ -8,112 +10,157 @@ Trước khi chạy backend, cần đảm bảo:
 - **Java 17 & Maven**: Để chạy Java Utility Service (nếu chạy local không dùng Docker)
 - **Docker Desktop**: Để chạy database MySQL và Java Service (optional)
 
-## 2. Start Database (Docker)
+## 2. Default Accounts (Tài khoản mặc định)
 
-Project này sử dụng MySQL chạy trên Docker. Bạn không cần cài MySQL thủ công.
+Hệ thống đã được khởi tạo với dữ liệu mẫu cho đầy đủ các phòng ban. Mật khẩu mặc định cho tất cả tài khoản là **`123456`**.
 
-1. Mở terminal tại thư mục root của project (nơi có file `docker-compose.yml`).
-2. Chạy lệnh sau để khởi động container:
+| Role (Vai trò) | Name | Email | Password | Phòng ban |
+| :--- | :--- | :--- | :--- | :--- |
+| **Director (Admin)** | Alice Nguyen | `alice@hrm.com` | `123456` | Board of Directors (BOD) |
+| **HR Manager** | Bob Tran | `bob@hrm.com` | `123456` | Human Resources |
+| **IT Manager** | Charlie Le | `charlie@hrm.com` | `123456` | IT Development |
+| **Sales Manager** | Frank Do | `frank@hrm.com` | `123456` | Sales & Marketing |
+| **Finance Manager** | Grace Hoang | `grace@hrm.com` | `123456` | Finance |
+| **IT Employee** | David Pham | `david@hrm.com` | `123456` | IT Development |
+| **HR Employee** | Eve Vo | `eve@hrm.com` | `123456` | Human Resources |
+| **Sales Employee** | Liam Dang | `liam@hrm.com` | `123456` | Sales & Marketing |
+| **Finance Employee** | Mia Cao | `mia@hrm.com` | `123456` | Finance |
 
-   docker-compose up -d --build
+> **Lưu ý:** PasswordHash trong database (`$2a$11$jPe9...`) tương ứng với mật khẩu `123456`.
 
-   > **Lưu ý**: Lệnh này sẽ tự động khởi động:
-   > - `hrm_mysql`: Database MySQL (HRM_System & hrm_utility).
-   > - `hrm_utility_java`: Java Utility Service (Calendar & PDF engine) tại port 8081.
+---
 
-3. Kiểm tra container đã chạy chưa:
+## 🚀 OPTION 1: RUN WITH DOCKER (Recommended)
 
-   docker ps
+Cách này nhanh nhất, không cần cài MySQL hay Java vào máy.
 
-   Bạn sẽ thấy container tên `hrm_mysql` và `hrm_utility_java` đang chạy.
+### Bước 1: Khởi động Database & Java Service
+Mở terminal tại thư mục root (nơi có file `docker-compose.yml`) và chạy:
 
-## 3. Restore & Build
+```bash
+docker-compose up -d --build
+```
+> Lệnh này sẽ tự động chạy MySQL (Port 3306) và Java Utility Service (Port 8081).
 
-Sau khi pull code:
+### Bước 2: Chạy Backend API
+Mở một terminal mới, trỏ vào thư mục Api:
 
-
-    cd backend/HRM.Api
-    dotnet restore
-    dotnet build
-
-
-## 4. Run Backend
-
-Có 2 cách chạy:
-
-✔ **Cách 1**:
-dotnet run
-
-✔ **Cách 2 (recommended for dev)**:
-
+```bash
+cd backend/HRM.Api
+dotnet restore
 dotnet watch run
+```
 
-## 5. Verify API is running
+### 🛠 Docker Database Management (Quản lý DB trong Docker)
 
-Mở browser:
-- Swagger UI: http://localhost:5204/swagger
-- Test endpoint: http://localhost:5204/weatherforecast
+1. **Reset toàn bộ (Xóa hết dữ liệu cũ, nạp lại từ đầu):**
+   ```bash
+   docker-compose down -v
+   docker-compose up -d
+   ```
 
-## 🎯 Tóm tắt các bước chạy
+2. **Nạp lại dữ liệu (Update) mà không tắt Server:**
+*Chọn lệnh phù hợp với hệ điều hành của bạn:*
 
-1. `docker-compose up -d` (Khởi động DB và Java Utility)
-2. `cd backend/HRM.Api`
-3. `dotnet run` (Khởi động C# Backend)
+- **Windows (PowerShell):**
+     ```powershell
+     Get-Content src/Human-Management_mysql.sql | docker exec -i hrm_mysql mysql -u root -p123456 HRM_System
+     ```
+
+- **Windows (CMD):**
+     ```cmd
+     type src\Human-Management_mysql.sql | docker exec -i hrm_mysql mysql -u root -p123456 HRM_System
+     ```
+
+- **MacOS / Linux (Bash):**
+     ```bash
+     docker exec -i hrm_mysql mysql -u root -p123456 HRM_System < src/Human-Management_mysql.sql
+     ```
 
 ---
 
-## ☕ 6. Java Utility Service (Manual Run)
-
-Nếu bạn không muốn chạy Java qua Docker:
-
-1. `cd backend-java/hrm-utility`
-2. `mvn spring-boot:run`
-
-Service sẽ chạy tại: http://localhost:8081
-
 ---
 
----
+## ⚠️ OPTION 2: RUN MANUALLY (No Docker)
+Dành cho trường hợp bạn muốn dùng MySQL Workbench và chạy Java + .NET thủ công.
 
-## ⚠️ Option 2: Running with Local MySQL (No Docker)
+### Bước 1: Cấu hình Database (MySQL)
 
-Nếu bạn không dùng Docker mà cài MySQL trực tiếp (ví dụ dùng MySQL Workbench, XAMPP):
-
-1. **Tạo Database**:
-   - Mở MySQL Workbench.
-   - Chạy script SQL tại: `src/Human-Management_mysql.sql`.
-   - Script này sẽ tạo database `HRM_System` và các bảng.
-
-2. **Cấu hình Backend**:
-   - Mở file `backend/HRM.Api/appsettings.json`.
-   - Sửa `ConnectionStrings` để trỏ về MySQL của bạn:
-     ```json
+1. Mở MySQL Workbench (hoặc tool quản lý DB bất kỳ).
+2. Tạo database và bảng bằng cách chạy script file: src/Human-Management_mysql.sql.
+3. Mở file cấu hình Backend: backend/HRM.Api/appsettings.json.
+4. Sửa ConnectionStrings để trỏ về MySQL của bạn:
+- **JSON**
+     ```bash
      "DefaultConnection": "Server=localhost;Database=HRM_System;User=root;Password=YOUR_PASSWORD;"
      ```
-   - Thay `YOUR_PASSWORD` bằng mật khẩu MySQL của bạn.
+   *(Thay YOUR_PASSWORD bằng mật khẩu MySQL của bạn).*
 
-3. **Chạy Backend**:
-   - `dotnet run` như bình thường.
+### Bước 2: Chạy Java Utility Service
+Lưu ý cấu hình: Mặc định Java Service dùng password 123456. Nếu mật khẩu MySQL của bạn khác, hãy mở file **backend-java/hrm-utility/src/main/resources/application.properties** và sửa dòng:
+   ```bash
+     spring.datasource.password=YOUR_PASSWORD
+   ```
+   *(Thay YOUR_PASSWORD bằng mật khẩu MySQL của bạn).*
+
+### Bước 3: Chạy Service
+
+1. Mở terminal, đi tới thư mục Java:
+   ```bash
+   cd backend-java/hrm-utility
+   ```
+
+2. Chạy lệnh:
+   ```bash
+   mvn spring-boot:run
+   ```
+
+### Bước 4: Chạy Backend API
+1. Mở terminal mới, đi tới thư mục Api:
+   ```bash
+     cd backend/HRM.Api
+     ```
+2. Chạy lệnh:
+     ```bash
+     dotnet run
+     ```
+
+---
+
+---
+
+## 💻 FRONTEND SETUP (Next.js)
+Sau khi Backend đã chạy (bằng Docker hoặc No Docker), hãy khởi động Frontend.
+
+### Các bước thực hiện:
+
+1. **Di chuyển vào thư mục frontend:**
+*Từ thư mục root của project*
+   ```bash
+   cd frontend
+   ```
+
+2. **Cài đặt thư viện**
+*Chỉ cần chạy lần đầu tiên*
+   ```bash
+   npm install
+   ```
+
+3. **Khởi động dự án:**
+   ```bash
+   npm run dev
+   ```
+
+4. **Truy cập Web App:** Mở trình duyệt tại: http://localhost:3000
+
+---
+
+---
+
+## ✅ Verify Installation (Kiểm tra hệ thống)
+
+- **Frontend:** http://localhost:3000
+- **Swagger API:** http://localhost:5204/swagger
+- **Java Service:** http://localhost:8081
 
 
-   Để nạp dữ liệu này vào database, bạn có 2 cách:
-
-Cách 1: Reset lại toàn bộ (Khuyên dùng nếu chưa có dữ liệu quan trọng) Chạy lệnh sau để xóa database cũ và tạo lại từ đầu (bao gồm cả dữ liệu mẫu mới):
-
-    bash
-    docker-compose down -v
-    docker-compose up -d
-    
-Cách 2: Chỉ chạy thêm dữ liệu mới (Nếu không muốn xóa DB cũ) Chạy lệnh sau để thực thi phần INSERT mới:
-
-    bash
-    docker exec -i hrm_mysql mysql -u root -proot HRM_System < src/Human-Management_mysql.sql
-(Lưu ý: Cách 2 có thể báo lỗi "Table already exists" ở phần tạo bảng, nhưng sẽ vẫn chạy tiếp phần INSERT bên dưới).
-
-## Nếu có add table hoặc insert dữ liệu, cần chạy lại file mysql thì chạy lệnh dưới đây là đc:
-cmd /c "docker exec -i hrm_mysql mysql -u root -p123456 < Human-Management_mysql.sql"
-cmd /c "docker exec -i hrm_mysql mysql -u root -p123456 < Human-Management_mysql.sql"
-Get-Content Human-Management_mysql.sql | docker exec -i hrm_mysql mysql -u root -p123456 HRM_System
-
-## Rebuild java
-docker-compose up -d --build hrm-utility-service
