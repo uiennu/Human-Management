@@ -127,7 +127,6 @@ export function AppSidebar() {
       ...baseNavigation.slice(0, 1),
       { name: "Reports", href: "/reports", icon: FileText },
       ...baseNavigation.slice(1, 3),
-      { name: "Team Management", href: "/organization/teams", icon: Users },
       { name: "Register Employee", href: "/organization/employees/register", icon: UserPlus },
       { name: "Sensitive Requests", href: "/sensitive-requests", icon: Shield },
       ...(isAdmin ? [{ name: "Registration History", href: "/organization/employees/registration-history", icon: History }] : []),
