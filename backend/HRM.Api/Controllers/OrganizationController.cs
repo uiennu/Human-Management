@@ -187,7 +187,10 @@ namespace HRM.Api.Controllers
             if (request == null || request.EmployeeId <= 0 || request.TargetTeamId <= 0)
                 return BadRequest(new { success = false, message = "Invalid request data" });
 
-            var result = await _teamService.MoveEmployeeAsync(request.EmployeeId, request.TargetTeamId);
+            int userId = GetCurrentUserId();
+
+            var result = await _teamService.MoveEmployeeAsync(request.EmployeeId, request.TargetTeamId, userId);
+
             if (result.Success) return Ok(new { success = true, message = result.Message });
             if (result.Message.Contains("not found")) return NotFound(new { success = false, message = result.Message });
             return BadRequest(new { success = false, message = result.Message });
@@ -214,5 +217,7 @@ namespace HRM.Api.Controllers
                 return StatusCode(500, new { message = ex.Message });
             }
         }
+
+        
     }
 }

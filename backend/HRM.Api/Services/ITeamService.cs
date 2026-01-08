@@ -59,6 +59,6 @@ namespace HRM.Api.Services
         /// <summary>
         /// Move an employee from their current team (if any) to a target team (atomic)
         /// </summary>
-        Task<(bool Success, string Message)> MoveEmployeeAsync(int employeeId, int targetTeamId);
+        Task<(bool Success, string Message)> MoveEmployeeAsync(int employeeId, int targetTeamId, int userId);
     }
 }

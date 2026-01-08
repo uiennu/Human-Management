@@ -210,5 +210,45 @@ namespace HRM.Api.Services
         {
             return await _repository.GetOrganizationLogsAsync();
         }
+
+        // Trong OrganizationService.cs
+
+        // Trong file OrganizationService.cs
+
+        // File: HRM.Api.Services/OrganizationService.cs
+
+// 1. Cập nhật tham số nhận vào
+        public async Task<(bool Success, string Message)> MoveEmployeeAsync(int employeeId, int targetTeamId, int userId)
+        {
+            try 
+            {
+                var targetTeam = await _repository.GetSubTeamByIdAsync(targetTeamId);
+                if (targetTeam == null) return (false, "Target team not found");
+
+                // Lấy thông tin nhân viên TRƯỚC khi di chuyển để ghi log cho đẹp (Optional)
+                var emp = await _repository.GetEmployeeByIdAsync(employeeId);
+                string empName = emp != null ? $"{emp.FirstName} {emp.LastName}" : $"ID {employeeId}";
+
+                // Thực hiện logic di chuyển
+                await _repository.MoveEmployeeToTeamAsync(employeeId, targetTeamId);
+                await _repository.UpdateEmployeeDepartmentAsync(employeeId, targetTeam.DepartmentID);
+
+                // 2. GHI LOG VỚI USER ID CHÍNH CHỦ
+                var logData = new 
+                { 
+                    Employee = empName, 
+                    ToTeam = targetTeam.TeamName,
+                    ToDeptID = targetTeam.DepartmentID
+                };
+
+                await LogActionAsync("MoveEmployee", "Employee", employeeId, logData, userId);
+
+                return (true, "Employee moved successfully");
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Error: {ex.Message}");
+            }
+        }
     }
 }

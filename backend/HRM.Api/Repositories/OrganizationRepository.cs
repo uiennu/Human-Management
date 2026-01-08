@@ -407,5 +407,38 @@ namespace HRM.Api.Repositories
             using var conn = CreateConnection();
             return await conn.QueryAsync<OrganizationLogDto>(sql);
         }
+
+
+        // Trong file OrganizationRepository.cs
+
+        public async Task MoveEmployeeToTeamAsync(int employeeId, int targetTeamId)
+        {
+            // Bước 1: Kiểm tra xem nhân viên này đã nằm trong bảng SubTeamMembers chưa
+            const string checkSql = "SELECT COUNT(*) FROM SubTeamMembers WHERE EmployeeID = @EmployeeID";
+            
+            using var conn = CreateConnection();
+            var count = await conn.ExecuteScalarAsync<int>(checkSql, new { EmployeeID = employeeId });
+
+            if (count > 0)
+            {
+                // CASE A: Đã thuộc một team nào đó -> Update sang team mới
+                const string updateSql = @"
+                    UPDATE SubTeamMembers 
+                    SET SubTeamID = @TargetTeamID 
+                    WHERE EmployeeID = @EmployeeID";
+                    
+                await conn.ExecuteAsync(updateSql, new { TargetTeamID = targetTeamId, EmployeeID = employeeId });
+            }
+            else
+            {
+                // CASE B: Chưa thuộc team nào (đang Unassigned) -> Insert mới
+                const string insertSql = @"
+                    INSERT INTO SubTeamMembers (SubTeamID, EmployeeID) 
+                    VALUES (@TargetTeamID, @EmployeeID)";
+                    
+                await conn.ExecuteAsync(insertSql, new { TargetTeamID = targetTeamId, EmployeeID = employeeId });
+            }
+        }
     }
 }
+

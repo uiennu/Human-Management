@@ -420,7 +420,7 @@ namespace HRM.Api.Services
             }
         }
 
-        public async Task<(bool Success, string Message)> MoveEmployeeAsync(int employeeId, int targetTeamId)
+        public async Task<(bool Success, string Message)> MoveEmployeeAsync(int employeeId, int targetTeamId, int userId) // <--- 1. Đã thêm tham số userId
         {
             try
             {
@@ -430,9 +430,12 @@ namespace HRM.Api.Services
                 if (!employee.IsActive) return (false, "Employee is locked or inactive and cannot be moved");
 
                 // Delegate atomic move to repository which ensures transaction and logging
-                // performedBy currently hardcoded; ideally should be retrieved from context
-                var performedBy = 1;
-                var result = await _teamRepository.MoveEmployeeAsync(employeeId, targetTeamId, performedBy);
+                
+                // --- ĐOẠN NÀY ĐÃ SỬA ---
+                // Không dùng hardcode "performedBy = 1" nữa
+                // Truyền thẳng userId từ Controller xuống Repository
+                var result = await _teamRepository.MoveEmployeeAsync(employeeId, targetTeamId, userId);
+                
                 return result;
             }
             catch (Exception ex)
