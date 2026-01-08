@@ -9,6 +9,7 @@ Trước khi chạy backend, cần đảm bảo:
 - **.NET 8 SDK**: Để chạy code .NET
 - **Java 17 & Maven**: Để chạy Java Utility Service (nếu chạy local không dùng Docker)
 - **Docker Desktop**: Để chạy database MySQL và Java Service (optional)
+- **Node.js >= 18**: Để chạy Frontend (Next.js)
 
 ## 2. Default Accounts (Tài khoản mặc định)
 
