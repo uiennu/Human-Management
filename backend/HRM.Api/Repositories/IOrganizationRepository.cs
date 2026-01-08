@@ -39,5 +39,6 @@ namespace HRM.Api.Repositories
         Task AddLogAsync(OrganizationLogDto log);
         Task<IEnumerable<OrganizationLogDto>> GetOrganizationLogsAsync();
         Task MoveEmployeeToTeamAsync(int employeeId, int targetTeamId);
+        Task<bool> IsDepartmentCodeExistAsync(string code);
     }
 }

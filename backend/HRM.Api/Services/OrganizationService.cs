@@ -184,7 +184,35 @@ namespace HRM.Api.Services
         public async Task UpdateDepartmentAsync(int id, UpdateDepartmentDto request, int userId)
         {
             var oldDept = await _repository.GetDepartmentByIdAsync(id);
-            if (oldDept == null) return;
+            if (oldDept == null) return; // Hoặc throw Exception("Department not found")
+
+            // --- LOGIC MỚI: KIỂM TRA TRÙNG CODE ---
+    // Nếu có yêu cầu đổi Code và Code mới khác Code cũ
+            if (!string.IsNullOrWhiteSpace(request.DepartmentCode) && request.DepartmentCode != oldDept.DepartmentCode)
+            {
+                // Gọi Repository kiểm tra xem Code mới đã tồn tại chưa
+                bool isDuplicate = await _repository.IsDepartmentCodeExistAsync(request.DepartmentCode);
+                if (isDuplicate)
+                {
+                    throw new Exception($"Department Code '{request.DepartmentCode}' already exists. Please choose another one.");
+                }
+            }
+
+            // --- LOGIC MỚI: TỰ ĐỘNG DI CHUYỂN MANAGER ---
+            // Kiểm tra nếu có thay đổi Manager và ManagerID hợp lệ (khác null, khác 0)
+            if (request.ManagerID.HasValue && request.ManagerID != oldDept.ManagerID && request.ManagerID > 0)
+            {
+                // 1. Lấy thông tin nhân viên được chỉ định làm Manager mới
+                var newManager = await _repository.GetEmployeeByIdAsync(request.ManagerID.Value);
+
+                // 2. Nếu nhân viên này tồn tại và đang thuộc phòng ban khác
+                if (newManager != null && newManager.DepartmentID != id)
+                {
+                    // -> Cập nhật DepartmentID của nhân viên này về phòng ban hiện tại
+                    await _repository.UpdateEmployeeDepartmentAsync(newManager.EmployeeID, id);
+                }
+            }
+            // ---------------------------------------------
 
             var changes = new List<object>();
 
@@ -198,8 +226,10 @@ namespace HRM.Api.Services
             if (request.ManagerID != oldDept.ManagerID)
                 changes.Add(new { Field = "ManagerID", Old = oldDept.ManagerID, New = request.ManagerID });
 
+            // Cập nhật thông tin phòng ban
             await _repository.UpdateDepartmentAsync(id, request, userId);
 
+            // Ghi log
             if (changes.Count > 0)
             {
                 await LogActionAsync("UpdateDepartment", "Department", id, changes, userId);

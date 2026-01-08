@@ -439,6 +439,14 @@ namespace HRM.Api.Repositories
                 await conn.ExecuteAsync(insertSql, new { TargetTeamID = targetTeamId, EmployeeID = employeeId });
             }
         }
+
+        public async Task<bool> IsDepartmentCodeExistAsync(string code)
+        {
+            const string sql = "SELECT COUNT(1) FROM Departments WHERE DepartmentCode = @Code";
+            using var conn = CreateConnection();
+            var count = await conn.ExecuteScalarAsync<int>(sql, new { Code = code });
+            return count > 0;
+        }
     }
 }
 

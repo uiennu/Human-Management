@@ -37,11 +37,11 @@ export function EditDepartmentModal({ open, onOpenChange, department, onSubmit }
   const [employees, setEmployees] = useState<Employee[]>([])
   
   // State lưu lỗi validation
-  const [nameError, setNameError] = useState("")
+  const [errors, setErrors] = useState({ name: "", code: "" })
 
   useEffect(() => { 
       setFormData(department);
-      setNameError(""); // Reset lỗi khi mở modal
+      setErrors({ name: "", code: "" }); // Reset lỗi khi mở modal
   }, [department, open])
 
   useEffect(() => {
@@ -59,11 +59,24 @@ export function EditDepartmentModal({ open, onOpenChange, department, onSubmit }
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     
-    // YÊU CẦU: Validate tên không được để trống
+    const newErrors = { name: "", code: "" }
+    let hasError = false
+
+    // 1. Validate Name
     if (!formData.name || formData.name.trim() === "") {
-        setNameError("Department Name không được để trống!"); // Set nội dung lỗi
-        return;
+        newErrors.name = "Department Name không được để trống!";
+        hasError = true;
     }
+
+    // 2. Validate Code (Thay alert bằng state)
+    if (!formData.code || formData.code.trim() === "") {
+        newErrors.code = "Department Code không được để trống!";
+        hasError = true;
+    }
+
+    setErrors(newErrors);
+
+    if (hasError) return;
 
     // Nếu hợp lệ thì submit
     onSubmit(formData)
@@ -84,20 +97,21 @@ export function EditDepartmentModal({ open, onOpenChange, department, onSubmit }
                <Input 
                  value={formData.name} 
                  // Nếu có lỗi thì viền đỏ
-                 className={nameError ? "border-red-500 focus-visible:ring-red-500" : ""}
+                 className={errors.name ? "border-red-500 focus-visible:ring-red-500" : ""}
                  onChange={e => {
                      setFormData({...formData, name: e.target.value});
                      // Khi người dùng gõ lại, xóa lỗi đi
-                     if(e.target.value.trim() !== "") setNameError("");
+                     if(e.target.value.trim() !== "") setErrors({...errors, name: ""});
                  }} 
                />
                {/* Hiển thị dòng thông báo lỗi */}
-               {nameError && <p className="text-xs text-red-500 font-medium">{nameError}</p>}
+               {errors.name && <p className="text-xs text-red-500 font-medium">{errors.name}</p>}
              </div>
 
              <div className="space-y-2">
                <Label>Code</Label>
-               <Input value={formData.code} disabled className="bg-gray-100" />
+               <Input value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                 placeholder="e.g. HR-REC" />
              </div>
           </div>
           
