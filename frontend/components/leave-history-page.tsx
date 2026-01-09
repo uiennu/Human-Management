@@ -148,7 +148,13 @@ export default function LeaveHistoryPage() {
         setLoadingApprovals(true);
         try {
             // Fetch ALL để có thể filter ở client
-            const response = await fetch(`http://localhost:8081/api/approvals/all?managerId=${employeeId}`);
+            let url =`http://localhost:8081/api/approvals/all?managerId=${employeeId}`;
+            
+            if (approvalLeaveTypeFilter && approvalLeaveTypeFilter !== 'all') {
+                url += `&leaveTypeId=${approvalLeaveTypeFilter}`;
+            }
+            
+            const response = await fetch(url);
             
             if (response.ok) {
                 const data = await response.json();
@@ -162,7 +168,7 @@ export default function LeaveHistoryPage() {
             setLoadingApprovals(false);
         }
     }
-  }, [employeeId, userRole]);
+  }, [employeeId, userRole,approvalLeaveTypeFilter]);
 
   const loadBalances = useCallback(async () => {
     if (!employeeId) return;
@@ -297,7 +303,7 @@ export default function LeaveHistoryPage() {
     .filter((req: any) => {
         if (approvalStatusFilter === 'Pending' && req.status !== 'Pending') return false
         if (approvalStatusFilter === 'Complete' && req.status !== 'Approved' && req.status !== 'Rejected') return false
-        if (approvalLeaveTypeFilter !== 'all' && req.leaveTypeID?.toString() !== approvalLeaveTypeFilter) return false
+        //if (approvalLeaveTypeFilter !== 'all' && req.leaveTypeID?.toString() !== approvalLeaveTypeFilter) return false
         
         if (approvalDateRangeFilter !== 'all-time') {
             const requestDate = new Date(req.requestedDate)

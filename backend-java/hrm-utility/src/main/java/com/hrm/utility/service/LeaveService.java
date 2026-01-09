@@ -18,19 +18,29 @@ public class LeaveService {
     @Autowired
     private LeaveRequestRepository leaveRequestRepository;
 
-    public List<LeaveRequestResponseDto> getPendingApprovals(Integer managerId) {
+    public List<LeaveRequestResponseDto> getPendingApprovals(Integer managerId,Integer leaveTypeId) {
         // 1. Lấy tất cả đơn có ManagerID trùng khớp và Status là 'Pending'
-        List<LeaveRequest> requests = leaveRequestRepository.findByManagerIDAndStatus(managerId, "Pending");
+        List<LeaveRequest> requests;
+        // Logic: Nếu có chọn loại nghỉ thì gọi hàm lọc, ngược lại gọi hàm thường
+        if (leaveTypeId != null && leaveTypeId > 0) {
+            requests = leaveRequestRepository.findByManagerIDAndStatusAndLeaveType(managerId, "Pending", leaveTypeId);
+        } else {
+            requests = leaveRequestRepository.findByManagerIDAndStatus(managerId, "Pending");
+        } 
 
         // 2. Convert Entity sang DTO
         return requests.stream().map(this::mapToDto).collect(Collectors.toList());
     }
 
-    public List<LeaveRequestResponseDto> getAllApprovals(Integer managerId) {
-        // Lấy TẤT CẢ đơn của manager (không phân biệt status)
-        List<LeaveRequest> requests = leaveRequestRepository.findByManagerID(managerId);
+    public List<LeaveRequestResponseDto> getAllApprovals(Integer managerId,Integer leaveTypeId) {
+        List<LeaveRequest> requests;
+        // Logic: Nếu có chọn loại nghỉ thì gọi hàm lọc, ngược lại gọi hàm thường
+        if (leaveTypeId != null && leaveTypeId > 0) {
+            requests = leaveRequestRepository.findByManagerIDAndLeaveType(managerId, leaveTypeId);
+        } else {
+            requests = leaveRequestRepository.findByManagerID(managerId);
+        }
 
-        // Convert Entity sang DTO
         return requests.stream().map(this::mapToDto).collect(Collectors.toList());
     }
 
@@ -52,6 +62,7 @@ public class LeaveService {
         // Lấy thông tin từ bảng LeaveType (đã Join)
         if (entity.getLeaveType() != null) {
             dto.setLeaveTypeName(entity.getLeaveType().getName());
+            dto.setLeaveTypeId(entity.getLeaveType().getLeaveTypeID());
         }
 
         return dto;

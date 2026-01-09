@@ -20,20 +20,22 @@ public class ApprovalController {
     // API: GET http://localhost:8081/api/approvals/pending?managerId=2
     @GetMapping("/pending")
     public ResponseEntity<List<LeaveRequestResponseDto>> getPendingRequests(
-            @RequestParam Integer managerId) {
+            @RequestParam Integer managerId,
+            @RequestParam(required = false) Integer leaveTypeId) {
 
         // Lưu ý: Trong thực tế, managerId nên lấy từ JWT Token để bảo mật
-        List<LeaveRequestResponseDto> result = leaveService.getPendingApprovals(managerId);
+        List<LeaveRequestResponseDto> result = leaveService.getPendingApprovals(managerId, leaveTypeId);
         return ResponseEntity.ok(result);
     }
 
     // API: GET http://localhost:8081/api/approvals/all?managerId=2
     @GetMapping("/all")
     public ResponseEntity<List<LeaveRequestResponseDto>> getAllRequests(
-            @RequestParam Integer managerId) {
+            @RequestParam Integer managerId,
+            @RequestParam(required = false) Integer leaveTypeId) {
 
         // Lấy TẤT CẢ requests của manager (không phân biệt status)
-        List<LeaveRequestResponseDto> result = leaveService.getAllApprovals(managerId);
+        List<LeaveRequestResponseDto> result = leaveService.getAllApprovals(managerId, leaveTypeId);
         return ResponseEntity.ok(result);
     }
 

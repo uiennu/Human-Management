@@ -9,6 +9,7 @@ public class LeaveRequestResponseDto {
     private Integer leaveRequestID;
     private String employeeName; // Tên người xin nghỉ
     private String avatarUrl;    // Avatar người xin nghỉ
+    private Integer leaveTypeId;
     private String leaveTypeName;
     private LocalDate startDate;
     private LocalDate endDate;

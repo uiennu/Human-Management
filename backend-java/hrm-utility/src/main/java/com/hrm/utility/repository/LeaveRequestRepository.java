@@ -19,4 +19,17 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Inte
     // Fetch all requests by manager ID (for all statuses)
     @Query("SELECT l FROM LeaveRequest l WHERE l.managerID = :managerId")
     List<LeaveRequest> findByManagerID(@Param("managerId") Integer managerId);
+
+    // 3. (QUAN TRỌNG) Lấy theo Manager + Status + LeaveTypeID
+    // Hàm này giúp lọc danh sách "Pending" theo loại nghỉ
+    @Query("SELECT l FROM LeaveRequest l WHERE l.managerID = :managerId AND l.status = :status AND l.leaveType.leaveTypeID = :leaveTypeId")
+    List<LeaveRequest> findByManagerIDAndStatusAndLeaveType(@Param("managerId") Integer managerId, 
+                                                            @Param("status") String status, 
+                                                            @Param("leaveTypeId") Integer leaveTypeId);
+
+    // 4. (QUAN TRỌNG) Lấy theo Manager + LeaveTypeID
+    // Hàm này giúp lọc danh sách lịch sử "All" theo loại nghỉ
+    @Query("SELECT l FROM LeaveRequest l WHERE l.managerID = :managerId AND l.leaveType.leaveTypeID = :leaveTypeId")
+    List<LeaveRequest> findByManagerIDAndLeaveType(@Param("managerId") Integer managerId, 
+                                                   @Param("leaveTypeId") Integer leaveTypeId);
 }
